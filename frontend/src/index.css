@@ -1,0 +1,131 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: 'Inter', system-ui, sans-serif;
+  background: #020617;
+  min-height: 100vh;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0f172a;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #475569;
+}
+
+/* Glassmorphism utilities */
+@layer components {
+  .glass {
+    @apply bg-dark-900/50 backdrop-blur-xl border border-dark-700/50;
+  }
+
+  .glass-card {
+    @apply bg-dark-900/40 backdrop-blur-xl border border-dark-700/30 rounded-2xl;
+  }
+
+  .glass-hover {
+    @apply hover:bg-dark-800/60 hover:border-dark-600/50 transition-all duration-300;
+  }
+
+  .neon-glow {
+    box-shadow: 0 0 5px #39FF14, 0 0 10px #39FF14, 0 0 15px #39FF14, 0 0 20px #39FF14;
+  }
+
+  .neon-text {
+    text-shadow: 0 0 5px #39FF14, 0 0 10px #39FF14, 0 0 20px #39FF14;
+  }
+
+  .neon-border {
+    box-shadow: 0 0 5px #39FF14, inset 0 0 5px rgba(57, 255, 20, 0.1);
+  }
+
+  .btn-primary {
+    @apply bg-gradient-to-r from-neon-green/80 to-emerald-500 text-dark-950 font-semibold 
+           px-6 py-3 rounded-xl hover:from-neon-green hover:to-emerald-400 
+           transition-all duration-300 shadow-lg hover:shadow-neon-green/30;
+  }
+
+  .btn-secondary {
+    @apply bg-dark-800/50 text-white font-medium px-6 py-3 rounded-xl 
+           border border-dark-600/50 hover:bg-dark-700/50 hover:border-dark-500/50 
+           transition-all duration-300;
+  }
+
+  .input-field {
+    @apply w-full bg-dark-800/50 border border-dark-600/50 rounded-xl px-4 py-3 
+           text-white placeholder-dark-400 focus:outline-none focus:border-neon-green/50 
+           focus:ring-2 focus:ring-neon-green/20 transition-all duration-300;
+  }
+
+  .checkbox-neon {
+    @apply w-5 h-5 rounded-md border-2 border-dark-500 bg-dark-800/50 
+           checked:bg-neon-green checked:border-neon-green focus:ring-neon-green/30 
+           focus:ring-2 transition-all duration-200 cursor-pointer accent-[#39FF14];
+  }
+}
+
+/* Gradient backgrounds */
+.gradient-mesh {
+  background-image: 
+    radial-gradient(at 40% 20%, rgba(57, 255, 20, 0.1) 0px, transparent 50%),
+    radial-gradient(at 80% 0%, rgba(0, 255, 255, 0.08) 0px, transparent 50%),
+    radial-gradient(at 0% 50%, rgba(57, 255, 20, 0.08) 0px, transparent 50%),
+    radial-gradient(at 80% 50%, rgba(255, 16, 240, 0.05) 0px, transparent 50%),
+    radial-gradient(at 0% 100%, rgba(0, 255, 255, 0.08) 0px, transparent 50%);
+}
+
+/* Progress bar animation */
+@keyframes progress-shine {
+  0% {
+    background-position: -200px 0;
+  }
+  100% {
+    background-position: calc(200px + 100%) 0;
+  }
+}
+
+.progress-bar {
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.2),
+    transparent
+  );
+  background-size: 200px 100%;
+  animation: progress-shine 1.5s ease-in-out infinite;
+}
+
+/* Chart customizations */
+.recharts-cartesian-grid-horizontal line,
+.recharts-cartesian-grid-vertical line {
+  stroke: #334155;
+  stroke-opacity: 0.5;
+}
+
+.recharts-text {
+  fill: #94a3b8;
+}
