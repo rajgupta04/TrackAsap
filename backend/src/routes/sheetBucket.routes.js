@@ -1,5 +1,5 @@
 import express from 'express';
-import { protect } from '../middleware/auth.middleware.js';
+import { protect, requireAdmin } from '../middleware/auth.middleware.js';
 import {
   getBuckets,
   getBucket,
@@ -18,7 +18,7 @@ router.get('/:id', getBucket);
 router.post('/import', protect, importBucketToSheet);
 router.post('/create-sheet', protect, createSheetFromBucket);
 
-// Admin route (could add admin middleware)
-router.post('/upsert', protect, upsertBucket);
+// Admin route
+router.post('/upsert', protect, requireAdmin, upsertBucket);
 
 export default router;
