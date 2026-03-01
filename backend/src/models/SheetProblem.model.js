@@ -50,6 +50,10 @@ const sheetProblemSchema = new mongoose.Schema(
       type: String,
       default: '',
     },
+    problemKey: {
+      type: String,
+      default: '',
+    },
     // Status tracking
     status: {
       type: String,
@@ -89,7 +93,7 @@ const sheetProblemSchema = new mongoose.Schema(
     // Platform (optional)
     platform: {
       type: String,
-      enum: ['leetcode', 'geeksforgeeks', 'codechef', 'codeforces', 'hackerrank', 'interviewbit', 'other'],
+      enum: ['leetcode', 'geeksforgeeks', 'codechef', 'codeforces', 'hackerrank', 'interviewbit', 'codingninjas', 'atcoder', 'spoj', 'other'],
       default: 'leetcode',
     },
     // Tags
@@ -108,6 +112,7 @@ sheetProblemSchema.index({ sheet: 1, topic: 1, order: 1 });
 sheetProblemSchema.index({ user: 1, sheet: 1 });
 sheetProblemSchema.index({ sheet: 1, status: 1 });
 sheetProblemSchema.index({ sheet: 1, difficulty: 1 });
+sheetProblemSchema.index({ sheet: 1, problemKey: 1 });
 
 const SheetProblem = mongoose.model('SheetProblem', sheetProblemSchema);
 export default SheetProblem;
