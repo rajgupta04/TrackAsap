@@ -26,6 +26,11 @@ const bucketProblemSchema = new mongoose.Schema({
     type: String,
     default: '',
   },
+  problemKey: {
+    type: String,
+    default: '',
+    index: true,
+  },
   platform: {
     type: String,
     default: 'leetcode',
@@ -88,21 +93,52 @@ const sheetBucketSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+function buildBucketStats(problems = []) {
+  return {
+    totalProblems: problems.length,
+    difficultyBreakdown: {
+      easy: problems.filter((problem) => problem.difficulty === 'easy').length,
+      medium: problems.filter((problem) => problem.difficulty === 'medium').length,
+      hard: problems.filter((problem) => problem.difficulty === 'hard').length,
+    },
+    topics: [...new Set(problems.map((problem) => problem.topic).filter(Boolean))],
+  };
+}
+
 // Update stats before saving
 sheetBucketSchema.pre('save', function (next) {
-  this.totalProblems = this.problems.length;
-  
-  // Calculate difficulty breakdown
-  this.difficultyBreakdown = {
-    easy: this.problems.filter(p => p.difficulty === 'easy').length,
-    medium: this.problems.filter(p => p.difficulty === 'medium').length,
-    hard: this.problems.filter(p => p.difficulty === 'hard').length,
-  };
-  
-  // Extract unique topics
-  this.topics = [...new Set(this.problems.map(p => p.topic))];
-  
+  const stats = buildBucketStats(this.problems || []);
+  this.totalProblems = stats.totalProblems;
+  this.difficultyBreakdown = stats.difficultyBreakdown;
+  this.topics = stats.topics;
   next();
+});
+
+// Update stats for findOneAndUpdate upserts
+sheetBucketSchema.pre('findOneAndUpdate', function (next) {
+  const update = this.getUpdate() || {};
+  const directProblems = update.problems;
+  const setProblems = update.$set?.problems;
+  const problems = directProblems || setProblems;
+
+  if (!Array.isArray(problems)) {
+    return next();
+  }
+
+  const stats = buildBucketStats(problems);
+
+  if (update.$set) {
+    update.$set.totalProblems = stats.totalProblems;
+    update.$set.difficultyBreakdown = stats.difficultyBreakdown;
+    update.$set.topics = stats.topics;
+  } else {
+    update.totalProblems = stats.totalProblems;
+    update.difficultyBreakdown = stats.difficultyBreakdown;
+    update.topics = stats.topics;
+  }
+
+  this.setUpdate(update);
+  return next();
 });
 
 const SheetBucket = mongoose.model('SheetBucket', sheetBucketSchema);
