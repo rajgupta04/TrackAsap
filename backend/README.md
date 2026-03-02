@@ -5,6 +5,7 @@
 ### Authentication
 - `POST /api/auth/register` - Register new user
 - `POST /api/auth/login` - Login user
+- `POST /api/auth/google` - Login/Register with Google credential
 - `GET /api/auth/me` - Get current user (Protected)
 - `PUT /api/auth/profile` - Update profile (Protected)
 
@@ -39,3 +40,38 @@ cp .env.example .env
 # Edit .env with your MongoDB URI and JWT secret
 npm run dev
 ```
+
+Google OAuth env:
+
+```bash
+# Server-side verification audience
+GOOGLE_CLIENT_ID=your_google_oauth_client_id
+```
+
+## Striver A2Z Bucket Seeding
+
+- Snapshot file: `src/data/striverA2Z.snapshot.json`
+- Seeder entry: `src/seed-buckets.js`
+- Extractor entry: `src/seeding/extractStriverA2Z.js`
+
+Commands:
+
+```bash
+# Regenerate full Striver A2Z snapshot from source page
+npm run extract:a2z
+
+# Validate snapshot structure without writing to DB
+npm run seed:a2z:dry
+
+# Upsert snapshot buckets into DB
+npm run seed:a2z
+```
+
+Notes:
+- Seeder is idempotent by bucket name (rerun safely updates existing buckets).
+- Bucket problem identity uses `problemKey` (URL/title-based normalized key) to reduce duplicates on imports.
+
+## Bucket Admin Access
+
+- `POST /api/buckets/upsert` is now admin-only.
+- Ensure admin users have `role: "admin"` in `users` collection.
