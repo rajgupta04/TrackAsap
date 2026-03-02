@@ -1,5 +1,8 @@
 import User from '../models/User.model.js';
 import { generateToken } from '../middleware/auth.middleware.js';
+import { OAuth2Client } from 'google-auth-library';
+
+const getGoogleClientId = () => process.env.GOOGLE_CLIENT_ID || process.env.GOOGLE_OAUTH_CLIENT_ID;
 
 // @desc    Register new user
 // @route   POST /api/auth/register
@@ -26,6 +29,7 @@ export const register = async (req, res) => {
       _id: user._id,
       name: user.name,
       email: user.email,
+      role: user.role,
       startDate: user.startDate,
       token: generateToken(user._id),
     });
@@ -58,6 +62,7 @@ export const login = async (req, res) => {
       _id: user._id,
       name: user.name,
       email: user.email,
+      role: user.role,
       startDate: user.startDate,
       codeforcesHandle: user.codeforcesHandle,
       codechefHandle: user.codechefHandle,
@@ -67,6 +72,66 @@ export const login = async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Login/Register with Google
+// @route   POST /api/auth/google
+// @access  Public
+export const googleLogin = async (req, res) => {
+  try {
+    const clientId = getGoogleClientId();
+
+    if (!clientId) {
+      return res.status(500).json({ message: 'Google OAuth is not configured on server' });
+    }
+
+    const { credential } = req.body;
+    if (!credential) {
+      return res.status(400).json({ message: 'Missing Google credential' });
+    }
+
+    const client = new OAuth2Client(clientId);
+    const ticket = await client.verifyIdToken({
+      idToken: credential,
+      audience: clientId,
+    });
+
+    const payload = ticket.getPayload();
+    const email = payload?.email;
+    const name = payload?.name;
+
+    if (!email) {
+      return res.status(400).json({ message: 'Google token did not include email' });
+    }
+
+    let user = await User.findOne({ email });
+
+    if (!user) {
+      const randomPassword = `${Date.now()}_${Math.random().toString(36).slice(2)}`;
+      user = await User.create({
+        name: name || email.split('@')[0],
+        email,
+        password: randomPassword,
+        startDate: new Date(),
+      });
+    }
+
+    return res.json({
+      _id: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      startDate: user.startDate,
+      codeforcesHandle: user.codeforcesHandle,
+      codechefHandle: user.codechefHandle,
+      leetcodeHandle: user.leetcodeHandle,
+      targetWeight: user.targetWeight,
+      token: generateToken(user._id),
+    });
+  } catch (error) {
+    console.error('Google auth error:', error.message);
+    return res.status(401).json({ message: 'Google authentication failed' });
   }
 };
 
@@ -80,6 +145,7 @@ export const getMe = async (req, res) => {
       _id: user._id,
       name: user.name,
       email: user.email,
+      role: user.role,
       startDate: user.startDate,
       codeforcesHandle: user.codeforcesHandle,
       codechefHandle: user.codechefHandle,
@@ -120,6 +186,7 @@ export const updateProfile = async (req, res) => {
       _id: user._id,
       name: user.name,
       email: user.email,
+      role: user.role,
       startDate: user.startDate,
       codeforcesHandle: user.codeforcesHandle,
       codechefHandle: user.codechefHandle,
