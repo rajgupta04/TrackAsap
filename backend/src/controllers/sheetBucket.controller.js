@@ -1,6 +1,27 @@
 import SheetBucket from '../models/SheetBucket.model.js';
 import SheetProblem from '../models/SheetProblem.model.js';
 import Sheet from '../models/Sheet.model.js';
+import mongoose from 'mongoose';
+import { buildProblemKey, inferPlatform, normalizePlatform } from '../utils/problemIdentity.js';
+
+const VALID_SHEET_CATEGORIES = new Set([
+  'dsa',
+  'cp',
+  'os',
+  'cn',
+  'oops',
+  'dev',
+  'system-design',
+  'custom',
+]);
+
+function mapBucketCategoryToSheetCategory(bucketCategory = '') {
+  const normalized = String(bucketCategory || '').trim().toLowerCase();
+  if (VALID_SHEET_CATEGORIES.has(normalized)) {
+    return normalized;
+  }
+  return 'dsa';
+}
 
 // Get all available buckets
 export const getBuckets = async (req, res) => {
@@ -50,13 +71,20 @@ export const importBucketToSheet = async (req, res) => {
       return res.status(404).json({ message: 'Sheet not found' });
     }
 
-    // Get existing problem titles to avoid duplicates
+    // Get existing problem keys to avoid duplicates
     const existingProblems = await SheetProblem.find({ sheet: sheetId });
-    const existingTitles = new Set(existingProblems.map(p => p.title.toLowerCase()));
+    const existingKeys = new Set(
+      existingProblems
+        .map((problem) => problem.problemKey || buildProblemKey(problem))
+        .filter(Boolean)
+    );
 
     // Filter out duplicates and prepare problems for insertion
     const newProblems = bucket.problems
-      .filter(p => !existingTitles.has(p.title.toLowerCase()))
+      .filter((problem) => {
+        const problemKey = problem.problemKey || buildProblemKey(problem);
+        return problemKey && !existingKeys.has(problemKey);
+      })
       .map((problem, index) => ({
         user: userId,
         sheet: sheetId,
@@ -66,7 +94,8 @@ export const importBucketToSheet = async (req, res) => {
         problemLink: problem.problemLink,
         articleLink: problem.articleLink,
         youtubeLink: problem.youtubeLink,
-        platform: problem.platform,
+        problemKey: problem.problemKey || buildProblemKey(problem),
+        platform: normalizePlatform(problem.platform || inferPlatform(problem.problemLink)),
         tags: problem.tags,
         order: existingProblems.length + index,
         status: 'pending',
@@ -118,11 +147,11 @@ export const createSheetFromBucket = async (req, res) => {
       user: userId,
       name: sheetName || bucket.name,
       description: bucket.description,
-      category: bucket.category,
+      category: mapBucketCategoryToSheetCategory(bucket.category),
       color: bucket.color,
       totalProblems: bucket.totalProblems,
       solvedProblems: 0,
-      topics: bucket.topics.map(topic => ({
+      topics: (bucket.topics || []).map(topic => ({
         name: topic,
         totalProblems: bucket.problems.filter(p => p.topic === topic).length,
         solvedProblems: 0,
@@ -139,7 +168,8 @@ export const createSheetFromBucket = async (req, res) => {
       problemLink: problem.problemLink,
       articleLink: problem.articleLink,
       youtubeLink: problem.youtubeLink,
-      platform: problem.platform,
+      problemKey: problem.problemKey || buildProblemKey(problem),
+      platform: normalizePlatform(problem.platform || inferPlatform(problem.problemLink)),
       tags: problem.tags,
       order: index,
       status: 'pending',
@@ -167,6 +197,13 @@ export const upsertBucket = async (req, res) => {
   try {
     const { name, description, category, icon, color, problems } = req.body;
 
+    const normalizedProblems = (problems || []).map((problem, index) => ({
+      ...problem,
+      order: typeof problem.order === 'number' ? problem.order : index,
+      platform: normalizePlatform(problem.platform || inferPlatform(problem.problemLink)),
+      problemKey: problem.problemKey || buildProblemKey(problem),
+    }));
+
     const bucket = await SheetBucket.findOneAndUpdate(
       { name },
       {
@@ -175,7 +212,7 @@ export const upsertBucket = async (req, res) => {
         category,
         icon,
         color,
-        problems,
+        problems: normalizedProblems,
       },
       { upsert: true, new: true }
     );
@@ -189,8 +226,10 @@ export const upsertBucket = async (req, res) => {
 
 // Helper function to update sheet totals
 async function updateSheetTotals(sheetId) {
+  const sheetObjectId = new mongoose.Types.ObjectId(sheetId);
+
   const stats = await SheetProblem.aggregate([
-    { $match: { sheet: sheetId } },
+    { $match: { sheet: sheetObjectId } },
     {
       $group: {
         _id: null,
