@@ -5,6 +5,7 @@ import { protect } from '../middleware/auth.middleware.js';
 import {
   register,
   login,
+  googleLogin,
   getMe,
   updateProfile,
 } from '../controllers/auth.controller.js';
@@ -25,9 +26,14 @@ const loginValidation = [
   body('password').notEmpty().withMessage('Password is required'),
 ];
 
+const googleValidation = [
+  body('credential').notEmpty().withMessage('Google credential is required'),
+];
+
 // Routes
 router.post('/register', registerValidation, validate, register);
 router.post('/login', loginValidation, validate, login);
+router.post('/google', googleValidation, validate, googleLogin);
 router.get('/me', protect, getMe);
 router.put('/profile', protect, updateProfile);
 
