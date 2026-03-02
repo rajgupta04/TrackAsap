@@ -28,6 +28,26 @@ export const useAuthStore = create((set, get) => ({
     }
   },
 
+  loginWithGoogle: async (credential) => {
+    set({ isLoading: true, error: null });
+    try {
+      const data = await authService.googleLogin(credential);
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('user', JSON.stringify(data));
+      set({
+        user: data,
+        token: data.token,
+        isAuthenticated: true,
+        isLoading: false,
+      });
+      return { success: true };
+    } catch (error) {
+      const message = error.response?.data?.message || 'Google sign-in failed';
+      set({ error: message, isLoading: false });
+      return { success: false, error: message };
+    }
+  },
+
   register: async (userData) => {
     set({ isLoading: true, error: null });
     try {
