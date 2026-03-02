@@ -4,17 +4,27 @@ import { motion } from 'framer-motion';
 import { Mail, Lock, LogIn, Target } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import toast from 'react-hot-toast';
+import GoogleSignInButton from '../components/auth/GoogleSignInButton';
 
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const { login, isLoading, error } = useAuthStore();
+  const { login, loginWithGoogle, isLoading, error } = useAuthStore();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     const result = await login({ email, password });
     if (result.success) {
       toast.success('Welcome back!');
+    } else {
+      toast.error(result.error);
+    }
+  };
+
+  const handleGoogleCredential = async (credential) => {
+    const result = await loginWithGoogle(credential);
+    if (result.success) {
+      toast.success('Signed in with Google!');
     } else {
       toast.error(result.error);
     }
@@ -93,6 +103,22 @@ const Login = () => {
                 </>
               )}
             </button>
+
+            <div className="relative py-1">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-dark-700" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-dark-900 px-2 text-dark-400">Or continue with</span>
+              </div>
+            </div>
+
+            <div className="flex justify-center">
+              <GoogleSignInButton
+                onCredential={handleGoogleCredential}
+                onError={(err) => toast.error(err?.message || 'Google sign-in failed')}
+              />
+            </div>
           </form>
 
           <p className="text-center text-dark-400 mt-6">
