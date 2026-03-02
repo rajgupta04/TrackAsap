@@ -1,6 +1,7 @@
 import User from '../models/User.model.js';
 import { generateToken } from '../middleware/auth.middleware.js';
 import { OAuth2Client } from 'google-auth-library';
+import logger from '../config/logger.js';
 
 const getGoogleClientId = () => process.env.GOOGLE_CLIENT_ID || process.env.GOOGLE_OAUTH_CLIENT_ID;
 
@@ -130,7 +131,7 @@ export const googleLogin = async (req, res) => {
       token: generateToken(user._id),
     });
   } catch (error) {
-    console.error('Google auth error:', error.message);
+    logger.error('Google auth error:', error.message);
     return res.status(401).json({ message: 'Google authentication failed' });
   }
 };

@@ -1,3 +1,5 @@
+import logger from '../config/logger.js';
+
 export const notFound = (req, res, next) => {
   const error = new Error(`Not Found - ${req.originalUrl}`);
   res.status(404);
@@ -27,6 +29,13 @@ export const errorHandler = (err, req, res, next) => {
     message = Object.values(err.errors)
       .map((val) => val.message)
       .join(', ');
+  }
+
+  // Log error
+  logger.error(`${statusCode} - ${message} - ${req.originalUrl} - ${req.method} - ${req.ip}`);
+  
+  if (process.env.NODE_ENV !== 'production') {
+    logger.error(err.stack);
   }
 
   res.status(statusCode).json({

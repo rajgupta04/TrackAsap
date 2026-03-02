@@ -3,6 +3,7 @@ import SheetProblem from '../models/SheetProblem.model.js';
 import Sheet from '../models/Sheet.model.js';
 import mongoose from 'mongoose';
 import { buildProblemKey, inferPlatform, normalizePlatform } from '../utils/problemIdentity.js';
+import logger from '../config/logger.js';
 
 const VALID_SHEET_CATEGORIES = new Set([
   'dsa',
@@ -32,7 +33,7 @@ export const getBuckets = async (req, res) => {
 
     res.json(buckets);
   } catch (error) {
-    console.error('Get buckets error:', error);
+    logger.error('Get buckets error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 };
@@ -48,7 +49,7 @@ export const getBucket = async (req, res) => {
 
     res.json(bucket);
   } catch (error) {
-    console.error('Get bucket error:', error);
+    logger.error('Get bucket error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 };
@@ -125,7 +126,7 @@ export const importBucketToSheet = async (req, res) => {
       skipped: bucket.problems.length - newProblems.length,
     });
   } catch (error) {
-    console.error('Import bucket error:', error);
+    logger.error('Import bucket error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 };
@@ -187,7 +188,7 @@ export const createSheetFromBucket = async (req, res) => {
       problemsAdded: problems.length,
     });
   } catch (error) {
-    console.error('Create sheet from bucket error:', error);
+    logger.error('Create sheet from bucket error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 };
@@ -219,7 +220,7 @@ export const upsertBucket = async (req, res) => {
 
     res.json(bucket);
   } catch (error) {
-    console.error('Upsert bucket error:', error);
+    logger.error('Upsert bucket error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 };

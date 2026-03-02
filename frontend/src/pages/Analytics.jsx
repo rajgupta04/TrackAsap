@@ -61,10 +61,10 @@ const Analytics = () => {
   };
 
   return (
-    <div className="space-y-4 md:space-y-6 p-4 md:p-6">
+    <div className="space-y-6">
       {/* Problems Trend */}
       <GlassCard>
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4 md:mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
           <div className="flex items-center gap-3">
             <TrendingUp className="w-5 h-5 md:w-6 md:h-6 text-neon-green" />
             <h3 className="text-lg md:text-xl font-semibold text-white">
@@ -104,17 +104,17 @@ const Analytics = () => {
         </div>
       </GlassCard>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Platform Distribution */}
         <GlassCard>
-          <div className="flex items-center gap-3 mb-4 md:mb-6">
+          <div className="flex items-center gap-3 mb-6">
             <BarChart3 className="w-5 h-5 md:w-6 md:h-6 text-cyan-400" />
             <h3 className="text-lg md:text-xl font-semibold text-white">
               Platform Distribution
             </h3>
           </div>
 
-          <div className="h-56 md:h-64">
+          <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={platformDistribution} layout="vertical">
                 <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
@@ -139,14 +139,14 @@ const Analytics = () => {
 
         {/* Difficulty Breakdown */}
         <GlassCard>
-          <div className="flex items-center gap-3 mb-4 md:mb-6">
+          <div className="flex items-center gap-3 mb-6">
             <PieChartIcon className="w-5 h-5 md:w-6 md:h-6 text-pink-400" />
             <h3 className="text-lg md:text-xl font-semibold text-white">
               Difficulty Breakdown
             </h3>
           </div>
 
-          <div className="h-56 md:h-64 flex items-center justify-center">
+          <div className="h-64 flex items-center justify-center">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie

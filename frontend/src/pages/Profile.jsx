@@ -57,10 +57,10 @@ const Profile = () => {
   );
 
   return (
-    <div className="max-w-2xl mx-auto space-y-4 md:space-y-6 px-4 py-4 md:px-6 md:py-6">
+    <div className="max-w-2xl mx-auto space-y-6">
       {/* Profile Header */}
       <GlassCard>
-        <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6 p-2 md:p-0">
+        <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6">
           <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl bg-gradient-to-br from-neon-green/20 to-cyan-500/20 flex items-center justify-center border border-dark-600/50 flex-shrink-0">
             <span className="text-3xl sm:text-4xl font-bold text-neon-green">
               {user?.name?.charAt(0).toUpperCase() || 'U'}

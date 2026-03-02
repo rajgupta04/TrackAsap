@@ -2,6 +2,7 @@ import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import chalk from 'chalk';
 import { importA2ZSnapshot } from './seeding/striverA2Z.importer.js';
 import SheetBucket from './models/SheetBucket.model.js';
 import { legacyBuckets } from './seeding/legacyBuckets.js';
@@ -94,7 +95,7 @@ async function run() {
 
     if (!dryRun) {
       await mongoose.connect(process.env.MONGODB_URI);
-      console.log('✅ Connected to MongoDB');
+      console.log(chalk.green('✅ Connected to MongoDB'));
     }
 
     const summary = await importA2ZSnapshot({
@@ -106,25 +107,25 @@ async function run() {
       ? await upsertLegacyBuckets({ dryRun })
       : { count: 0, problems: 0 };
 
-    console.log('--- A2Z Import Summary ---');
-    console.log(`Source: ${summary.source}`);
-    console.log(`Version: ${summary.version}`);
-    console.log(`Buckets in snapshot: ${summary.buckets}`);
-    console.log(`Problems in snapshot: ${summary.totalProblems}`);
+    console.log(chalk.cyan.bold('\n--- A2Z Import Summary ---'));
+    console.log(chalk.blue(`Source: ${summary.source}`));
+    console.log(chalk.blue(`Version: ${summary.version}`));
+    console.log(chalk.blue(`Buckets in snapshot: ${summary.buckets}`));
+    console.log(chalk.blue(`Problems in snapshot: ${summary.totalProblems}`));
     if (includeLegacy) {
-      console.log(`Legacy buckets upserted: ${legacySummary.count}`);
-      console.log(`Legacy problems upserted: ${legacySummary.problems}`);
+      console.log(chalk.magenta(`Legacy buckets upserted: ${legacySummary.count}`));
+      console.log(chalk.magenta(`Legacy problems upserted: ${legacySummary.problems}`));
     }
 
     if (dryRun) {
-      console.log('Dry run complete. No database changes were made.');
+      console.log(chalk.yellow('Dry run complete. No database changes were made.'));
     } else {
-      console.log(`Buckets upserted: ${summary.upserted}`);
+      console.log(chalk.green(`Buckets upserted: ${summary.upserted}`));
     }
 
     process.exit(0);
   } catch (error) {
-    console.error('❌ Seeding failed:', error.message);
+    console.error(chalk.red.bold('❌ Seeding failed:'), chalk.red(error.message));
     process.exit(1);
   }
 }

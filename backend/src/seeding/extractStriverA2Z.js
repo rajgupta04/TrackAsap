@@ -1,6 +1,7 @@
 import fs from 'fs/promises';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import chalk from 'chalk';
 import { buildProblemKey, inferPlatform, normalizePlatform } from '../utils/problemIdentity.js';
 
 const SOURCE_URL = 'https://takeuforward.org/dsa/strivers-a2z-sheet-learn-dsa-a-to-z';
@@ -223,12 +224,12 @@ async function main() {
 
   const totalProblems = snapshot.buckets.reduce((sum, bucket) => sum + bucket.problems.length, 0);
 
-  console.log('✅ Generated snapshot file:', OUTPUT_PATH);
-  console.log('Buckets:', snapshot.buckets.length);
-  console.log('Problems:', totalProblems);
+  console.log(chalk.green.bold('✅ Generated snapshot file:'), chalk.cyan(OUTPUT_PATH));
+  console.log(chalk.blue('Buckets:'), chalk.yellow(snapshot.buckets.length));
+  console.log(chalk.blue('Problems:'), chalk.yellow(totalProblems));
 }
 
 main().catch((error) => {
-  console.error('❌ Extraction failed:', error.message);
+  console.error(chalk.red.bold('❌ Extraction failed:'), chalk.red(error.message));
   process.exit(1);
 });

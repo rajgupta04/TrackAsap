@@ -1,7 +1,10 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import morgan from 'morgan';
+import chalk from 'chalk';
 import connectDB from './config/db.js';
+import logger from './config/logger.js';
 import authRoutes from './routes/auth.routes.js';
 import dailyLogRoutes from './routes/dailyLog.routes.js';
 import physiqueRoutes from './routes/physique.routes.js';
@@ -21,9 +24,21 @@ const PORT = process.env.PORT || 5000;
 // Connect to MongoDB
 connectDB();
 
+// Morgan stream to Winston
+const morganStream = {
+  write: (message) => logger.http(message.trim()),
+};
+
 // Middleware
 app.use(cors());
 app.use(express.json());
+
+// Morgan HTTP request logger
+app.use(
+  morgan(':method :url :status :res[content-length] - :response-time ms', {
+    stream: morganStream,
+  })
+);
 
 // Routes
 app.use('/api/auth', authRoutes);
@@ -64,5 +79,12 @@ app.use(notFound);
 app.use(errorHandler);
 
 app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
+  console.log(chalk.cyan.bold('\n' + '='.repeat(50)));
+  console.log(chalk.green.bold('  🚀 TrackAsap Server Started!'));
+  console.log(chalk.cyan.bold('='.repeat(50)));
+  console.log(chalk.yellow(`  📡 Port: ${chalk.bold(PORT)}`));
+  console.log(chalk.yellow(`  🌍 Environment: ${chalk.bold(process.env.NODE_ENV || 'development')}`));
+  console.log(chalk.yellow(`  📝 Log Level: ${chalk.bold(process.env.LOG_LEVEL || 'info')}`));
+  console.log(chalk.cyan.bold('='.repeat(50) + '\n'));
+  logger.info(`Server running on port ${PORT}`);
 });
