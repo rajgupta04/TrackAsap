@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { Mail, Lock, User, UserPlus, Target, Calendar } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import toast from 'react-hot-toast';
+import GoogleSignInButton from '../components/auth/GoogleSignInButton';
 
 const Register = () => {
   const [name, setName] = useState('');
@@ -13,7 +14,7 @@ const Register = () => {
   const [startDate, setStartDate] = useState(
     new Date().toISOString().split('T')[0]
   );
-  const { register, isLoading } = useAuthStore();
+  const { register, loginWithGoogle, isLoading } = useAuthStore();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -31,6 +32,15 @@ const Register = () => {
     const result = await register({ name, email, password, startDate });
     if (result.success) {
       toast.success('Account created! Let\'s start your 75-day journey!');
+    } else {
+      toast.error(result.error);
+    }
+  };
+
+  const handleGoogleCredential = async (credential) => {
+    const result = await loginWithGoogle(credential);
+    if (result.success) {
+      toast.success('Signed in with Google!');
     } else {
       toast.error(result.error);
     }
@@ -157,6 +167,22 @@ const Register = () => {
                 </>
               )}
             </button>
+
+            <div className="relative py-1">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-dark-700" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-dark-900 px-2 text-dark-400">Or continue with</span>
+              </div>
+            </div>
+
+            <div className="flex justify-center">
+              <GoogleSignInButton
+                onCredential={handleGoogleCredential}
+                onError={(err) => toast.error(err?.message || 'Google sign-in failed')}
+              />
+            </div>
           </form>
 
           <p className="text-center text-dark-400 mt-6">
