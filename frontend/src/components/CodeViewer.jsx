@@ -52,20 +52,20 @@ const CodeViewer = ({ isOpen, onClose, problem }) => {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+        className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
         onClick={onClose}
       >
         <motion.div
           initial={{ scale: 0.9, opacity: 0, y: 20 }}
           animate={{ scale: 1, opacity: 1, y: 0 }}
           exit={{ scale: 0.9, opacity: 0, y: 20 }}
-          className="w-full max-w-5xl h-[85vh] overflow-hidden"
+          className="w-full h-[100dvh] sm:h-[85vh] sm:max-w-5xl overflow-hidden rounded-none sm:rounded-2xl"
           onClick={(e) => e.stopPropagation()}
         >
           <GlassCard className="h-full flex flex-col">
             {/* Header */}
-            <div className="p-4 border-b border-white/10">
-              <div className="flex items-start justify-between">
+            <div className="p-3 sm:p-4 border-b border-white/10">
+              <div className="flex items-start justify-between gap-2">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-3 mb-2">
                     <h2 className="text-xl font-bold text-white truncate">
@@ -96,7 +96,7 @@ const CodeViewer = ({ isOpen, onClose, problem }) => {
                     )}
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1 sm:gap-2 shrink-0">
                   <a
                     href={problem.link}
                     target="_blank"

@@ -151,6 +151,8 @@ export const getMe = async (req, res) => {
       codechefHandle: user.codechefHandle,
       leetcodeHandle: user.leetcodeHandle,
       targetWeight: user.targetWeight,
+      githubConnected: user.githubConnected,
+      githubUsername: user.githubUsername,
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -192,6 +194,8 @@ export const updateProfile = async (req, res) => {
       codechefHandle: user.codechefHandle,
       leetcodeHandle: user.leetcodeHandle,
       targetWeight: user.targetWeight,
+      githubConnected: user.githubConnected,
+      githubUsername: user.githubUsername,
     });
   } catch (error) {
     res.status(500).json({ message: error.message });

@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { authService } from '../services/authService';
+import githubService from '../services/githubService';
 
 export const useAuthStore = create((set, get) => ({
   user: JSON.parse(localStorage.getItem('user') || 'null'),
@@ -7,6 +8,7 @@ export const useAuthStore = create((set, get) => ({
   isAuthenticated: !!localStorage.getItem('token'),
   isLoading: false,
   error: null,
+  githubStatus: null, // { connected, username, lastSync }
 
   login: async (credentials) => {
     set({ isLoading: true, error: null });
@@ -95,4 +97,18 @@ export const useAuthStore = create((set, get) => ({
   },
 
   clearError: () => set({ error: null }),
+
+  // GitHub integration
+  fetchGitHubStatus: async () => {
+    try {
+      const status = await githubService.getStatus();
+      set({ githubStatus: status });
+      return status;
+    } catch {
+      set({ githubStatus: { connected: false, username: '', lastSync: null } });
+      return null;
+    }
+  },
+
+  setGitHubStatus: (status) => set({ githubStatus: status }),
 }));

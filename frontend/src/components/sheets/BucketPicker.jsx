@@ -132,20 +132,20 @@ const BucketPicker = ({ isOpen, onClose, onImport, sheets = [] }) => {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+      className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-stretch sm:items-center justify-center p-0 sm:p-4"
       onClick={onClose}
     >
       <motion.div
         initial={{ scale: 0.9, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         exit={{ scale: 0.9, opacity: 0 }}
-        className="w-full max-w-2xl max-h-[85vh] overflow-hidden"
+        className="w-full h-[100dvh] sm:h-auto sm:max-w-2xl sm:max-h-[85vh] overflow-hidden rounded-none sm:rounded-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <GlassCard className="p-0 overflow-hidden">
+        <GlassCard className="p-0 overflow-hidden h-full sm:h-auto flex flex-col">
           {/* Header */}
-          <div className="flex items-center justify-between p-4 border-b border-white/10">
-            <div className="flex items-center gap-3">
+          <div className="flex items-start sm:items-center justify-between p-4 border-b border-white/10 gap-3">
+            <div className="flex items-start sm:items-center gap-3 min-w-0">
               {mode !== 'list' && (
                 <button
                   onClick={handleBack}
@@ -154,7 +154,7 @@ const BucketPicker = ({ isOpen, onClose, onImport, sheets = [] }) => {
                   <ChevronRight className="w-5 h-5 rotate-180" />
                 </button>
               )}
-              <h2 className="text-xl font-bold text-white">
+              <h2 className="text-base sm:text-xl font-bold text-white break-words leading-tight">
                 {mode === 'list' && 'Problem Buckets'}
                 {mode === 'details' && selectedBucket?.name}
                 {mode === 'import' && 'Import to Sheet'}
@@ -169,7 +169,7 @@ const BucketPicker = ({ isOpen, onClose, onImport, sheets = [] }) => {
           </div>
 
           {/* Content */}
-          <div className="p-4 overflow-y-auto max-h-[calc(85vh-120px)]">
+          <div className="p-3 sm:p-4 overflow-y-auto flex-1 min-h-0">
             {loading ? (
               <div className="flex items-center justify-center py-12">
                 <Loader2 className="w-8 h-8 animate-spin text-neon-green" />
@@ -184,9 +184,9 @@ const BucketPicker = ({ isOpen, onClose, onImport, sheets = [] }) => {
                       key={bucket._id}
                       whileHover={{ scale: 1.01 }}
                       onClick={() => handleSelectBucket(bucket)}
-                      className="w-full p-4 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 rounded-xl text-left transition-all"
+                      className="w-full p-3 sm:p-4 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 rounded-xl text-left transition-all"
                     >
-                      <div className="flex items-center gap-4">
+                      <div className="flex items-start sm:items-center gap-3 sm:gap-4">
                         <div
                           className="w-12 h-12 rounded-xl flex items-center justify-center"
                           style={{ backgroundColor: `${bucket.color}20` }}
@@ -196,7 +196,7 @@ const BucketPicker = ({ isOpen, onClose, onImport, sheets = [] }) => {
                         <div className="flex-1 min-w-0">
                           <h3 className="font-semibold text-white">{bucket.name}</h3>
                           <p className="text-sm text-gray-400 truncate">{bucket.description}</p>
-                          <div className="flex items-center gap-3 mt-2">
+                          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2">
                             <span className="text-xs text-gray-500">
                               {bucket.totalProblems} problems
                             </span>
@@ -211,7 +211,7 @@ const BucketPicker = ({ isOpen, onClose, onImport, sheets = [] }) => {
                             </span>
                           </div>
                         </div>
-                        <ChevronRight className="w-5 h-5 text-gray-500" />
+                        <ChevronRight className="w-5 h-5 text-gray-500 shrink-0" />
                       </div>
                     </motion.button>
                   );
@@ -230,7 +230,7 @@ const BucketPicker = ({ isOpen, onClose, onImport, sheets = [] }) => {
                 <p className="text-gray-400">{bucketDetails.description}</p>
 
                 {/* Stats */}
-                <div className="grid grid-cols-4 gap-3">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
                   <div className="p-3 bg-white/5 rounded-lg text-center">
                     <div className="text-xl font-bold text-white">
                       {bucketDetails.totalProblems}
@@ -300,7 +300,7 @@ const BucketPicker = ({ isOpen, onClose, onImport, sheets = [] }) => {
 
                 {/* Import Options */}
                 <div className="pt-4 border-t border-white/10 space-y-4">
-                  <div className="flex gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <button
                       onClick={() => setImportMode('new')}
                       className={`flex-1 p-3 rounded-lg border transition-all ${
@@ -364,17 +364,17 @@ const BucketPicker = ({ isOpen, onClose, onImport, sheets = [] }) => {
 
           {/* Footer */}
           {mode === 'details' && (
-            <div className="p-4 border-t border-white/10 flex justify-end gap-3">
+            <div className="p-3 sm:p-4 border-t border-white/10 flex flex-col-reverse sm:flex-row sm:justify-end gap-3">
               <button
                 onClick={onClose}
-                className="px-6 py-2.5 text-gray-300 hover:text-white border border-white/10 hover:border-white/20 rounded-lg transition-all"
+                className="w-full sm:w-auto px-6 py-2.5 text-gray-300 hover:text-white border border-white/10 hover:border-white/20 rounded-lg transition-all"
               >
                 Cancel
               </button>
               <button
                 onClick={handleImport}
                 disabled={importing || (importMode === 'existing' && !selectedSheet)}
-                className="flex items-center gap-2 px-6 py-2.5 bg-neon-green text-black font-semibold rounded-lg hover:bg-neon-green/90 transition-all disabled:opacity-50"
+                className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-2.5 bg-neon-green text-black font-semibold rounded-lg hover:bg-neon-green/90 transition-all disabled:opacity-50"
               >
                 {importing ? (
                   <>

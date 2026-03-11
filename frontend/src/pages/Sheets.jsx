@@ -135,7 +135,7 @@ const Sheets = () => {
   const overallProgress = totalProblems > 0 ? Math.round((solvedProblems / totalProblems) * 100) : 0;
 
   return (
-    <div className="h-[calc(100vh-80px)] flex">
+    <div className="min-h-[calc(100dvh-120px)] lg:h-[calc(100dvh-80px)] flex flex-col lg:flex-row">
       {/* Left Sidebar - Only visible when no sheet selected */}
       <AnimatePresence>
         {!selectedSheet && (
@@ -144,7 +144,7 @@ const Sheets = () => {
             animate={{ width: 208, opacity: 1 }}
             exit={{ width: 0, opacity: 0 }}
             transition={{ duration: 0.3, ease: 'easeInOut' }}
-            className="shrink-0 border-r border-white/10 flex flex-col overflow-hidden"
+            className="hidden lg:flex shrink-0 border-r border-white/10 flex-col overflow-hidden"
           >
             <div className="p-4 w-52">
               <div className="flex items-center justify-between mb-4">
@@ -237,7 +237,7 @@ const Sheets = () => {
       </AnimatePresence>
 
       {/* Main Content Area */}
-      <div className="flex-1 overflow-y-auto flex flex-col">
+      <div className="flex-1 overflow-y-auto flex flex-col min-w-0">
         {/* Horizontal Sheet Tiles - Only when sheet is selected */}
         <AnimatePresence>
           {selectedSheet && (
@@ -330,7 +330,7 @@ const Sheets = () => {
         </AnimatePresence>
 
         {/* Sheet Content */}
-        <div className="flex-1 overflow-y-auto p-4">
+        <div className="flex-1 overflow-y-auto p-3 sm:p-4">
           {selectedSheet && currentSheet ? (
             <SheetProblemsView 
               sheet={currentSheet} 
@@ -340,21 +340,76 @@ const Sheets = () => {
               }}
             />
           ) : (
-            <div className="h-full flex items-center justify-center">
-              <GlassCard className="p-12 text-center max-w-md">
-                <div className="w-20 h-20 rounded-full bg-white/5 flex items-center justify-center mx-auto mb-4">
-                  <BookOpen className="w-10 h-10 text-gray-600" />
-                </div>
-                <h3 className="text-xl font-semibold text-gray-400">Select a sheet</h3>
-                <p className="text-gray-500 mt-2">Choose a sheet from the left sidebar or create a new one</p>
-              </GlassCard>
+            <div className="h-full space-y-4">
+              <div className="lg:hidden">
+                <GlassCard className="p-3">
+                  <div className="flex items-center justify-between mb-3">
+                    <h2 className="text-sm font-semibold text-white">Sheets</h2>
+                    <span className="text-xs text-gray-500">{sheets.length}</span>
+                  </div>
+                  <div className="flex gap-2 mb-3">
+                    <button
+                      onClick={() => setShowBucketPicker(true)}
+                      className="flex-1 flex items-center justify-center gap-1.5 px-2 py-2 text-xs bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-gray-300 transition-all"
+                    >
+                      <FolderOpen className="w-3.5 h-3.5" />
+                      Buckets
+                    </button>
+                    <button
+                      onClick={() => setShowCreateModal(true)}
+                      className="flex-1 flex items-center justify-center gap-1.5 px-2 py-2 text-xs bg-neon-green text-black font-medium rounded-lg hover:bg-neon-green/90 transition-all"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      New
+                    </button>
+                  </div>
+                  <div className="space-y-1.5 max-h-64 overflow-y-auto">
+                    {sheets.map((sheet) => {
+                      const Icon = CATEGORY_ICONS[sheet.category] || BookOpen;
+                      const progress = sheet.completionPercentage || 0;
+                      return (
+                        <button
+                          key={sheet._id}
+                          onClick={() => handleSelectSheet(sheet._id)}
+                          className="w-full text-left p-2.5 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 transition-all"
+                        >
+                          <div className="flex items-center gap-2.5">
+                            <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: `${sheet.color}15` }}>
+                              <Icon className="w-4 h-4" style={{ color: sheet.color }} />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <h3 className="text-sm font-medium text-white truncate">{sheet.name}</h3>
+                              <div className="flex items-center gap-2 mt-1">
+                                <div className="flex-1 h-1 bg-white/10 rounded-full overflow-hidden">
+                                  <div className="h-full rounded-full" style={{ width: `${progress}%`, backgroundColor: sheet.color }} />
+                                </div>
+                                <span className="text-[10px] text-gray-500">{progress}%</span>
+                              </div>
+                            </div>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </GlassCard>
+              </div>
+
+              <div className="h-[calc(100%-1rem)] flex items-center justify-center">
+                <GlassCard className="p-8 sm:p-12 text-center max-w-md mx-auto">
+                  <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-white/5 flex items-center justify-center mx-auto mb-4">
+                    <BookOpen className="w-8 h-8 sm:w-10 sm:h-10 text-gray-600" />
+                  </div>
+                  <h3 className="text-lg sm:text-xl font-semibold text-gray-400">Select a sheet</h3>
+                  <p className="text-gray-500 mt-2 text-sm sm:text-base">Choose a sheet to start solving problems</p>
+                </GlassCard>
+              </div>
             </div>
           )}
         </div>
       </div>
 
       {/* Right Sidebar - Progress & Stats */}
-      <div className="w-60 shrink-0 border-l border-white/10 p-4 overflow-y-auto space-y-3 scrollbar-thin">
+      <div className="hidden xl:block w-60 shrink-0 border-l border-white/10 p-4 overflow-y-auto space-y-3 scrollbar-thin">
         {/* Overall Progress */}
         <GlassCard className="p-3">
           <div className="flex items-center gap-2 mb-2">
@@ -454,17 +509,17 @@ const Sheets = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
             onClick={() => setShowCreateModal(false)}
           >
             <motion.div
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              className="w-full max-w-lg"
+              className="w-full h-[100dvh] sm:h-auto sm:max-w-lg rounded-none sm:rounded-2xl overflow-hidden"
               onClick={(e) => e.stopPropagation()}
             >
-              <GlassCard className="p-6">
+              <GlassCard className="p-4 sm:p-6 h-full sm:h-auto overflow-y-auto">
                 <div className="flex items-center justify-between mb-6">
                   <h2 className="text-xl font-bold text-white">Create New Sheet</h2>
                   <button
@@ -480,7 +535,7 @@ const Sheets = () => {
                   <label className="block text-sm font-medium text-gray-300 mb-3">
                     Select Category
                   </label>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {templates.map((template) => {
                       const Icon = CATEGORY_ICONS[template.category] || BookOpen;
                       const isSelected = newSheetData.category === template.category;

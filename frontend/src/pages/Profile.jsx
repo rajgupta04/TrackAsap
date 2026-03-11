@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
 import { motion } from 'framer-motion';
@@ -10,13 +10,20 @@ import {
   Code2,
   Target,
   Loader2,
+  Github,
+  RefreshCw,
+  Unlink,
+  ExternalLink,
 } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
+import githubService from '../services/githubService';
 import GlassCard from '../components/ui/GlassCard';
 import NumberInput from '../components/ui/NumberInput';
 
 const Profile = () => {
-  const { user, updateUser, isLoading } = useAuthStore();
+  const { user, updateUser, isLoading, githubStatus, fetchGitHubStatus, setGitHubStatus } = useAuthStore();
+  const [syncing, setSyncing] = useState(false);
+  const [connectingGithub, setConnectingGithub] = useState(false);
 
   const [formData, setFormData] = useState({
     name: user?.name || '',
@@ -31,6 +38,59 @@ const Profile = () => {
 
   const handleChange = (field, value) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  // GitHub integration
+  useEffect(() => {
+    fetchGitHubStatus();
+
+    // Handle OAuth redirect
+    const params = new URLSearchParams(window.location.search);
+    const githubParam = params.get('github');
+    if (githubParam === 'connected') {
+      toast.success('GitHub connected successfully!');
+      fetchGitHubStatus();
+      window.history.replaceState({}, '', '/profile');
+    } else if (githubParam === 'error') {
+      toast.error(`GitHub connection failed: ${params.get('reason') || 'Unknown error'}`);
+      window.history.replaceState({}, '', '/profile');
+    }
+  }, []);
+
+  const handleConnectGithub = async () => {
+    setConnectingGithub(true);
+    try {
+      const { url } = await githubService.getAuthUrl();
+      window.location.href = url;
+    } catch {
+      toast.error('Failed to get GitHub auth URL');
+      setConnectingGithub(false);
+    }
+  };
+
+  const handleDisconnectGithub = async () => {
+    if (!window.confirm('Disconnect GitHub? Your repo will remain, but syncing will stop.')) return;
+    try {
+      await githubService.disconnect();
+      setGitHubStatus({ connected: false, username: '', lastSync: null });
+      toast.success('GitHub disconnected');
+    } catch {
+      toast.error('Failed to disconnect GitHub');
+    }
+  };
+
+  const handleSyncGithub = async () => {
+    setSyncing(true);
+    try {
+      const result = await githubService.sync();
+      toast.success(`Synced ${result.filesCount} files to GitHub!`);
+      fetchGitHubStatus();
+    } catch (error) {
+      const msg = error.response?.data?.message || 'Sync failed';
+      toast.error(msg);
+    } finally {
+      setSyncing(false);
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -210,6 +270,81 @@ const Profile = () => {
               </div>
             </div>
           </div>
+        </GlassCard>
+
+        {/* GitHub Integration */}
+        <GlassCard className="mt-4 md:mt-6">
+          <h3 className="text-base md:text-lg font-semibold text-white mb-4 md:mb-6 flex items-center gap-2">
+            <Github className="w-5 h-5" />
+            GitHub Sync
+          </h3>
+          <p className="text-dark-400 text-xs md:text-sm mb-4">
+            Connect your GitHub account to automatically push your code solutions and notes to a repository.
+          </p>
+
+          {githubStatus?.connected ? (
+            <div className="space-y-4">
+              <div className="flex items-center gap-3 bg-green-500/10 border border-green-500/20 rounded-lg p-4">
+                <Github className="w-5 h-5 text-green-400 flex-shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-green-400 font-medium">Connected as @{githubStatus.username}</p>
+                  {githubStatus.lastSync && (
+                    <p className="text-xs text-dark-400 mt-0.5">
+                      Last synced: {format(new Date(githubStatus.lastSync), 'MMM d, yyyy h:mm a')}
+                    </p>
+                  )}
+                </div>
+                <a
+                  href={`https://github.com/${githubStatus.username}/TrackAsap`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-dark-400 hover:text-white transition-colors flex-shrink-0"
+                >
+                  <ExternalLink className="w-4 h-4" />
+                </a>
+              </div>
+
+              <div className="flex flex-wrap gap-3">
+                <motion.button
+                  type="button"
+                  onClick={handleSyncGithub}
+                  disabled={syncing}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  className="flex items-center gap-2 px-4 py-2.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg transition-all text-white disabled:opacity-50"
+                >
+                  <RefreshCw className={`w-4 h-4 ${syncing ? 'animate-spin' : ''}`} />
+                  {syncing ? 'Syncing...' : 'Sync to GitHub'}
+                </motion.button>
+                <motion.button
+                  type="button"
+                  onClick={handleDisconnectGithub}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  className="flex items-center gap-2 px-4 py-2.5 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 rounded-lg transition-all text-red-400"
+                >
+                  <Unlink className="w-4 h-4" />
+                  Disconnect
+                </motion.button>
+              </div>
+            </div>
+          ) : (
+            <motion.button
+              type="button"
+              onClick={handleConnectGithub}
+              disabled={connectingGithub}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              className="flex items-center gap-2 px-5 py-2.5 bg-[#24292e] hover:bg-[#2f363d] border border-white/10 rounded-lg transition-all text-white disabled:opacity-50"
+            >
+              {connectingGithub ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Github className="w-4 h-4" />
+              )}
+              Connect GitHub
+            </motion.button>
+          )}
         </GlassCard>
 
         {/* Submit Button */}

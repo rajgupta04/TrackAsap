@@ -103,17 +103,17 @@ const ProblemModal = ({ isOpen, onClose, platform, date, sheetId, sheetTopic, on
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
         onClick={onClose}
       >
         <motion.div
           initial={{ scale: 0.9, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           exit={{ scale: 0.9, opacity: 0 }}
-          className="w-full max-w-2xl max-h-[90vh] overflow-auto"
+          className="w-full h-[100dvh] sm:h-auto sm:max-w-2xl sm:max-h-[90vh] overflow-auto rounded-none sm:rounded-2xl"
           onClick={(e) => e.stopPropagation()}
         >
-          <GlassCard className="p-6">
+          <GlassCard className="p-4 sm:p-6 h-full sm:h-auto">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl font-bold text-white flex items-center gap-2">
                 <Code className="w-5 h-5 text-neon-green" />

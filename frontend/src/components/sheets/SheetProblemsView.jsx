@@ -29,6 +29,8 @@ import toast from 'react-hot-toast';
 import Editor from '@monaco-editor/react';
 import GlassCard from '../ui/GlassCard';
 import sheetProblemService from '../../services/sheetProblemService';
+import githubService from '../../services/githubService';
+import { useAuthStore } from '../../store/authStore';
 
 const DIFFICULTY_COLORS = {
   easy: { bg: 'bg-green-500/20', text: 'text-green-400', border: 'border-green-500/30' },
@@ -57,6 +59,7 @@ const SheetProblemsView = ({ sheet, onStatsUpdate }) => {
   const [selectedProblemForNotes, setSelectedProblemForNotes] = useState(null);
   const [showCodeModal, setShowCodeModal] = useState(false);
   const [selectedProblemForCode, setSelectedProblemForCode] = useState(null);
+  const [githubSyncing, setGithubSyncing] = useState(false);
   const fileInputRef = useRef(null);
   const expandedTopicsRef = useRef({});
   const lastSheetIdRef = useRef(null);
@@ -281,7 +284,31 @@ const SheetProblemsView = ({ sheet, onStatsUpdate }) => {
           <p className="text-gray-400 text-sm">{sheet.description}</p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center flex-wrap gap-2 sm:gap-3">
+          <button
+            onClick={async () => {
+              const { githubStatus } = useAuthStore.getState();
+              if (!githubStatus?.connected) {
+                toast.error('Connect GitHub first from Profile page');
+                return;
+              }
+              setGithubSyncing(true);
+              try {
+                const result = await githubService.sync();
+                toast.success(`Synced ${result.filesCount} files to GitHub!`);
+              } catch (error) {
+                toast.error(error.response?.data?.message || 'Sync failed');
+              } finally {
+                setGithubSyncing(false);
+              }
+            }}
+            disabled={githubSyncing}
+            className="flex items-center gap-2 px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg transition-all text-white disabled:opacity-50"
+            title="Sync to GitHub"
+          >
+            <svg className={`w-4 h-4 ${githubSyncing ? 'animate-spin' : ''}`} viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+            {githubSyncing ? <span className="hidden sm:inline">Syncing...</span> : <span className="hidden sm:inline">Sync</span>}
+          </button>
           <button
             onClick={() => setShowImportModal(true)}
             className="flex items-center gap-2 px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg transition-all text-white"
@@ -307,7 +334,7 @@ const SheetProblemsView = ({ sheet, onStatsUpdate }) => {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2 sm:gap-3">
         <GlassCard className="p-4 text-center">
           <div className="text-2xl font-bold text-white">{stats.total}</div>
           <div className="text-xs text-gray-400">Total</div>
@@ -442,8 +469,121 @@ const SheetProblemsView = ({ sheet, onStatsUpdate }) => {
                       exit={{ height: 0, opacity: 0 }}
                       transition={{ duration: 0.2 }}
                     >
-                      <div className="overflow-x-auto">
-                        <table className="w-full">
+                      <div className="md:hidden border-t border-white/10 p-2 space-y-2">
+                        {topicProblems.map((problem, idx) => {
+                          const StatusIcon = STATUS_ICONS[problem.status];
+                          const diffColors = DIFFICULTY_COLORS[problem.difficulty];
+
+                          return (
+                            <div
+                              key={problem._id}
+                              className={`p-3 rounded-lg border border-white/10 bg-white/[0.03] ${
+                                problem.status === 'solved' ? 'bg-green-500/5' : ''
+                              }`}
+                            >
+                              <div className="flex items-start gap-2.5">
+                                <button
+                                  onClick={() => handleStatusChange(problem._id, problem.status)}
+                                  className="transition-transform hover:scale-110 mt-0.5"
+                                >
+                                  <StatusIcon
+                                    className={`w-5 h-5 ${
+                                      problem.status === 'solved'
+                                        ? 'text-green-400'
+                                        : problem.status === 'revision'
+                                        ? 'text-yellow-400'
+                                        : 'text-gray-500 hover:text-neon-green'
+                                    }`}
+                                  />
+                                </button>
+
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center justify-between gap-2">
+                                    <p className="text-sm font-medium text-white leading-snug break-words">
+                                      {idx + 1}. {problem.title}
+                                    </p>
+                                    <span
+                                      className={`shrink-0 px-2 py-0.5 rounded-full text-[10px] font-medium capitalize ${diffColors.bg} ${diffColors.text}`}
+                                    >
+                                      {problem.difficulty}
+                                    </span>
+                                  </div>
+
+                                  {problem.tags.length > 0 && (
+                                    <div className="flex flex-wrap gap-1 mt-2">
+                                      {problem.tags.slice(0, 3).map((tag, i) => (
+                                        <span
+                                          key={i}
+                                          className="px-1.5 py-0.5 text-[10px] bg-white/10 rounded text-gray-400"
+                                        >
+                                          {tag}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  )}
+
+                                  <div className="flex items-center justify-between mt-2.5">
+                                    <div className="flex items-center gap-1.5">
+                                      {problem.problemLink && (
+                                        <a
+                                          href={problem.problemLink}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="p-1.5 hover:bg-white/10 rounded transition-colors"
+                                          title="Problem"
+                                        >
+                                          <Code2 className="w-4 h-4 text-blue-400" />
+                                        </a>
+                                      )}
+                                      {problem.articleLink && (
+                                        <a
+                                          href={problem.articleLink}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="p-1.5 hover:bg-white/10 rounded transition-colors"
+                                          title="Article"
+                                        >
+                                          <FileText className="w-4 h-4 text-orange-400" />
+                                        </a>
+                                      )}
+                                      {problem.youtubeLink && (
+                                        <a
+                                          href={problem.youtubeLink}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="p-1.5 hover:bg-white/10 rounded transition-colors"
+                                          title="YouTube"
+                                        >
+                                          <Youtube className="w-4 h-4 text-red-400" />
+                                        </a>
+                                      )}
+                                      <button
+                                        onClick={() => handleOpenNotes(problem)}
+                                        className={`p-1.5 hover:bg-white/10 rounded transition-colors ${problem.notes ? 'text-purple-400' : 'text-gray-500 hover:text-purple-400'}`}
+                                        title={problem.notes ? 'View notes' : 'Add notes'}
+                                      >
+                                        <StickyNote className="w-4 h-4" />
+                                      </button>
+                                      <button
+                                        onClick={() => handleOpenCode(problem)}
+                                        className={`p-1.5 hover:bg-white/10 rounded transition-colors ${problem.code ? 'text-neon-green' : 'text-gray-500 hover:text-neon-green'}`}
+                                        title={problem.code ? 'View code' : 'Add code'}
+                                      >
+                                        <Terminal className="w-4 h-4" />
+                                      </button>
+                                    </div>
+
+                                    <span className="text-xs text-gray-400">Rev: {problem.revisionCount}</span>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      <div className="hidden md:block overflow-x-auto">
+                        <table className="w-full min-w-[760px] lg:min-w-0">
                           <thead>
                             <tr className="border-t border-white/10 bg-white/5">
                               <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider w-12">
@@ -612,7 +752,7 @@ const SheetProblemsView = ({ sheet, onStatsUpdate }) => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
             onClick={() => setShowImportModal(false)}
           >
             <motion.div
@@ -740,24 +880,24 @@ const NotesModal = ({ problem, onClose, onSave }) => {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+      className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
       onClick={onClose}
     >
       <motion.div
         initial={{ scale: 0.9, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         exit={{ scale: 0.9, opacity: 0 }}
-        className="w-full max-w-lg"
+        className="w-full h-[100dvh] sm:h-auto sm:max-w-lg rounded-none sm:rounded-2xl overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
-        <GlassCard className="p-6">
+        <GlassCard className="p-4 sm:p-6 h-full sm:h-auto overflow-y-auto">
           <div className="flex items-center justify-between mb-4">
             <div>
               <h2 className="text-lg font-bold text-white flex items-center gap-2">
                 <StickyNote className="w-5 h-5 text-purple-400" />
                 Notes
               </h2>
-              <p className="text-sm text-gray-400 mt-1 truncate max-w-[300px]">{problem.title}</p>
+              <p className="text-sm text-gray-400 mt-1 truncate max-w-[220px] sm:max-w-[300px]">{problem.title}</p>
             </div>
             <button
               onClick={onClose}
@@ -860,14 +1000,14 @@ const CodeEditorModal = ({ problem, onClose, onSave }) => {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+      className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
       onClick={onClose}
     >
       <motion.div
         initial={{ scale: 0.9, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         exit={{ scale: 0.9, opacity: 0 }}
-        className="w-full max-w-5xl h-[85vh]"
+        className="w-full h-[100dvh] sm:h-[85vh] sm:max-w-5xl rounded-none sm:rounded-2xl overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         <GlassCard className="h-full flex flex-col p-0">
@@ -938,7 +1078,7 @@ const CodeEditorModal = ({ problem, onClose, onSave }) => {
           </div>
 
           {/* Footer */}
-          <div className="p-4 border-t border-white/10 flex justify-end gap-3">
+          <div className="p-4 border-t border-white/10 flex flex-col-reverse sm:flex-row justify-end gap-3">
             <button
               onClick={onClose}
               className="px-4 py-2 text-gray-300 hover:text-white border border-white/10 hover:border-white/20 rounded-lg transition-all"
@@ -1001,17 +1141,17 @@ const AddProblemModal = ({ sheetId, onClose, onSuccess }) => {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+      className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
       onClick={onClose}
     >
       <motion.div
         initial={{ scale: 0.9, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         exit={{ scale: 0.9, opacity: 0 }}
-        className="w-full max-w-lg max-h-[90vh] overflow-y-auto"
+        className="w-full h-[100dvh] sm:h-auto sm:max-w-lg sm:max-h-[90vh] overflow-y-auto rounded-none sm:rounded-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <GlassCard className="p-6">
+        <GlassCard className="p-4 sm:p-6 h-full sm:h-auto">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-xl font-bold text-white">Add Problem</h2>
             <button
@@ -1045,7 +1185,7 @@ const AddProblemModal = ({ sheetId, onClose, onSuccess }) => {
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-1.5">Difficulty</label>
                 <select
