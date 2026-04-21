@@ -195,7 +195,7 @@ export const getDifficultyBreakdown = async (req, res) => {
 export const getHeatmapData = async (req, res) => {
   try {
     const dailyLogs = await DailyLog.find({ user: req.user._id })
-      .select('date completionScore')
+      .select('date leetcode codechef codeforces gym diet')
       .sort({ date: 1 });
 
     const heatmapData = dailyLogs.map((log) => ({

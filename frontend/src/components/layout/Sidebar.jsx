@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -31,11 +31,21 @@ const navItems = [
 
 const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const { logout, user } = useAuthStore();
+  const { logout, user, githubStatus, fetchGitHubStatus } = useAuthStore();
   const location = useLocation();
 
   const toggleSidebar = () => setIsOpen(!isOpen);
   const toggleCollapse = () => setIsCollapsed(!isCollapsed);
+
+  useEffect(() => {
+    fetchGitHubStatus();
+  }, [fetchGitHubStatus]);
+
+  const avatarSrc =
+    user?.avatarUrl ||
+    (githubStatus?.connected && githubStatus?.username
+      ? `https://github.com/${githubStatus.username}.png?size=80`
+      : '');
 
   return (
     <>
@@ -139,11 +149,26 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
 
         {/* User section */}
         <div className="p-2 md:p-4 border-t border-dark-700/50">
-          <div className={`flex items-center gap-3 px-3 md:px-4 py-3 mb-2 ${isCollapsed ? 'md:justify-center' : ''}`}>
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-neon-green/20 to-cyan-500/20 flex items-center justify-center border border-dark-600/50 flex-shrink-0">
-              <span className="text-neon-green font-bold">
-                {user?.name?.charAt(0).toUpperCase() || 'U'}
-              </span>
+          <NavLink
+            to="/profile"
+            onClick={() => setIsOpen(false)}
+            title={isCollapsed ? 'Profile' : ''}
+            className={`flex items-center gap-3 px-3 md:px-4 py-3 mb-2 rounded-xl transition-all duration-300 hover:bg-dark-800/50 ${
+              isCollapsed ? 'md:justify-center' : ''
+            }`}
+          >
+            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-neon-green/20 to-cyan-500/20 flex items-center justify-center border border-dark-600/50 flex-shrink-0 overflow-hidden">
+              {avatarSrc ? (
+                <img
+                  src={avatarSrc}
+                  alt={user?.name || 'User'}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <span className="text-neon-green font-bold">
+                  {user?.name?.charAt(0).toUpperCase() || 'U'}
+                </span>
+              )}
             </div>
             {!isCollapsed && (
               <div className="flex-1 min-w-0 hidden md:block">
@@ -165,7 +190,7 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
                 <span>Day {user?.currentDay || 1}</span>
               </div>
             </div>
-          </div>
+          </NavLink>
           <button
             onClick={logout}
             title={isCollapsed ? 'Logout' : ''}

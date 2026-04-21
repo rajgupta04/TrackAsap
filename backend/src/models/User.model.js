@@ -54,6 +54,10 @@ const userSchema = new mongoose.Schema(
       default: '',
       select: false,
     },
+    githubId: {
+      type: String,
+      default: '',
+    },
     githubUsername: {
       type: String,
       default: '',

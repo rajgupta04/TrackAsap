@@ -157,8 +157,7 @@ const Analytics = () => {
                   outerRadius={100}
                   paddingAngle={5}
                   dataKey="count"
-                  label={({ difficulty, count }) => `${difficulty}: ${count}`}
-                  labelLine={false}
+                  label={false}
                 >
                   {difficultyBreakdown.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.color} />

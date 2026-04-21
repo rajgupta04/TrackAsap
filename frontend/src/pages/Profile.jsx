@@ -24,6 +24,11 @@ const Profile = () => {
   const { user, updateUser, isLoading, githubStatus, fetchGitHubStatus, setGitHubStatus } = useAuthStore();
   const [syncing, setSyncing] = useState(false);
   const [connectingGithub, setConnectingGithub] = useState(false);
+  const avatarSrc =
+    user?.avatarUrl ||
+    (githubStatus?.connected && githubStatus?.username
+      ? `https://github.com/${githubStatus.username}.png?size=120`
+      : '');
   const [creatingRepo, setCreatingRepo] = useState(false);
 
   const [formData, setFormData] = useState({
@@ -138,10 +143,18 @@ const Profile = () => {
       {/* Profile Header */}
       <GlassCard>
         <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6 p-2 md:p-0">
-          <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl bg-gradient-to-br from-neon-green/20 to-cyan-500/20 flex items-center justify-center border border-dark-600/50 flex-shrink-0">
-            <span className="text-3xl sm:text-4xl font-bold text-neon-green">
-              {user?.name?.charAt(0).toUpperCase() || 'U'}
-            </span>
+          <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl bg-gradient-to-br from-neon-green/20 to-cyan-500/20 flex items-center justify-center border border-dark-600/50 flex-shrink-0 overflow-hidden">
+            {avatarSrc ? (
+              <img
+                src={avatarSrc}
+                alt={user?.name || 'User'}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <span className="text-3xl sm:text-4xl font-bold text-neon-green">
+                {user?.name?.charAt(0).toUpperCase() || 'U'}
+              </span>
+            )}
           </div>
           <div className="text-center sm:text-left flex-1">
             <h2 className="text-xl sm:text-2xl font-bold text-white">{user?.name || 'User'}</h2>
@@ -312,7 +325,7 @@ const Profile = () => {
                   )}
                 </div>
                 <a
-                  href={`https://github.com/${githubStatus.username}/TrackAsap`}
+                  href={`https://github.com/${githubStatus.username}/TrackAsap-Activity`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-dark-400 hover:text-white transition-colors flex-shrink-0"

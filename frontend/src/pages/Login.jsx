@@ -1,15 +1,37 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Mail, Lock, LogIn, Target } from 'lucide-react';
+import { Github, Mail, Lock, LogIn, Target } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import toast from 'react-hot-toast';
 import GoogleSignInButton from '../components/auth/GoogleSignInButton';
+import { authService } from '../services/authService';
 
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const { login, loginWithGoogle, isLoading, error } = useAuthStore();
+  const { login, loginWithGoogle, loginWithGitHubToken, isLoading, error } = useAuthStore();
+
+  useEffect(() => {
+    const hash = window.location.hash.startsWith('#')
+      ? window.location.hash.slice(1)
+      : '';
+    if (!hash) return;
+
+    const params = new URLSearchParams(hash);
+    const token = params.get('token');
+    const avatarUrl = params.get('avatarUrl') || '';
+    if (token) {
+      loginWithGitHubToken(token, avatarUrl).then((result) => {
+        if (result.success) {
+          toast.success('Signed in with GitHub!');
+        } else {
+          toast.error(result.error || 'GitHub sign-in failed');
+        }
+      });
+      window.history.replaceState({}, '', '/login');
+    }
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -27,6 +49,15 @@ const Login = () => {
       toast.success('Signed in with Google!');
     } else {
       toast.error(result.error);
+    }
+  };
+
+  const handleGitHubSignIn = async () => {
+    try {
+      const { url } = await authService.getGitHubAuthUrl();
+      window.location.href = url;
+    } catch (err) {
+      toast.error(err?.message || 'Failed to start GitHub sign-in');
     }
   };
 
@@ -113,11 +144,19 @@ const Login = () => {
               </div>
             </div>
 
-            <div className="flex justify-center">
+            <div className="flex flex-col items-center gap-3">
               <GoogleSignInButton
                 onCredential={handleGoogleCredential}
                 onError={(err) => toast.error(err?.message || 'Google sign-in failed')}
               />
+              <button
+                type="button"
+                onClick={handleGitHubSignIn}
+                className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-[#24292e] hover:bg-[#2f363d] text-white border border-white/10 transition-all"
+              >
+                <Github className="w-4 h-4" />
+                Sign in with GitHub
+              </button>
             </div>
           </form>
 

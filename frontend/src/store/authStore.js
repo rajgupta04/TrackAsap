@@ -50,6 +50,29 @@ export const useAuthStore = create((set, get) => ({
     }
   },
 
+  loginWithGitHubToken: async (token, avatarUrl = '') => {
+    set({ isLoading: true, error: null });
+    try {
+      localStorage.setItem('token', token);
+      const data = await authService.getMe();
+      const user = { ...data, avatarUrl, token };
+      localStorage.setItem('user', JSON.stringify(user));
+      set({
+        user,
+        token,
+        isAuthenticated: true,
+        isLoading: false,
+      });
+      return { success: true };
+    } catch (error) {
+      const message = error.response?.data?.message || 'GitHub sign-in failed';
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      set({ error: message, isLoading: false });
+      return { success: false, error: message };
+    }
+  },
+
   register: async (userData) => {
     set({ isLoading: true, error: null });
     try {

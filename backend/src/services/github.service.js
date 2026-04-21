@@ -1,5 +1,5 @@
 const GITHUB_API = 'https://api.github.com';
-const REPO_NAME = 'TrackAsap';
+const REPO_NAME = 'TrackAsap-Activity';
 
 /**
  * Exchange OAuth code for an access token.
@@ -37,7 +37,27 @@ export async function getGitHubUser(token) {
 }
 
 /**
- * Ensure the "TrackAsap" repo exists under the user's account.
+ * Fetch authenticated GitHub user emails.
+ */
+export async function getGitHubUserEmails(token) {
+  const res = await fetch(`${GITHUB_API}/user/emails`, {
+    headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
+  });
+  if (!res.ok) throw new Error('Failed to fetch GitHub emails');
+  return res.json();
+}
+
+/**
+ * Get the best email to use for login/linking.
+ */
+export async function getGitHubPrimaryEmail(token) {
+  const emails = await getGitHubUserEmails(token);
+  const primary = emails.find((e) => e.primary && e.verified) || emails.find((e) => e.verified) || emails[0];
+  return primary?.email || '';
+}
+
+/**
+ * Ensure the "TrackAsap-Activity" repo exists under the user's account.
  * Creates it if it doesn't exist. Returns the repo object.
  */
 export async function ensureRepo(token, username) {

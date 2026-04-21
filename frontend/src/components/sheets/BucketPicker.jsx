@@ -139,10 +139,10 @@ const BucketPicker = ({ isOpen, onClose, onImport, sheets = [] }) => {
         initial={{ scale: 0.9, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         exit={{ scale: 0.9, opacity: 0 }}
-        className="w-full h-[100dvh] sm:h-auto sm:max-w-3xl lg:max-w-4xl sm:max-h-[85vh] overflow-hidden rounded-none sm:rounded-2xl"
+        className="w-full max-w-full h-[100svh] max-h-[100svh] sm:h-[85vh] sm:max-h-[85vh] sm:max-w-3xl lg:max-w-4xl overflow-hidden rounded-none sm:rounded-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <GlassCard className="p-0 overflow-hidden h-full sm:h-auto flex flex-col">
+        <GlassCard className="p-0 overflow-hidden h-full flex flex-col">
           {/* Header */}
           <div className="flex items-start sm:items-center justify-between p-4 border-b border-white/10 gap-3">
             <div className="flex items-start sm:items-center gap-3 min-w-0">
@@ -169,7 +169,7 @@ const BucketPicker = ({ isOpen, onClose, onImport, sheets = [] }) => {
           </div>
 
           {/* Content */}
-          <div className="p-3 sm:p-4 overflow-y-auto flex-1 min-h-0">
+          <div className="p-3 sm:p-4 overflow-y-auto overflow-x-hidden overscroll-contain flex-1 min-h-0 pb-4 sm:pb-4">
             {loading ? (
               <div className="flex items-center justify-center py-12">
                 <Loader2 className="w-8 h-8 animate-spin text-neon-green" />
@@ -184,7 +184,7 @@ const BucketPicker = ({ isOpen, onClose, onImport, sheets = [] }) => {
                       key={bucket._id}
                       whileHover={{ scale: 1.01 }}
                       onClick={() => handleSelectBucket(bucket)}
-                      className="w-full p-3 sm:p-4 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 rounded-xl text-left transition-all"
+                      className="w-full p-3 sm:p-4 min-h-[104px] bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 rounded-xl text-left transition-all"
                     >
                       <div className="flex items-start sm:items-center gap-3 sm:gap-4">
                         <div
@@ -195,7 +195,9 @@ const BucketPicker = ({ isOpen, onClose, onImport, sheets = [] }) => {
                         </div>
                         <div className="flex-1 min-w-0">
                           <h3 className="font-semibold text-white">{bucket.name}</h3>
-                          <p className="text-sm text-gray-400 truncate">{bucket.description}</p>
+                          <p className="text-sm text-gray-400 whitespace-normal break-words">
+                            {bucket.description}
+                          </p>
                           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2">
                             <span className="text-xs text-gray-500">
                               {bucket.totalProblems} problems

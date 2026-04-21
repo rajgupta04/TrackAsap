@@ -118,7 +118,7 @@ export const initRepo = async (req, res) => {
 
     res.json({
       success: true,
-      repoUrl: repo.html_url || `https://github.com/${user.githubUsername}/TrackAsap`,
+      repoUrl: repo.html_url || `https://github.com/${user.githubUsername}/TrackAsap-Activity`,
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -205,7 +205,7 @@ export const syncToGitHub = async (req, res) => {
       success: true,
       filesCount: result.filesCount,
       commitSha: result.commitSha,
-      repoUrl: `https://github.com/${user.githubUsername}/TrackAsap`,
+      repoUrl: `https://github.com/${user.githubUsername}/TrackAsap-Activity`,
     });
   } catch (error) {
     console.error('GitHub sync error:', error.message);
