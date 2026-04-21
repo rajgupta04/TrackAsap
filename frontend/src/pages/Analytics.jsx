@@ -124,7 +124,16 @@ const Analytics = () => {
                   type="category"
                   stroke="#64748b"
                   tick={{ fill: '#94a3b8' }}
-                  width={80}
+                  width={100}
+                  tickFormatter={(value) => {
+                    const normalized = String(value || '').toLowerCase();
+                    if (normalized === 'codeforces' || normalized === 'codeforces ') {
+                      return 'Codeforces';
+                    }
+                    if (normalized === 'codechef') return 'CodeChef';
+                    if (normalized === 'leetcode') return 'LeetCode';
+                    return value;
+                  }}
                 />
                 <Tooltip content={<CustomTooltip />} />
                 <Bar dataKey="problems" radius={[0, 8, 8, 0]}>

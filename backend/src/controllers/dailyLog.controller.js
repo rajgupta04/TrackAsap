@@ -1,5 +1,6 @@
 import DailyLog from '../models/DailyLog.model.js';
 import User from '../models/User.model.js';
+import Problem from '../models/Problem.model.js';
 
 // Helper: Calculate day number from start date
 const calculateDayNumber = (startDate, targetDate) => {
@@ -141,11 +142,49 @@ export const getAllDailyLogs = async (req, res) => {
 // @access  Private
 export const getStreak = async (req, res) => {
   try {
-    // Get all logs - need full document for virtual completionScore to work
-    const logs = await DailyLog.find({ user: req.user._id })
-      .sort({ date: -1 });
+    const toDateKey = (value) => {
+      const d = new Date(value);
+      d.setHours(0, 0, 0, 0);
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${y}-${m}-${day}`;
+    };
 
-    if (logs.length === 0) {
+    const isLogActive = (log) => {
+      if (!log) return false;
+      if (log.leetcode?.problemsSolved > 0 || log.leetcode?.contestParticipated) return true;
+      if (log.codechef?.dailyProblem || log.codechef?.contestParticipated || log.codechef?.problemsSolved > 0) return true;
+      if (log.codeforces?.problemsSolved > 0 || log.codeforces?.contestParticipated) return true;
+      if (log.gym?.completed) return true;
+      if (log.diet?.cleanDiet) return true;
+      if ((log.diet?.notes || '').trim()) return true;
+      if (log.internshipPrep?.completed || (log.internshipPrep?.hoursSpent || 0) > 0) return true;
+      if ((log.notes || '').trim()) return true;
+      return false;
+    };
+
+    const [logs, problems] = await Promise.all([
+      DailyLog.find({ user: req.user._id }).sort({ date: -1 }),
+      Problem.find({ user: req.user._id }).select('solvedAt code notes').sort({ solvedAt: -1 }),
+    ]);
+
+    const activeDates = new Set();
+
+    logs.forEach((log) => {
+      if (isLogActive(log)) {
+        activeDates.add(toDateKey(log.date));
+      }
+    });
+
+    problems.forEach((problem) => {
+      const hasContent = (problem.code && problem.code.trim()) || (problem.notes && problem.notes.trim());
+      if (hasContent) {
+        activeDates.add(toDateKey(problem.solvedAt));
+      }
+    });
+
+    if (activeDates.size === 0) {
       return res.json({
         currentStreak: 0,
         longestStreak: 0,
@@ -153,80 +192,57 @@ export const getStreak = async (req, res) => {
       });
     }
 
-    // Calculate current streak (consecutive days with completionScore >= 60%)
-    let currentStreak = 0;
+    const sortedActive = Array.from(activeDates).sort();
     let longestStreak = 0;
     let tempStreak = 0;
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    // Sort logs by date ascending for streak calculation
-    const sortedLogs = [...logs].sort((a, b) => new Date(a.date) - new Date(b.date));
-
-    // Calculate longest streak - check for consecutive days
     let prevDate = null;
-    for (let i = 0; i < sortedLogs.length; i++) {
-      const log = sortedLogs[i];
-      const logDate = new Date(log.date);
-      logDate.setHours(0, 0, 0, 0);
-      
-      const isActive = log.completionScore >= 60;
 
-      if (isActive) {
-        // Check if this is consecutive to previous active day
-        if (prevDate) {
-          const dayDiff = (logDate - prevDate) / (1000 * 60 * 60 * 24);
-          if (dayDiff === 1) {
-            tempStreak++;
-          } else {
-            tempStreak = 1; // Reset streak but count this day
-          }
+    sortedActive.forEach((dateKey) => {
+      const currentDate = new Date(`${dateKey}T00:00:00`);
+      if (prevDate) {
+        const dayDiff = (currentDate - prevDate) / (1000 * 60 * 60 * 24);
+        if (dayDiff === 1) {
+          tempStreak += 1;
         } else {
           tempStreak = 1;
         }
-        longestStreak = Math.max(longestStreak, tempStreak);
-        prevDate = logDate;
       } else {
-        tempStreak = 0;
-        prevDate = null;
+        tempStreak = 1;
       }
+      longestStreak = Math.max(longestStreak, tempStreak);
+      prevDate = currentDate;
+    });
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayKey = toDateKey(today);
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayKey = toDateKey(yesterday);
+
+    let currentStreak = 0;
+    let checkDate = null;
+
+    if (activeDates.has(todayKey)) {
+      checkDate = today;
+    } else if (activeDates.has(yesterdayKey)) {
+      checkDate = yesterday;
     }
 
-    // Calculate current streak (from today backwards)
-    const reversedLogs = [...sortedLogs].reverse();
-    let checkDate = new Date(today);
-    
-    for (let i = 0; i < reversedLogs.length; i++) {
-      const log = reversedLogs[i];
-      const logDate = new Date(log.date);
-      logDate.setHours(0, 0, 0, 0);
-
-      // Calculate difference in days
-      const diffDays = Math.round((checkDate - logDate) / (1000 * 60 * 60 * 24));
-
-      // Allow for today or yesterday (in case user hasn't logged today yet)
-      if (i === 0 && diffDays > 1) {
-        // First log is more than 1 day old, no current streak
-        break;
-      }
-
-      if (diffDays === 0 || diffDays === 1) {
-        if (log.completionScore >= 60) {
-          currentStreak++;
-          checkDate = new Date(logDate);
-          checkDate.setDate(checkDate.getDate() - 1);
-        } else {
-          break;
-        }
-      } else {
-        break;
-      }
+    while (checkDate) {
+      const key = toDateKey(checkDate);
+      if (!activeDates.has(key)) break;
+      currentStreak += 1;
+      checkDate = new Date(checkDate);
+      checkDate.setDate(checkDate.getDate() - 1);
     }
+
+    const lastActiveDate = sortedActive[sortedActive.length - 1] || null;
 
     res.json({
       currentStreak,
       longestStreak,
-      lastActiveDate: logs[0]?.date || null,
+      lastActiveDate,
     });
   } catch (error) {
     console.error('Streak calculation error:', error);

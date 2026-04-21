@@ -6,8 +6,6 @@ import {
   register,
   login,
   googleLogin,
-  githubAuthUrl,
-  githubCallback,
   getMe,
   updateProfile,
 } from '../controllers/auth.controller.js';
@@ -36,8 +34,6 @@ const googleValidation = [
 router.post('/register', registerValidation, validate, register);
 router.post('/login', loginValidation, validate, login);
 router.post('/google', googleValidation, validate, googleLogin);
-router.get('/github/auth-url', githubAuthUrl);
-router.get('/github/callback', githubCallback);
 router.get('/me', protect, getMe);
 router.put('/profile', protect, updateProfile);
 

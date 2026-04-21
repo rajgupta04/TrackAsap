@@ -56,6 +56,7 @@ const DailyTracker = () => {
     saveLog,
     updateCurrentLog,
     deleteLog,
+    fetchStreak,
     isLoading,
     isSaving,
   } = useDailyLogStore();
@@ -94,17 +95,29 @@ const DailyTracker = () => {
     handleDateChange(next);
   };
 
+  const isActiveToday = () => {
+    if (!currentLog) return false;
+    if (currentLog.leetcode?.problemsSolved > 0 || currentLog.leetcode?.contestParticipated) return true;
+    if (currentLog.codechef?.dailyProblem || currentLog.codechef?.contestParticipated || currentLog.codechef?.problemsSolved > 0) return true;
+    if (currentLog.codeforces?.problemsSolved > 0 || currentLog.codeforces?.contestParticipated) return true;
+    if (currentLog.gym?.completed) return true;
+    if (currentLog.diet?.cleanDiet) return true;
+    if ((currentLog.diet?.notes || '').trim()) return true;
+    if (currentLog.internshipPrep?.completed || (currentLog.internshipPrep?.hoursSpent || 0) > 0) return true;
+    if ((currentLog.notes || '').trim()) return true;
+    if (todayProblems.length > 0) return true;
+    return false;
+  };
+
   const handleSave = async () => {
     if (!currentLog) return;
 
     const result = await saveLog(currentLog);
     if (result.success) {
       toast.success('Daily log saved!');
-      
-      // Check if day is complete (60%+ score) and show streak animation
-      const score = calculateCompletionScore();
-      if (score >= 60 && result.data?.streak) {
-        setCurrentStreak(result.data.streak);
+
+      if (isActiveToday() && result.streak > 0 && result.streak !== currentStreak) {
+        setCurrentStreak(result.streak);
         setShowStreakAnimation(true);
       }
     } else {
@@ -117,13 +130,19 @@ const DailyTracker = () => {
     setShowProblemModal(true);
   };
 
-  const handleProblemAdded = () => {
+  const handleProblemAdded = async () => {
     loadTodayProblems(selectedDate);
     // Update the problems count
     if (selectedPlatform && currentLog) {
       const platformKey = selectedPlatform;
       const currentSolved = currentLog[platformKey]?.problemsSolved || 0;
       updateCurrentLog(`${platformKey}.problemsSolved`, currentSolved + 1);
+    }
+
+    const streakData = await fetchStreak();
+    if (streakData?.currentStreak > 0 && streakData.currentStreak !== currentStreak) {
+      setCurrentStreak(streakData.currentStreak);
+      setShowStreakAnimation(true);
     }
   };
 

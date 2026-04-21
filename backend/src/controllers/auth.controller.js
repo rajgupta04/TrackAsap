@@ -1,10 +1,8 @@
 import User from '../models/User.model.js';
 import { generateToken } from '../middleware/auth.middleware.js';
 import { OAuth2Client } from 'google-auth-library';
-import { exchangeCodeForToken, getGitHubUser, getGitHubPrimaryEmail } from '../services/github.service.js';
 
 const getGoogleClientId = () => process.env.GOOGLE_CLIENT_ID || process.env.GOOGLE_OAUTH_CLIENT_ID;
-const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
 
 // @desc    Register new user
 // @route   POST /api/auth/register
@@ -139,83 +137,6 @@ export const googleLogin = async (req, res) => {
   }
 };
 
-// @desc    Get GitHub OAuth URL for login
-// @route   GET /api/auth/github/auth-url
-// @access  Public
-export const githubAuthUrl = (req, res) => {
-  const clientId = process.env.GITHUB_CLIENT_ID;
-  if (!clientId) {
-    return res.status(500).json({ message: 'GitHub OAuth is not configured on server' });
-  }
-
-  const backendBase = (process.env.BACKEND_URL || `http://localhost:${process.env.PORT || 5000}`)
-    .replace(/\/+$/, '');
-  const redirectUri =
-    process.env.GITHUB_AUTH_REDIRECT_URI || `${backendBase}/api/auth/github/callback`;
-
-  const params = new URLSearchParams({
-    client_id: clientId,
-    redirect_uri: redirectUri,
-    scope: 'read:user user:email repo',
-  });
-
-  res.json({
-    url: `https://github.com/login/oauth/authorize?${params.toString()}`,
-  });
-};
-
-// @desc    Handle GitHub OAuth callback for login
-// @route   GET /api/auth/github/callback
-// @access  Public
-export const githubCallback = async (req, res) => {
-  try {
-    const { code } = req.query;
-    if (!code) {
-      return res.redirect(`${FRONTEND_URL}/login?github=error&reason=missing_code`);
-    }
-
-    const accessToken = await exchangeCodeForToken(code);
-    const ghUser = await getGitHubUser(accessToken);
-    const email = await getGitHubPrimaryEmail(accessToken);
-
-    if (!email) {
-      return res.redirect(`${FRONTEND_URL}/login?github=error&reason=missing_email`);
-    }
-
-    let user = await User.findOne({ githubId: String(ghUser.id) });
-    if (!user) {
-      user = await User.findOne({ email });
-    }
-
-    if (!user) {
-      const randomPassword = `${Date.now()}_${Math.random().toString(36).slice(2)}`;
-      user = await User.create({
-        name: ghUser.name || ghUser.login || email.split('@')[0],
-        email,
-        password: randomPassword,
-        startDate: new Date(),
-        githubId: String(ghUser.id),
-        githubUsername: ghUser.login || '',
-        githubConnected: true,
-        githubAccessToken: accessToken,
-      });
-    } else {
-      user.githubId = user.githubId || String(ghUser.id);
-      user.githubUsername = ghUser.login || user.githubUsername;
-      user.githubConnected = true;
-      user.githubAccessToken = accessToken;
-      await user.save();
-    }
-
-    const token = generateToken(user._id);
-    const avatarUrl = ghUser.avatar_url || '';
-    const redirectUrl = `${FRONTEND_URL}/login#token=${encodeURIComponent(token)}&avatarUrl=${encodeURIComponent(avatarUrl)}`;
-    return res.redirect(redirectUrl);
-  } catch (error) {
-    console.error('GitHub auth error:', error.message);
-    return res.redirect(`${FRONTEND_URL}/login?github=error&reason=auth_failed`);
-  }
-};
 
 // @desc    Get current user profile
 // @route   GET /api/auth/me
