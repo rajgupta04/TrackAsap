@@ -24,6 +24,7 @@ const Profile = () => {
   const { user, updateUser, isLoading, githubStatus, fetchGitHubStatus, setGitHubStatus } = useAuthStore();
   const [syncing, setSyncing] = useState(false);
   const [connectingGithub, setConnectingGithub] = useState(false);
+  const [creatingRepo, setCreatingRepo] = useState(false);
 
   const [formData, setFormData] = useState({
     name: user?.name || '',
@@ -90,6 +91,22 @@ const Profile = () => {
       toast.error(msg);
     } finally {
       setSyncing(false);
+    }
+  };
+
+  const handleInitRepo = async () => {
+    setCreatingRepo(true);
+    try {
+      const result = await githubService.initRepo();
+      toast.success('Repository is ready on GitHub!');
+      if (result.repoUrl) {
+        window.open(result.repoUrl, '_blank', 'noopener,noreferrer');
+      }
+    } catch (error) {
+      const msg = error.response?.data?.message || 'Failed to create repo';
+      toast.error(msg);
+    } finally {
+      setCreatingRepo(false);
     }
   };
 
@@ -305,6 +322,17 @@ const Profile = () => {
               </div>
 
               <div className="flex flex-wrap gap-3">
+                <motion.button
+                  type="button"
+                  onClick={handleInitRepo}
+                  disabled={creatingRepo}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  className="flex items-center gap-2 px-4 py-2.5 bg-neon-green/10 hover:bg-neon-green/20 border border-neon-green/20 rounded-lg transition-all text-neon-green disabled:opacity-50"
+                >
+                  <Github className={`w-4 h-4 ${creatingRepo ? 'animate-pulse' : ''}`} />
+                  {creatingRepo ? 'Creating Repo...' : 'Create Repo'}
+                </motion.button>
                 <motion.button
                   type="button"
                   onClick={handleSyncGithub}

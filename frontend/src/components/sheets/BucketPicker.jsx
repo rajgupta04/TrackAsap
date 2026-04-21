@@ -139,7 +139,7 @@ const BucketPicker = ({ isOpen, onClose, onImport, sheets = [] }) => {
         initial={{ scale: 0.9, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         exit={{ scale: 0.9, opacity: 0 }}
-        className="w-full h-[100dvh] sm:h-auto sm:max-w-2xl sm:max-h-[85vh] overflow-hidden rounded-none sm:rounded-2xl"
+        className="w-full h-[100dvh] sm:h-auto sm:max-w-3xl lg:max-w-4xl sm:max-h-[85vh] overflow-hidden rounded-none sm:rounded-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         <GlassCard className="p-0 overflow-hidden h-full sm:h-auto flex flex-col">
@@ -278,7 +278,7 @@ const BucketPicker = ({ isOpen, onClose, onImport, sheets = [] }) => {
                     Preview ({Math.min(8, bucketDetails.problems?.length || 0)} of{' '}
                     {bucketDetails.problems?.length || 0})
                   </h4>
-                  <div className="space-y-2 max-h-48 overflow-y-auto">
+                  <div className="space-y-2">
                     {bucketDetails.problems?.slice(0, 8).map((problem, idx) => (
                       <div
                         key={idx}

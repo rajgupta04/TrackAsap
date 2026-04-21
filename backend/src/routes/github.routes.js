@@ -5,6 +5,7 @@ import {
   handleCallback,
   getStatus,
   disconnect,
+  initRepo,
   syncToGitHub,
 } from '../controllers/github.controller.js';
 
@@ -17,6 +18,7 @@ router.get('/callback', handleCallback); // public — GitHub redirects here
 // Status & management
 router.get('/status', protect, getStatus);
 router.delete('/disconnect', protect, disconnect);
+router.post('/init-repo', protect, initRepo);
 
 // Sync
 router.post('/sync', protect, syncToGitHub);

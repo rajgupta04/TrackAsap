@@ -20,6 +20,11 @@ const githubService = {
     const response = await api.delete('/github/disconnect');
     return response.data;
   },
+
+  initRepo: async () => {
+    const response = await api.post('/github/init-repo');
+    return response.data;
+  },
 };
 
 export default githubService;

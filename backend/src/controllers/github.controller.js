@@ -22,7 +22,10 @@ export const getAuthUrl = (req, res) => {
     return res.status(500).json({ message: 'GitHub OAuth is not configured' });
   }
 
-  const redirectUri = `${process.env.BACKEND_URL || `http://localhost:${process.env.PORT || 5000}`}/api/github/callback`;
+  const backendBase = (process.env.BACKEND_URL || `http://localhost:${process.env.PORT || 5000}`)
+    .replace(/\/+$/, '');
+  const redirectUri =
+    process.env.GITHUB_REDIRECT_URI || `${backendBase}/api/github/callback`;
 
   const params = new URLSearchParams({
     client_id: clientId,
@@ -95,6 +98,28 @@ export const disconnect = async (req, res) => {
       lastGithubSync: null,
     });
     res.json({ message: 'GitHub disconnected' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Create/ensure GitHub repo exists
+// @route   POST /api/github/init-repo
+// @access  Private
+export const initRepo = async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id).select('+githubAccessToken');
+
+    if (!user.githubConnected || !user.githubAccessToken) {
+      return res.status(400).json({ message: 'GitHub not connected. Please connect your account first.' });
+    }
+
+    const repo = await ensureRepo(user.githubAccessToken, user.githubUsername);
+
+    res.json({
+      success: true,
+      repoUrl: repo.html_url || `https://github.com/${user.githubUsername}/TrackAsap`,
+    });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
