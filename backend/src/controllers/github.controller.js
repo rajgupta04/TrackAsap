@@ -10,13 +10,63 @@ import {
   buildFileTree,
   pushFiles,
 } from '../services/github.service.js';
+import {
+  decryptText,
+  encryptText,
+  isTokenEncryptionConfigured,
+} from '../utils/crypto.js';
 
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
 const SYNC_COOLDOWN_MS = 5 * 60 * 1000; // 5 minutes
 const OAUTH_STATE_TTL_MS = 10 * 60 * 1000; // 10 minutes
+const GITHUB_USERNAME_REGEX = /^([A-Za-z\d](?:[A-Za-z\d-]{0,37}[A-Za-z\d])?)$/;
 
 const hashState = (value) =>
   crypto.createHash('sha256').update(value).digest('hex');
+
+const redirectWithReason = (res, reason) => {
+  const allowed = new Set([
+    'missing_params',
+    'invalid_state',
+    'invalid_github_user',
+    'callback_failed',
+  ]);
+  const safeReason = allowed.has(reason) ? reason : 'callback_failed';
+  return res.redirect(`${FRONTEND_URL}/profile?github=error&reason=${safeReason}`);
+};
+
+const getUserGitHubToken = (user) => {
+  if (
+    user.githubAccessTokenEnc &&
+    user.githubAccessTokenIv &&
+    user.githubAccessTokenTag
+  ) {
+    return decryptText({
+      encrypted: user.githubAccessTokenEnc,
+      iv: user.githubAccessTokenIv,
+      tag: user.githubAccessTokenTag,
+    });
+  }
+
+  return user.githubAccessToken || '';
+};
+
+const buildTokenUpdate = (token) => {
+  if (isTokenEncryptionConfigured()) {
+    const { encrypted, iv, tag } = encryptText(token);
+    return {
+      githubAccessTokenEnc: encrypted,
+      githubAccessTokenIv: iv,
+      githubAccessTokenTag: tag,
+      githubAccessToken: '',
+    };
+  }
+
+  // Backward-compatible fallback for environments that have not set encryption key yet.
+  return {
+    githubAccessToken: token,
+  };
+};
 
 // @desc    Get GitHub OAuth authorization URL
 // @route   GET /api/github/auth-url
@@ -65,7 +115,7 @@ export const handleCallback = async (req, res) => {
     const { code, state } = req.query;
 
     if (!code || !state) {
-      return res.redirect(`${FRONTEND_URL}/profile?github=error&reason=missing_params`);
+      return redirectWithReason(res, 'missing_params');
     }
 
     const stateHash = hashState(String(state));
@@ -76,15 +126,24 @@ export const handleCallback = async (req, res) => {
     }).select('+githubAccessToken +githubOAuthState +githubOAuthStateExpiresAt');
 
     if (!user) {
-      return res.redirect(`${FRONTEND_URL}/profile?github=error&reason=invalid_state`);
+      return redirectWithReason(res, 'invalid_state');
     }
 
     const accessToken = await exchangeCodeForToken(code);
     const ghUser = await getGitHubUser(accessToken);
+    const githubUsername = String(ghUser?.login || '').trim();
+
+    if (!GITHUB_USERNAME_REGEX.test(githubUsername)) {
+      await User.findByIdAndUpdate(user._id, {
+        githubOAuthState: '',
+        githubOAuthStateExpiresAt: null,
+      });
+      return redirectWithReason(res, 'invalid_github_user');
+    }
 
     await User.findByIdAndUpdate(user._id, {
-      githubAccessToken: accessToken,
-      githubUsername: ghUser.login,
+      ...buildTokenUpdate(accessToken),
+      githubUsername,
       githubConnected: true,
       githubOAuthState: '',
       githubOAuthStateExpiresAt: null,
@@ -93,7 +152,7 @@ export const handleCallback = async (req, res) => {
     res.redirect(`${FRONTEND_URL}/profile?github=connected`);
   } catch (error) {
     console.error('GitHub callback error:', error.message);
-    res.redirect(`${FRONTEND_URL}/profile?github=error&reason=callback_failed`);
+    redirectWithReason(res, 'callback_failed');
   }
 };
 
@@ -120,6 +179,9 @@ export const disconnect = async (req, res) => {
   try {
     await User.findByIdAndUpdate(req.user._id, {
       githubAccessToken: '',
+      githubAccessTokenEnc: '',
+      githubAccessTokenIv: '',
+      githubAccessTokenTag: '',
       githubUsername: '',
       githubConnected: false,
       lastGithubSync: null,
@@ -135,13 +197,17 @@ export const disconnect = async (req, res) => {
 // @access  Private
 export const initRepo = async (req, res) => {
   try {
-    const user = await User.findById(req.user._id).select('+githubAccessToken');
+    const user = await User.findById(req.user._id).select(
+      '+githubAccessToken +githubAccessTokenEnc +githubAccessTokenIv +githubAccessTokenTag'
+    );
 
-    if (!user.githubConnected || !user.githubAccessToken) {
+    const githubToken = getUserGitHubToken(user);
+
+    if (!user.githubConnected || !githubToken) {
       return res.status(400).json({ message: 'GitHub not connected. Please connect your account first.' });
     }
 
-    const repo = await ensureRepo(user.githubAccessToken, user.githubUsername);
+    const repo = await ensureRepo(githubToken, user.githubUsername);
 
     res.json({
       success: true,
@@ -158,9 +224,13 @@ export const initRepo = async (req, res) => {
 export const syncToGitHub = async (req, res) => {
   try {
     // Fetch user with access token
-    const user = await User.findById(req.user._id).select('+githubAccessToken');
+    const user = await User.findById(req.user._id).select(
+      '+githubAccessToken +githubAccessTokenEnc +githubAccessTokenIv +githubAccessTokenTag'
+    );
 
-    if (!user.githubConnected || !user.githubAccessToken) {
+    const githubToken = getUserGitHubToken(user);
+
+    if (!user.githubConnected || !githubToken) {
       return res.status(400).json({ message: 'GitHub not connected. Please connect your account first.' });
     }
 
@@ -176,7 +246,7 @@ export const syncToGitHub = async (req, res) => {
     }
 
     // Ensure repo exists
-    await ensureRepo(user.githubAccessToken, user.githubUsername);
+    await ensureRepo(githubToken, user.githubUsername);
 
     // Fetch all sheet problems with sheet names
     const sheets = await Sheet.find({ user: user._id }).select('_id name');
@@ -218,7 +288,7 @@ export const syncToGitHub = async (req, res) => {
 
     // Push to GitHub in a single commit
     const result = await pushFiles(
-      user.githubAccessToken,
+      githubToken,
       user.githubUsername,
       files,
       `sync: ${files.length - 1} files from TrackAsap — ${new Date().toISOString().split('T')[0]}`
@@ -241,6 +311,9 @@ export const syncToGitHub = async (req, res) => {
     if (error.message?.includes('401') || error.message?.includes('Bad credentials')) {
       await User.findByIdAndUpdate(req.user._id, {
         githubAccessToken: '',
+        githubAccessTokenEnc: '',
+        githubAccessTokenIv: '',
+        githubAccessTokenTag: '',
         githubUsername: '',
         githubConnected: false,
       });

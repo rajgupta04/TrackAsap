@@ -54,6 +54,21 @@ const userSchema = new mongoose.Schema(
       default: '',
       select: false,
     },
+    githubAccessTokenEnc: {
+      type: String,
+      default: '',
+      select: false,
+    },
+    githubAccessTokenIv: {
+      type: String,
+      default: '',
+      select: false,
+    },
+    githubAccessTokenTag: {
+      type: String,
+      default: '',
+      select: false,
+    },
     githubId: {
       type: String,
       default: '',
@@ -70,7 +85,7 @@ const userSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
-        githubOAuthState: {
+    githubOAuthState: {
       type: String,
       default: '',
       select: false,
