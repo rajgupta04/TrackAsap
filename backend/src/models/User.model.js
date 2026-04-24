@@ -70,6 +70,16 @@ const userSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+        githubOAuthState: {
+      type: String,
+      default: '',
+      select: false,
+    },
+    githubOAuthStateExpiresAt: {
+      type: Date,
+      default: null,
+      select: false,
+    },
   },
   {
     timestamps: true,

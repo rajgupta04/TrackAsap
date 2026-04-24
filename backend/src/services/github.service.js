@@ -182,7 +182,7 @@ export function buildFileTree(sheetProblems, standaloneProblems, username) {
   const readme = [
     `# TrackAsap — ${username}'s Solutions`,
     '',
-    `> Auto-synced from [TrackAsap](https://trackasap.vercel.app)`,
+    `> Auto-synced from [TrackAsap](https://track-asap.vercel.app)`,
     '',
     `| Metric | Count |`,
     `| ------ | ----- |`,

@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import User from '../models/User.model.js';
 import SheetProblem from '../models/SheetProblem.model.js';
 import Sheet from '../models/Sheet.model.js';
@@ -12,31 +13,48 @@ import {
 
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
 const SYNC_COOLDOWN_MS = 5 * 60 * 1000; // 5 minutes
+const OAUTH_STATE_TTL_MS = 10 * 60 * 1000; // 10 minutes
+
+const hashState = (value) =>
+  crypto.createHash('sha256').update(value).digest('hex');
 
 // @desc    Get GitHub OAuth authorization URL
 // @route   GET /api/github/auth-url
 // @access  Private
-export const getAuthUrl = (req, res) => {
-  const clientId = process.env.GITHUB_CLIENT_ID;
-  if (!clientId) {
-    return res.status(500).json({ message: 'GitHub OAuth is not configured' });
+export const getAuthUrl = async (req, res) => {
+  try {
+    const clientId = process.env.GITHUB_CLIENT_ID;
+    if (!clientId) {
+      return res.status(500).json({ message: 'GitHub OAuth is not configured' });
+    }
+
+    const backendBase = (process.env.BACKEND_URL || `http://localhost:${process.env.PORT || 5000}`)
+      .replace(/\/+$/, '');
+    const redirectUri =
+      process.env.GITHUB_REDIRECT_URI || `${backendBase}/api/github/callback`;
+
+    const rawState = crypto.randomBytes(32).toString('hex');
+    const stateHash = hashState(rawState);
+    const expiresAt = new Date(Date.now() + OAUTH_STATE_TTL_MS);
+
+    await User.findByIdAndUpdate(req.user._id, {
+      githubOAuthState: stateHash,
+      githubOAuthStateExpiresAt: expiresAt,
+    });
+
+    const params = new URLSearchParams({
+      client_id: clientId,
+      redirect_uri: redirectUri,
+      scope: 'repo',
+      state: rawState,
+    });
+
+    res.json({
+      url: `https://github.com/login/oauth/authorize?${params.toString()}`,
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to start GitHub OAuth flow' });
   }
-
-  const backendBase = (process.env.BACKEND_URL || `http://localhost:${process.env.PORT || 5000}`)
-    .replace(/\/+$/, '');
-  const redirectUri =
-    process.env.GITHUB_REDIRECT_URI || `${backendBase}/api/github/callback`;
-
-  const params = new URLSearchParams({
-    client_id: clientId,
-    redirect_uri: redirectUri,
-    scope: 'repo',
-    state: req.user._id.toString(), // we'll verify this in callback
-  });
-
-  res.json({
-    url: `https://github.com/login/oauth/authorize?${params.toString()}`,
-  });
 };
 
 // @desc    Handle GitHub OAuth callback
@@ -44,29 +62,38 @@ export const getAuthUrl = (req, res) => {
 // @access  Public (redirected from GitHub)
 export const handleCallback = async (req, res) => {
   try {
-    const { code, state: userId } = req.query;
+    const { code, state } = req.query;
 
-    if (!code || !userId) {
+    if (!code || !state) {
       return res.redirect(`${FRONTEND_URL}/profile?github=error&reason=missing_params`);
     }
 
-    // Exchange code for token
-    const accessToken = await exchangeCodeForToken(code);
+    const stateHash = hashState(String(state));
 
-    // Get GitHub username
+    const user = await User.findOne({
+      githubOAuthState: stateHash,
+      githubOAuthStateExpiresAt: { $gt: new Date() },
+    }).select('+githubAccessToken +githubOAuthState +githubOAuthStateExpiresAt');
+
+    if (!user) {
+      return res.redirect(`${FRONTEND_URL}/profile?github=error&reason=invalid_state`);
+    }
+
+    const accessToken = await exchangeCodeForToken(code);
     const ghUser = await getGitHubUser(accessToken);
 
-    // Save to user
-    await User.findByIdAndUpdate(userId, {
+    await User.findByIdAndUpdate(user._id, {
       githubAccessToken: accessToken,
       githubUsername: ghUser.login,
       githubConnected: true,
+      githubOAuthState: '',
+      githubOAuthStateExpiresAt: null,
     });
 
     res.redirect(`${FRONTEND_URL}/profile?github=connected`);
   } catch (error) {
     console.error('GitHub callback error:', error.message);
-    res.redirect(`${FRONTEND_URL}/profile?github=error&reason=${encodeURIComponent(error.message)}`);
+    res.redirect(`${FRONTEND_URL}/profile?github=error&reason=callback_failed`);
   }
 };
 
