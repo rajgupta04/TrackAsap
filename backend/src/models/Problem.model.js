@@ -94,7 +94,10 @@ problemSchema.index({ user: 1, solvedAt: -1 });
 problemSchema.index({ user: 1, platform: 1 });
 problemSchema.index({ user: 1, tags: 1 });
 problemSchema.index({ user: 1, sheet: 1 });
-problemSchema.index({ user: 1, sheetProblem: 1 }, { unique: true, sparse: true });
+problemSchema.index(
+  { user: 1, sheetProblem: 1 },
+  { unique: true, partialFilterExpression: { sheetProblem: { $type: 'objectId' } } }
+);
 
 const Problem = mongoose.model('Problem', problemSchema);
 export default Problem;
