@@ -81,6 +81,23 @@ const userSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    githubAuthMode: {
+      type: String,
+      enum: ['oauth', 'app'],
+      default: 'oauth',
+    },
+    githubInstallationId: {
+      type: Number,
+      default: null,
+    },
+    githubRepoOwner: {
+      type: String,
+      default: '',
+    },
+    githubRepoName: {
+      type: String,
+      default: '',
+    },
     lastGithubSync: {
       type: Date,
       default: null,

@@ -1,5 +1,109 @@
+import crypto from 'crypto';
+
 const GITHUB_API = 'https://api.github.com';
-const REPO_NAME = 'TrackAsap-Activity';
+export const REPO_NAME = 'TrackAsap-Activity';
+
+function normalizePrivateKey(raw) {
+  return String(raw || '').replace(/\\n/g, '\n').trim();
+}
+
+/**
+ * Build a short-lived JWT for GitHub App authentication.
+ */
+export function createGitHubAppJwt() {
+  const appId = process.env.GITHUB_APP_ID;
+  const privateKey = normalizePrivateKey(process.env.GITHUB_APP_PRIVATE_KEY);
+
+  if (!appId || !privateKey) {
+    throw new Error('GitHub App is not configured');
+  }
+
+  const now = Math.floor(Date.now() / 1000);
+  const header = { alg: 'RS256', typ: 'JWT' };
+  const payload = {
+    iat: now - 60,
+    exp: now + 9 * 60,
+    iss: appId,
+  };
+
+  const encode = (obj) =>
+    Buffer.from(JSON.stringify(obj))
+      .toString('base64')
+      .replace(/=/g, '')
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_');
+
+  const unsigned = `${encode(header)}.${encode(payload)}`;
+  const signer = crypto.createSign('RSA-SHA256');
+  signer.update(unsigned);
+  signer.end();
+
+  const signature = signer
+    .sign(privateKey, 'base64')
+    .replace(/=/g, '')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_');
+
+  return `${unsigned}.${signature}`;
+}
+
+/**
+ * Fetch an installation access token for GitHub App mode.
+ */
+export async function getInstallationAccessToken(installationId) {
+  const jwt = createGitHubAppJwt();
+  const res = await fetch(`${GITHUB_API}/app/installations/${installationId}/access_tokens`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${jwt}`,
+      Accept: 'application/vnd.github+json',
+      'Content-Type': 'application/json',
+    },
+  });
+
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.message || 'Failed to create installation access token');
+  }
+  return data;
+}
+
+/**
+ * Fetch installation metadata.
+ */
+export async function getInstallation(installationId) {
+  const jwt = createGitHubAppJwt();
+  const res = await fetch(`${GITHUB_API}/app/installations/${installationId}`, {
+    headers: {
+      Authorization: `Bearer ${jwt}`,
+      Accept: 'application/vnd.github+json',
+    },
+  });
+
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.message || 'Failed to fetch installation');
+  }
+  return data;
+}
+
+/**
+ * List repositories accessible by an installation token.
+ */
+export async function listInstallationRepositories(installationToken) {
+  const res = await fetch(`${GITHUB_API}/installation/repositories`, {
+    headers: {
+      Authorization: `Bearer ${installationToken}`,
+      Accept: 'application/vnd.github+json',
+    },
+  });
+
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.message || 'Failed to list installation repositories');
+  }
+  return data.repositories || [];
+}
 
 /**
  * Exchange OAuth code for an access token.
@@ -60,15 +164,19 @@ export async function getGitHubPrimaryEmail(token) {
  * Ensure the "TrackAsap-Activity" repo exists under the user's account.
  * Creates it if it doesn't exist. Returns the repo object.
  */
-export async function ensureRepo(token, username) {
+export async function ensureRepo(token, username, options = {}) {
+  const owner = options.owner || username;
+  const repoName = options.repoName || REPO_NAME;
+  const canCreate = options.canCreate !== false;
+
   // Check if repo exists
-  const check = await fetch(`${GITHUB_API}/repos/${username}/${REPO_NAME}`, {
+  const check = await fetch(`${GITHUB_API}/repos/${owner}/${repoName}`, {
     headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
   });
 
   if (check.ok) return check.json();
 
-  if (check.status === 404) {
+  if (check.status === 404 && canCreate) {
     // Create the repo
     const create = await fetch(`${GITHUB_API}/user/repos`, {
       method: 'POST',
@@ -78,7 +186,7 @@ export async function ensureRepo(token, username) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        name: REPO_NAME,
+        name: repoName,
         description:
           'My DSA problem solutions & notes — auto-synced from TrackAsap',
         private: true,
@@ -91,6 +199,10 @@ export async function ensureRepo(token, username) {
       throw new Error(err.message || 'Failed to create repo');
     }
     return create.json();
+  }
+
+  if (check.status === 404 && !canCreate) {
+    throw new Error(`Repository ${owner}/${repoName} not found or not accessible by installation`);
   }
 
   throw new Error('Failed to check repo existence');
@@ -207,8 +319,8 @@ export function buildFileTree(sheetProblems, standaloneProblems, username) {
  *
  * Flow: get HEAD ref → get base tree → create blobs → create new tree → create commit → update ref
  */
-export async function pushFiles(token, username, files, message) {
-  const repo = `${username}/${REPO_NAME}`;
+export async function pushFiles(token, username, files, message, repoName = REPO_NAME) {
+  const repo = `${username}/${repoName}`;
   const headers = {
     Authorization: `Bearer ${token}`,
     Accept: 'application/json',
