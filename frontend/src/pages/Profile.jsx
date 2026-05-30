@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   User,
   Mail,
@@ -14,16 +14,57 @@ import {
   RefreshCw,
   Unlink,
   ExternalLink,
+  Puzzle,
+  Download,
+  Timer,
+  Zap,
+  Shield,
+  ChevronRight,
+  X,
+  CheckCircle2,
+  Copy,
+  Check,
 } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import githubService from '../services/githubService';
 import GlassCard from '../components/ui/GlassCard';
 import NumberInput from '../components/ui/NumberInput';
 
+const TRACKEX_REPO_URL = 'https://github.com/rajgupta04/TrackAsap/tree/main/extension/track-ex';
+
+const SETUP_STEPS = [
+  {
+    title: 'Download the Extension',
+    desc: 'Clone or download the TrackAsap repository from GitHub. The extension is in the extension/track-ex/ folder.',
+    icon: Download,
+  },
+  {
+    title: 'Open Chrome Extensions',
+    desc: 'Go to chrome://extensions/ in your browser and enable Developer Mode (toggle in the top-right corner).',
+    icon: Puzzle,
+  },
+  {
+    title: 'Load Unpacked',
+    desc: 'Click "Load unpacked" and select the extension/track-ex/ folder from the downloaded repository.',
+    icon: CheckCircle2,
+  },
+  {
+    title: 'Sign In',
+    desc: 'Click the TrackEx icon in your toolbar, enter your TrackAsap email & password, and your API URL.',
+    icon: Shield,
+  },
+  {
+    title: 'Start Solving!',
+    desc: 'Open any LeetCode problem — the timer starts automatically. Submit a solution and it syncs to your account.',
+    icon: Zap,
+  },
+];
+
 const Profile = () => {
   const { user, updateUser, isLoading, githubStatus, fetchGitHubStatus, setGitHubStatus } = useAuthStore();
   const [syncing, setSyncing] = useState(false);
   const [connectingGithub, setConnectingGithub] = useState(false);
+  const [showTrackExGuide, setShowTrackExGuide] = useState(false);
   const avatarSrc =
     user?.avatarUrl ||
     (githubStatus?.connected && githubStatus?.username
@@ -388,6 +429,72 @@ const Profile = () => {
           )}
         </GlassCard>
 
+        {/* TrackEx Chrome Extension */}
+        <GlassCard className="mt-4 md:mt-6 relative overflow-hidden">
+          {/* Subtle gradient accent */}
+          <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-purple-500/8 to-transparent rounded-bl-full pointer-events-none" />
+
+          <div className="flex items-start justify-between gap-4 mb-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500/20 to-pink-500/10 border border-purple-500/20 flex items-center justify-center flex-shrink-0">
+                <Puzzle className="w-5 h-5 text-purple-400" />
+              </div>
+              <div>
+                <h3 className="text-base md:text-lg font-semibold text-white flex items-center gap-2">
+                  TrackEx Extension
+                  <span className="px-1.5 py-0.5 text-[9px] font-bold uppercase bg-purple-500/15 text-purple-400 border border-purple-500/25 rounded-md tracking-wider">
+                    NEW
+                  </span>
+                </h3>
+                <p className="text-dark-400 text-xs mt-0.5">Auto-track your LeetCode submissions</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Feature highlights */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4">
+            {[
+              { icon: Timer, label: 'Solve Timer', color: 'text-emerald-400' },
+              { icon: Code2, label: 'Code Capture', color: 'text-cyan-400' },
+              { icon: Zap, label: 'Auto Sync', color: 'text-amber-400' },
+              { icon: Shield, label: 'Track Results', color: 'text-purple-400' },
+            ].map((feat) => (
+              <div key={feat.label} className="flex items-center gap-2 bg-white/3 rounded-lg px-3 py-2">
+                <feat.icon className={`w-3.5 h-3.5 ${feat.color} flex-shrink-0`} />
+                <span className="text-[11px] text-gray-400 font-medium">{feat.label}</span>
+              </div>
+            ))}
+          </div>
+
+          <p className="text-dark-400 text-xs md:text-sm mb-4">
+            Install the TrackEx Chrome extension to automatically capture your LeetCode solve time, submitted code, runtime, and memory — all synced to your TrackAsap account with a <span className="text-purple-400 font-semibold">track-Ex</span> badge.
+          </p>
+
+          <div className="flex flex-wrap gap-3">
+            <motion.a
+              href={TRACKEX_REPO_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              className="flex items-center gap-2 px-4 py-2.5 bg-purple-500/15 hover:bg-purple-500/25 border border-purple-500/20 rounded-lg transition-all text-purple-400 font-medium text-sm"
+            >
+              <Download className="w-4 h-4" />
+              Download Extension
+            </motion.a>
+            <motion.button
+              type="button"
+              onClick={() => setShowTrackExGuide(true)}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              className="flex items-center gap-2 px-4 py-2.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg transition-all text-gray-300 text-sm"
+            >
+              Setup Guide
+              <ChevronRight className="w-4 h-4" />
+            </motion.button>
+          </div>
+        </GlassCard>
+
         {/* Submit Button */}
         <motion.button
           type="submit"
@@ -406,6 +513,106 @@ const Profile = () => {
           )}
         </motion.button>
       </form>
+
+      {/* TrackEx Setup Guide Modal */}
+      <AnimatePresence>
+        {showTrackExGuide && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            onClick={() => setShowTrackExGuide(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 20 }}
+              className="w-full max-w-lg max-h-[85vh] overflow-y-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <GlassCard className="p-5 md:p-6">
+                {/* Header */}
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500/20 to-pink-500/10 border border-purple-500/20 flex items-center justify-center">
+                      <Puzzle className="w-5 h-5 text-purple-400" />
+                    </div>
+                    <div>
+                      <h2 className="text-lg font-bold text-white">Setup Guide</h2>
+                      <p className="text-xs text-dark-400">Get TrackEx running in 2 minutes</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setShowTrackExGuide(false)}
+                    className="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+
+                {/* Steps */}
+                <div className="space-y-4">
+                  {SETUP_STEPS.map((step, i) => (
+                    <div key={i} className="flex gap-4">
+                      {/* Step number + line */}
+                      <div className="flex flex-col items-center">
+                        <div className="w-8 h-8 rounded-lg bg-purple-500/15 border border-purple-500/20 flex items-center justify-center flex-shrink-0">
+                          <span className="text-sm font-bold text-purple-400">{i + 1}</span>
+                        </div>
+                        {i < SETUP_STEPS.length - 1 && (
+                          <div className="w-px flex-1 bg-gradient-to-b from-purple-500/20 to-transparent mt-2" />
+                        )}
+                      </div>
+                      {/* Content */}
+                      <div className="pb-4">
+                        <div className="flex items-center gap-2 mb-1">
+                          <step.icon className="w-4 h-4 text-purple-400" />
+                          <h4 className="text-sm font-semibold text-white">{step.title}</h4>
+                        </div>
+                        <p className="text-xs text-dark-400 leading-relaxed">{step.desc}</p>
+                        {i === 1 && (
+                          <div className="mt-2 flex items-center gap-2 bg-white/5 border border-white/10 rounded-lg px-3 py-2">
+                            <code className="text-xs text-purple-300 flex-1 select-all">chrome://extensions/</code>
+                            <button
+                              onClick={() => {
+                                navigator.clipboard.writeText('chrome://extensions/');
+                                toast.success('Copied!');
+                              }}
+                              className="text-gray-500 hover:text-white transition-colors"
+                            >
+                              <Copy className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Footer */}
+                <div className="mt-4 pt-4 border-t border-white/10 flex flex-col sm:flex-row gap-3">
+                  <a
+                    href={TRACKEX_REPO_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-center gap-2 px-4 py-2.5 bg-purple-500/15 hover:bg-purple-500/25 border border-purple-500/20 rounded-lg transition-all text-purple-400 font-medium text-sm flex-1"
+                  >
+                    <Download className="w-4 h-4" />
+                    Get Extension Files
+                  </a>
+                  <button
+                    onClick={() => setShowTrackExGuide(false)}
+                    className="flex items-center justify-center gap-2 px-4 py-2.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg transition-all text-gray-300 text-sm flex-1"
+                  >
+                    Got It
+                  </button>
+                </div>
+              </GlassCard>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

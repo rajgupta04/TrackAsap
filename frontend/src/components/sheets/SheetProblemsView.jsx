@@ -26,7 +26,7 @@ import {
   Check,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import Editor from '@monaco-editor/react';
+import CodeViewer from '../CodeViewer';
 import GlassCard from '../ui/GlassCard';
 import sheetProblemService from '../../services/sheetProblemService';
 import githubService from '../../services/githubService';
@@ -846,19 +846,16 @@ const SheetProblemsView = ({ sheet, onStatsUpdate }) => {
         )}
       </AnimatePresence>
 
-      {/* Code Editor Modal */}
-      <AnimatePresence>
-        {showCodeModal && selectedProblemForCode && (
-          <CodeEditorModal
-            problem={selectedProblemForCode}
-            onClose={() => {
-              setShowCodeModal(false);
-              setSelectedProblemForCode(null);
-            }}
-            onSave={handleSaveCode}
-          />
-        )}
-      </AnimatePresence>
+      {/* Code Viewer / Editor Modal */}
+      <CodeViewer
+        isOpen={showCodeModal}
+        onClose={() => {
+          setShowCodeModal(false);
+          setSelectedProblemForCode(null);
+        }}
+        problem={selectedProblemForCode}
+        onSave={handleSaveCode}
+      />
     </div>
   );
 };
@@ -947,158 +944,6 @@ const NotesModal = ({ problem, onClose, onSave }) => {
   );
 };
 
-// Code Editor Modal Component
-const LANGUAGE_OPTIONS = [
-  { value: 'cpp', label: 'C++' },
-  { value: 'java', label: 'Java' },
-  { value: 'python', label: 'Python' },
-  { value: 'javascript', label: 'JavaScript' },
-  { value: 'c', label: 'C' },
-  { value: 'go', label: 'Go' },
-  { value: 'rust', label: 'Rust' },
-];
-
-const LANGUAGE_MAP = {
-  cpp: 'cpp',
-  java: 'java',
-  python: 'python',
-  javascript: 'javascript',
-  c: 'c',
-  go: 'go',
-  rust: 'rust',
-  other: 'plaintext',
-};
-
-const CodeEditorModal = ({ problem, onClose, onSave }) => {
-  const [code, setCode] = useState(problem.code || '');
-  const [language, setLanguage] = useState(problem.language || 'cpp');
-  const [saving, setSaving] = useState(false);
-  const [copied, setCopied] = useState(false);
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setSaving(true);
-    await onSave(problem._id, code, language);
-    setSaving(false);
-  };
-
-  const handleCopy = async () => {
-    if (code) {
-      try {
-        await navigator.clipboard.writeText(code);
-        setCopied(true);
-        toast.success('Code copied!');
-        setTimeout(() => setCopied(false), 2000);
-      } catch {
-        toast.error('Failed to copy');
-      }
-    }
-  };
-
-  return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
-      onClick={onClose}
-    >
-      <motion.div
-        initial={{ scale: 0.9, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        exit={{ scale: 0.9, opacity: 0 }}
-        className="w-full h-[100dvh] sm:h-[85vh] sm:max-w-5xl rounded-none sm:rounded-2xl overflow-hidden"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <GlassCard className="h-full flex flex-col p-0">
-          {/* Header */}
-          <div className="p-4 border-b border-white/10">
-            <div className="flex items-center justify-between">
-              <div className="flex-1 min-w-0">
-                <h2 className="text-lg font-bold text-white flex items-center gap-2">
-                  <Terminal className="w-5 h-5 text-neon-green" />
-                  Code Solution
-                </h2>
-                <p className="text-sm text-gray-400 mt-1 truncate">{problem.title}</p>
-              </div>
-              <div className="flex items-center gap-2">
-                <select
-                  value={language}
-                  onChange={(e) => setLanguage(e.target.value)}
-                  className="px-3 py-1.5 bg-white/5 border border-white/10 rounded-lg text-white text-sm outline-none focus:border-neon-green"
-                >
-                  {LANGUAGE_OPTIONS.map((opt) => (
-                    <option key={opt.value} value={opt.value} className="bg-gray-900">
-                      {opt.label}
-                    </option>
-                  ))}
-                </select>
-                <button
-                  onClick={handleCopy}
-                  className={`p-2 rounded-lg transition-all ${
-                    copied ? 'text-neon-green bg-neon-green/10' : 'text-gray-400 hover:text-white hover:bg-white/10'
-                  }`}
-                  title="Copy code"
-                >
-                  {copied ? <Check className="w-5 h-5" /> : <Copy className="w-5 h-5" />}
-                </button>
-                <button
-                  onClick={onClose}
-                  className="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* Monaco Editor */}
-          <div className="flex-1 min-h-0">
-            <Editor
-              height="100%"
-              language={LANGUAGE_MAP[language] || 'plaintext'}
-              value={code}
-              onChange={(value) => setCode(value || '')}
-              theme="vs-dark"
-              options={{
-                minimap: { enabled: true },
-                fontSize: 14,
-                fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
-                lineNumbers: 'on',
-                scrollBeyondLastLine: false,
-                wordWrap: 'on',
-                padding: { top: 16, bottom: 16 },
-                automaticLayout: true,
-                scrollbar: {
-                  verticalScrollbarSize: 8,
-                  horizontalScrollbarSize: 8,
-                },
-              }}
-            />
-          </div>
-
-          {/* Footer */}
-          <div className="p-4 border-t border-white/10 flex flex-col-reverse sm:flex-row justify-end gap-3">
-            <button
-              onClick={onClose}
-              className="px-4 py-2 text-gray-300 hover:text-white border border-white/10 hover:border-white/20 rounded-lg transition-all"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleSubmit}
-              disabled={saving}
-              className="px-4 py-2 bg-neon-green text-black font-semibold rounded-lg hover:bg-neon-green/90 transition-all disabled:opacity-50 flex items-center gap-2"
-            >
-              <Save className="w-4 h-4" />
-              {saving ? 'Saving...' : 'Save Code'}
-            </button>
-          </div>
-        </GlassCard>
-      </motion.div>
-    </motion.div>
-  );
-};
 
 // Add Problem Modal Component
 const AddProblemModal = ({ sheetId, onClose, onSuccess }) => {

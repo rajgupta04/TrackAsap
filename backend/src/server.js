@@ -14,6 +14,7 @@ import platformStatsRoutes from './routes/platformStats.routes.js';
 import githubRoutes from './routes/github.routes.js';
 import discussionRoutes from './routes/discussion.routes.js';
 import adminRoutes from './routes/admin.routes.js';
+import extensionRoutes from './routes/extension.routes.js';
 import { errorHandler, notFound } from './middleware/error.middleware.js';
 
 dotenv.config();
@@ -25,7 +26,17 @@ const PORT = process.env.PORT || 5000;
 connectDB();
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: (origin, callback) => {
+    // Allow requests with no origin (mobile apps, curl, etc.)
+    if (!origin) return callback(null, true);
+    // Allow chrome-extension:// origins for TrackEx
+    if (origin.startsWith('chrome-extension://')) return callback(null, true);
+    // Allow all other origins (existing behavior)
+    return callback(null, true);
+  },
+  credentials: true,
+}));
 app.use(express.json());
 
 // Routes
@@ -41,6 +52,7 @@ app.use('/api/platform-stats', platformStatsRoutes);
 app.use('/api/github', githubRoutes);
 app.use('/api/discussions', discussionRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/extension', extensionRoutes);
 
 // Root route
 app.get('/', (req, res) => {
@@ -59,6 +71,7 @@ app.get('/', (req, res) => {
       github: '/api/github',
       discussions: '/api/discussions',
       admin: '/api/admin',
+      extension: '/api/extension',
     }
   });
 });

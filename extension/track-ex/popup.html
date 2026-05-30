@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TrackEx</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      width: 340px; min-height: 280px;
+      font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: linear-gradient(145deg, #0a0a12, #0d0d1a, #0a0a12);
+      color: #e0e0e0; overflow-x: hidden;
+    }
+    #app { padding: 20px; }
+    .state { display: block; }
+    .hidden { display: none !important; }
+
+    .spinner {
+      width: 28px; height: 28px;
+      border: 3px solid rgba(139, 92, 246, 0.15);
+      border-top-color: #8B5CF6; border-radius: 50%;
+      animation: spin 0.7s linear infinite; margin: 40px auto 16px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
+    @keyframes slideUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+
+    .logo-section { text-align: center; margin-bottom: 20px; animation: slideUp 0.4s ease-out; }
+    .logo-icon {
+      width: 56px; height: 56px; border-radius: 16px;
+      background: linear-gradient(135deg, rgba(139, 92, 246, 0.2), rgba(236, 72, 153, 0.15));
+      border: 1px solid rgba(139, 92, 246, 0.3);
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 12px; box-shadow: 0 8px 32px rgba(139, 92, 246, 0.15);
+    }
+    .logo-text { font-size: 24px; font-weight: 800; color: #fff; letter-spacing: -0.5px; }
+    .accent { background: linear-gradient(135deg, #8B5CF6, #EC4899); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .logo-sub { font-size: 11px; color: #555; margin-top: 3px; letter-spacing: 0.5px; }
+    .built-by { text-align: center; margin-top: 6px; font-size: 9px; color: #333; letter-spacing: 1px; text-transform: uppercase; }
+    .built-by span { color: #8B5CF6; font-weight: 700; }
+
+    /* Connect */
+    .connect-card {
+      background: rgba(139, 92, 246, 0.04); border: 1px solid rgba(139, 92, 246, 0.1);
+      border-radius: 14px; padding: 20px; text-align: center; margin-bottom: 16px; animation: slideUp 0.5s ease-out;
+    }
+    .connect-icon {
+      width: 48px; height: 48px; border-radius: 14px;
+      background: linear-gradient(135deg, rgba(139, 92, 246, 0.15), rgba(236, 72, 153, 0.1));
+      border: 1px solid rgba(139, 92, 246, 0.2);
+      display: flex; align-items: center; justify-content: center; margin: 0 auto 12px;
+    }
+    .connect-title { font-size: 14px; font-weight: 700; color: #fff; margin-bottom: 4px; }
+    .connect-desc { font-size: 11px; color: #555; line-height: 1.5; margin-bottom: 16px; }
+
+    .btn-auto-connect {
+      width: 100%; padding: 12px;
+      background: linear-gradient(135deg, #8B5CF6, #7C3AED);
+      color: #fff; font-weight: 700; font-size: 13px;
+      border: none; border-radius: 12px; cursor: pointer;
+      transition: all 0.25s; display: flex; align-items: center;
+      justify-content: center; gap: 8px; position: relative; overflow: hidden;
+    }
+    .btn-auto-connect:hover { box-shadow: 0 8px 24px rgba(139, 92, 246, 0.3); transform: translateY(-1px); }
+    .btn-auto-connect.detecting {
+      background: linear-gradient(90deg, #7C3AED, #8B5CF6, #A78BFA, #8B5CF6, #7C3AED);
+      background-size: 200% 100%; animation: shimmer 1.5s linear infinite;
+    }
+
+    .btn-open-trackasap {
+      width: 100%; padding: 10px; margin-top: 8px;
+      background: rgba(255, 255, 255, 0.03); color: #777;
+      font-weight: 600; font-size: 12px; border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 10px; cursor: pointer; transition: all 0.2s;
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+    }
+    .btn-open-trackasap:hover { color: #A78BFA; border-color: rgba(139, 92, 246, 0.2); }
+
+    .connect-status { font-size: 11px; margin-top: 10px; padding: 8px 12px; border-radius: 8px; animation: slideUp 0.3s ease-out; }
+    .status-error { color: #F87171; background: rgba(248, 113, 113, 0.06); border: 1px solid rgba(248, 113, 113, 0.1); }
+    .status-info { color: #A78BFA; background: rgba(139, 92, 246, 0.06); border: 1px solid rgba(139, 92, 246, 0.1); }
+
+    .manual-section { animation: slideUp 0.5s ease-out; }
+    .manual-toggle {
+      width: 100%; padding: 8px; background: none; border: none;
+      color: #444; font-size: 10px; cursor: pointer; text-transform: uppercase; letter-spacing: 1px; transition: color 0.2s;
+    }
+    .manual-toggle:hover { color: #8B5CF6; }
+    .input-group { margin-bottom: 10px; }
+    .input-group input, .input-group textarea {
+      width: 100%; padding: 10px 14px;
+      background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.07);
+      border-radius: 12px; color: #fff; font-size: 13px; outline: none; transition: all 0.25s;
+      font-family: inherit;
+    }
+    .input-group input:focus, .input-group textarea:focus { border-color: rgba(139, 92, 246, 0.5); box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.08); }
+    .input-group input::placeholder, .input-group textarea::placeholder { color: #444; }
+    .input-label { font-size: 10px; color: #555; margin-bottom: 4px; display: block; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; }
+    .error-msg { font-size: 11px; color: #F87171; margin-bottom: 10px; padding: 8px 12px; background: rgba(248, 113, 113, 0.06); border: 1px solid rgba(248, 113, 113, 0.12); border-radius: 10px; }
+    .btn-primary {
+      width: 100%; padding: 11px; background: linear-gradient(135deg, #8B5CF6, #7C3AED);
+      color: #fff; font-weight: 700; font-size: 13px; border: none; border-radius: 12px;
+      cursor: pointer; transition: all 0.25s; display: flex; align-items: center; justify-content: center; gap: 6px;
+    }
+    .btn-primary:hover { box-shadow: 0 8px 24px rgba(139, 92, 246, 0.3); }
+    .btn-spinner { width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin 0.6s linear infinite; }
+
+    /* Dashboard */
+    .dash-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; animation: slideUp 0.3s ease-out; }
+    .user-info { display: flex; align-items: center; gap: 10px; }
+    .avatar {
+      width: 36px; height: 36px; border-radius: 10px;
+      background: linear-gradient(135deg, rgba(139, 92, 246, 0.25), rgba(236, 72, 153, 0.15));
+      border: 1px solid rgba(139, 92, 246, 0.3);
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 800; font-size: 15px; color: #A78BFA;
+    }
+    .user-name { font-size: 13px; font-weight: 700; color: #fff; }
+    .user-email { font-size: 10px; color: #555; }
+    .auto-badge { font-size: 8px; color: #8B5CF6; background: rgba(139, 92, 246, 0.1); padding: 1px 5px; border-radius: 4px; font-weight: 700; margin-left: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .btn-icon {
+      width: 32px; height: 32px; border-radius: 8px;
+      border: 1px solid rgba(255,255,255,0.06); background: rgba(255,255,255,0.03);
+      color: #555; display: flex; align-items: center; justify-content: center;
+      cursor: pointer; transition: all 0.2s;
+    }
+    .btn-icon:hover { color: #F87171; background: rgba(248, 113, 113, 0.08); }
+
+    /* Active Problem Card */
+    .card { background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 14px; padding: 14px; margin-bottom: 10px; animation: slideUp 0.4s ease-out; }
+    .problem-card { border-color: rgba(139, 92, 246, 0.12); background: rgba(139, 92, 246, 0.03); }
+    .muted-card { text-align: center; padding: 20px; }
+    .muted-text { font-size: 11px; color: #3a3a3a; }
+    .card-label { font-size: 9px; font-weight: 700; text-transform: uppercase; color: #8B5CF6; letter-spacing: 1px; margin-bottom: 8px; }
+    .problem-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .problem-name { font-size: 14px; font-weight: 700; color: #fff; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .timer { font-size: 20px; font-weight: 800; color: #A78BFA; font-variant-numeric: tabular-nums; font-family: 'Courier New', monospace; letter-spacing: 1px; }
+    .problem-meta { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+    .diff-badge { display: inline-block; font-size: 9px; font-weight: 700; text-transform: uppercase; padding: 3px 10px; border-radius: 6px; }
+    .diff-easy { background: rgba(0, 184, 163, 0.12); color: #00B8A3; }
+    .diff-medium { background: rgba(255, 192, 30, 0.12); color: #FFC01E; }
+    .diff-hard { background: rgba(255, 55, 95, 0.12); color: #FF375F; }
+    .attempts-badge { font-size: 9px; color: #666; background: rgba(255,255,255,0.04); padding: 3px 8px; border-radius: 6px; }
+
+    /* Notes */
+    .notes-section { margin-top: 10px; animation: slideUp 0.45s ease-out; }
+    .notes-toggle {
+      display: flex; align-items: center; gap: 6px;
+      background: none; border: none; color: #555; font-size: 10px;
+      cursor: pointer; padding: 4px 0; transition: color 0.2s; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 0.5px;
+    }
+    .notes-toggle:hover { color: #A78BFA; }
+    .notes-toggle svg { transition: transform 0.2s; }
+    .notes-toggle.open svg { transform: rotate(90deg); }
+    .notes-input {
+      width: 100%; min-height: 60px; max-height: 120px; margin-top: 6px;
+      padding: 10px 12px; resize: vertical;
+      background: rgba(255,255,255,0.03); border: 1px solid rgba(139, 92, 246, 0.12);
+      border-radius: 10px; color: #ccc; font-size: 12px; font-family: inherit;
+      outline: none; transition: all 0.25s; line-height: 1.5;
+    }
+    .notes-input:focus { border-color: rgba(139, 92, 246, 0.4); box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.06); }
+    .notes-input::placeholder { color: #333; }
+    .notes-saved { font-size: 9px; color: #8B5CF6; margin-top: 4px; animation: slideUp 0.2s ease-out; }
+
+    /* Stats & Recent */
+    .stats-row { display: flex; gap: 8px; margin-bottom: 12px; animation: slideUp 0.45s ease-out; }
+    .stat-item { flex: 1; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.04); border-radius: 12px; padding: 12px; text-align: center; }
+    .stat-value { display: block; font-size: 22px; font-weight: 800; color: #fff; }
+    .stat-label { font-size: 9px; color: #444; text-transform: uppercase; letter-spacing: 0.8px; }
+
+    .section { margin-bottom: 8px; animation: slideUp 0.5s ease-out; }
+    .section-title { font-size: 10px; font-weight: 700; text-transform: uppercase; color: #444; letter-spacing: 0.8px; margin-bottom: 8px; }
+    .recent-list { max-height: 130px; overflow-y: auto; }
+    .recent-item { display: flex; align-items: center; justify-content: space-between; padding: 9px 12px; background: rgba(255,255,255,0.015); border: 1px solid rgba(255,255,255,0.03); border-radius: 10px; margin-bottom: 5px; transition: all 0.2s; }
+    .recent-item:hover { background: rgba(255,255,255,0.04); border-color: rgba(139, 92, 246, 0.15); }
+    .recent-title { font-size: 11px; font-weight: 600; color: #bbb; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-right: 8px; }
+    .recent-meta { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+    .recent-runtime { font-size: 9px; color: #A78BFA; font-weight: 600; }
+    .recent-result { font-size: 8px; font-weight: 700; padding: 2px 6px; border-radius: 4px; text-transform: uppercase; }
+    .result-accepted { background: rgba(0, 184, 163, 0.12); color: #00B8A3; }
+    .result-wrong { background: rgba(255, 55, 95, 0.08); color: #FF375F; }
+
+    .footer { display: flex; align-items: center; justify-content: space-between; padding-top: 12px; margin-top: 4px; border-top: 1px solid rgba(255,255,255,0.04); }
+    .footer-left { display: flex; align-items: center; gap: 6px; }
+    .footer-text { font-size: 9px; color: #2a2a2a; font-weight: 500; }
+    .footer-raj { font-size: 9px; color: #444; }
+    .footer-raj span { color: #8B5CF6; font-weight: 700; }
+    .status-dot { width: 6px; height: 6px; border-radius: 50%; background: #8B5CF6; animation: pulse 2s infinite; }
+    .status-dot.offline { background: #F87171; }
+
+    ::-webkit-scrollbar { width: 3px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(139, 92, 246, 0.15); border-radius: 4px; }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <!-- Loading -->
+    <div id="loading-state" class="state">
+      <div class="logo-section">
+        <div class="logo-icon">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#8B5CF6" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline>
+          </svg>
+        </div>
+        <h1 class="logo-text">Track<span class="accent">Ex</span></h1>
+        <p class="logo-sub">Connecting to TrackAsap...</p>
+      </div>
+      <div class="spinner"></div>
+    </div>
+
+    <!-- Connect -->
+    <div id="connect-state" class="state hidden">
+      <div class="logo-section">
+        <div class="logo-icon">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#8B5CF6" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline>
+          </svg>
+        </div>
+        <h1 class="logo-text">Track<span class="accent">Ex</span></h1>
+        <p class="logo-sub">LeetCode Auto-Tracker for TrackAsap</p>
+        <div class="built-by">Crafted by <span>Raj</span> 🚀</div>
+      </div>
+
+      <div class="connect-card">
+        <div class="connect-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#A78BFA" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+            <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+          </svg>
+        </div>
+        <div class="connect-title">Auto-Connect</div>
+        <div class="connect-desc">
+          Open <strong>TrackAsap</strong> in any tab and log in — the extension auto-detects your session. No passwords needed here!
+        </div>
+        <button id="detect-btn" class="btn-auto-connect">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+          <span id="detect-btn-text">Detect TrackAsap Login</span>
+        </button>
+        <button id="open-trackasap-btn" class="btn-open-trackasap">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"></path>
+            <polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line>
+          </svg>
+          Open TrackAsap & Login
+        </button>
+        <div id="detect-status" class="connect-status hidden"></div>
+      </div>
+
+      <div class="manual-section">
+        <button id="manual-toggle" class="manual-toggle">or sign in manually ▾</button>
+        <div id="manual-form-wrap" class="hidden">
+          <form id="login-form">
+            <div class="input-group">
+              <label class="input-label">API URL</label>
+              <input type="text" id="api-url" placeholder="http://localhost:5000" />
+            </div>
+            <div class="input-group">
+              <label class="input-label">Email</label>
+              <input type="email" id="email" placeholder="your@email.com" required />
+            </div>
+            <div class="input-group">
+              <label class="input-label">Password</label>
+              <input type="password" id="password" placeholder="••••••••" required />
+            </div>
+            <div id="login-error" class="error-msg hidden"></div>
+            <button type="submit" id="login-btn" class="btn-primary">
+              <span id="login-btn-text">Sign In</span>
+              <div id="login-spinner" class="btn-spinner hidden"></div>
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Dashboard -->
+    <div id="dashboard-state" class="state hidden">
+      <div class="dash-header">
+        <div class="user-info">
+          <div class="avatar" id="user-avatar">R</div>
+          <div>
+            <p class="user-name">
+              <span id="user-name">Raj</span>
+              <span id="auto-badge" class="auto-badge hidden">auto</span>
+            </p>
+            <p class="user-email" id="user-email"></p>
+          </div>
+        </div>
+        <button id="logout-btn" class="btn-icon" title="Disconnect">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"></path>
+            <polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Active Problem -->
+      <div id="active-problem" class="card problem-card hidden">
+        <div class="card-label">⏱ Currently Solving</div>
+        <div class="problem-row">
+          <span class="problem-name" id="current-problem-name">—</span>
+          <span class="timer" id="timer-display">00:00</span>
+        </div>
+        <div class="problem-meta">
+          <span id="current-problem-diff" class="diff-badge">—</span>
+          <span id="current-attempts" class="attempts-badge hidden"></span>
+        </div>
+
+        <!-- Notes -->
+        <div class="notes-section">
+          <button id="notes-toggle" class="notes-toggle">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="9 18 15 12 9 6"></polyline>
+            </svg>
+            Add Notes
+          </button>
+          <div id="notes-wrap" class="hidden">
+            <textarea id="notes-input" class="notes-input" placeholder="Your approach, observations, key insight..." maxlength="1000"></textarea>
+            <div id="notes-saved" class="notes-saved hidden">✓ Notes saved</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- No Active Problem -->
+      <div id="no-active-problem" class="card muted-card">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#2a2a2a" stroke-width="1.5" style="margin: 0 auto 8px;">
+          <polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline>
+        </svg>
+        <p class="muted-text">Open a LeetCode problem to start tracking</p>
+      </div>
+
+      <!-- Stats -->
+      <div class="stats-row">
+        <div class="stat-item">
+          <span class="stat-value" id="stat-synced">0</span>
+          <span class="stat-label">Synced</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-value" id="stat-queued">0</span>
+          <span class="stat-label">Queued</span>
+        </div>
+      </div>
+
+      <!-- Recent -->
+      <div class="section">
+        <div class="section-title">Recent Syncs</div>
+        <div id="recent-list" class="recent-list">
+          <p class="muted-text" style="padding: 8px 0;">Solve a problem and it appears here ✨</p>
+        </div>
+      </div>
+
+      <div class="footer">
+        <div class="footer-left">
+          <span class="status-dot" id="connection-dot"></span>
+          <span class="footer-text">TrackEx v1.1</span>
+        </div>
+        <span class="footer-raj">Built by <span>Raj</span> with ❤️</span>
+      </div>
+    </div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

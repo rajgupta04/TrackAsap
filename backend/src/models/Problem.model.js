@@ -83,6 +83,32 @@ const problemSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: 'SheetProblem',
     },
+    // TrackEx extension fields
+    source: {
+      type: String,
+      enum: ['manual', 'track-ex', 'github-sync'],
+      default: 'manual',
+    },
+    runtime: {
+      type: String,
+      default: '',
+    },
+    memory: {
+      type: String,
+      default: '',
+    },
+    attempts: {
+      type: Number,
+      default: 1,
+    },
+    submissionId: {
+      type: String,
+      default: '',
+    },
+    leetcodeSlug: {
+      type: String,
+      default: '',
+    },
   },
   {
     timestamps: true,
@@ -97,6 +123,10 @@ problemSchema.index({ user: 1, sheet: 1 });
 problemSchema.index(
   { user: 1, sheetProblem: 1 },
   { unique: true, partialFilterExpression: { sheetProblem: { $type: 'objectId' } } }
+);
+problemSchema.index(
+  { user: 1, submissionId: 1 },
+  { unique: true, partialFilterExpression: { submissionId: { $ne: '' } } }
 );
 
 const Problem = mongoose.model('Problem', problemSchema);

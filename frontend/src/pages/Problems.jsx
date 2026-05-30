@@ -40,7 +40,7 @@ const DIFFICULTY_COLORS = {
 };
 
 const Problems = () => {
-  const { problems, stats, pagination, loading, fetchProblems, fetchStats, deleteProblem } =
+  const { problems, stats, pagination, loading, fetchProblems, fetchStats, deleteProblem, updateProblem } =
     useProblemStore();
 
   const [search, setSearch] = useState('');
@@ -69,6 +69,14 @@ const Problems = () => {
       } catch (error) {
         toast.error('Failed to delete problem');
       }
+    }
+  };
+
+  const handleSaveCode = async (problemId, code, language) => {
+    try {
+      await updateProblem(problemId, { code, language });
+    } catch (error) {
+      throw error;
     }
   };
 
@@ -268,6 +276,11 @@ const Problems = () => {
                         {problem.code && (
                           <Code className="w-4 h-4 text-neon-green flex-shrink-0" />
                         )}
+                        {problem.source === 'track-ex' && (
+                          <span className="px-1.5 py-0.5 text-[9px] font-bold uppercase bg-purple-500/15 text-purple-400 border border-purple-500/25 rounded-md tracking-wider flex-shrink-0">
+                            track-Ex
+                          </span>
+                        )}
                       </div>
                       <div className="flex items-center gap-3 text-sm text-gray-400">
                         <span className="capitalize">{problem.platform}</span>
@@ -286,6 +299,15 @@ const Problems = () => {
                             <Clock className="w-3 h-3" />
                             {problem.timeSpent}m
                           </span>
+                        )}
+                        {problem.runtime && (
+                          <span className="text-xs text-emerald-400/70">{problem.runtime}</span>
+                        )}
+                        {problem.memory && (
+                          <span className="text-xs text-cyan-400/70">{problem.memory}</span>
+                        )}
+                        {problem.attempts > 1 && (
+                          <span className="text-xs text-amber-400/70">{problem.attempts} attempts</span>
                         )}
                       </div>
                     </div>
@@ -376,6 +398,7 @@ const Problems = () => {
         isOpen={!!selectedProblem}
         onClose={() => setSelectedProblem(null)}
         problem={selectedProblem}
+        onSave={handleSaveCode}
       />
 
       {/* Notes Modal */}
