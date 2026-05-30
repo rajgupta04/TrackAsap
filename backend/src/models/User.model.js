@@ -112,6 +112,26 @@ const userSchema = new mongoose.Schema(
       default: null,
       select: false,
     },
+    isBanned: {
+      type: Boolean,
+      default: false,
+    },
+    banReason: {
+      type: String,
+      default: '',
+    },
+    bannedAt: {
+      type: Date,
+      default: null,
+    },
+    acceptedDiscussionAgreement: {
+      type: Boolean,
+      default: false,
+    },
+    acceptedDiscussionAgreementAt: {
+      type: Date,
+      default: null,
+    },
   },
   {
     timestamps: true,

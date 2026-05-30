@@ -5,6 +5,7 @@ import { fileURLToPath } from 'url';
 import { importA2ZSnapshot } from './seeding/striverA2Z.importer.js';
 import SheetBucket from './models/SheetBucket.model.js';
 import { legacyBuckets } from './seeding/legacyBuckets.js';
+import { rajSpecialBucket } from './seeding/rajSpecialBucket.js';
 import { buildProblemKey, inferPlatform, normalizePlatform } from './utils/problemIdentity.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -84,6 +85,35 @@ async function upsertLegacyBuckets({ dryRun }) {
   };
 }
 
+async function upsertRajSpecial({ dryRun }) {
+  const bucket = {
+    ...rajSpecialBucket,
+    problems: (rajSpecialBucket.problems || [])
+      .map((problem, index) => normalizeLegacyProblem(problem, index))
+      .filter((problem) => problem.title && problem.problemKey),
+  };
+
+  if (dryRun) {
+    return { count: 1, problems: bucket.problems.length };
+  }
+
+  await SheetBucket.findOneAndUpdate(
+    { name: bucket.name },
+    {
+      name: bucket.name,
+      description: bucket.description,
+      category: bucket.category,
+      icon: bucket.icon,
+      color: bucket.color,
+      problems: bucket.problems,
+      isActive: true,
+    },
+    { upsert: true, new: true }
+  );
+
+  return { count: 1, problems: bucket.problems.length };
+}
+
 async function run() {
   const { dryRun, includeLegacy, filePath } = parseArgs();
 
@@ -106,6 +136,8 @@ async function run() {
       ? await upsertLegacyBuckets({ dryRun })
       : { count: 0, problems: 0 };
 
+    const rajSummary = await upsertRajSpecial({ dryRun });
+
     console.log('--- A2Z Import Summary ---');
     console.log(`Source: ${summary.source}`);
     console.log(`Version: ${summary.version}`);
@@ -115,6 +147,8 @@ async function run() {
       console.log(`Legacy buckets upserted: ${legacySummary.count}`);
       console.log(`Legacy problems upserted: ${legacySummary.problems}`);
     }
+    console.log(`--- Raj Special ---`);
+    console.log(`Raj Special bucket: ${rajSummary.count} bucket, ${rajSummary.problems} problems`);
 
     if (dryRun) {
       console.log('Dry run complete. No database changes were made.');

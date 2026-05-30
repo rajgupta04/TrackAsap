@@ -10,6 +10,8 @@ import PhysiqueTracker from './pages/PhysiqueTracker';
 import Profile from './pages/Profile';
 import Sheets from './pages/Sheets';
 import Problems from './pages/Problems';
+import Discussion from './pages/Discussion';
+import Admin from './pages/Admin';
 
 // Protected Route wrapper
 const ProtectedRoute = ({ children }) => {
@@ -87,6 +89,8 @@ function App() {
         <Route path="profile" element={<Profile />} />
         <Route path="sheets" element={<Sheets />} />
         <Route path="problems" element={<Problems />} />
+        <Route path="discussion" element={<Discussion />} />
+        <Route path="admin" element={<Admin />} />
       </Route>
 
       {/* Catch all */}

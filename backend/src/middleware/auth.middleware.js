@@ -18,6 +18,13 @@ export const protect = async (req, res, next) => {
         return res.status(401).json({ message: 'User not found' });
       }
 
+      if (req.user.isBanned) {
+        return res.status(403).json({
+          message: 'Your account has been banned due to violation of community terms',
+          banned: true,
+        });
+      }
+
       next();
     } catch (error) {
       console.error('Auth error:', error);

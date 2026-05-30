@@ -98,6 +98,19 @@ export const useAuthStore = create((set, get) => ({
 
   clearError: () => set({ error: null }),
 
+  acceptAgreement: async () => {
+    try {
+      const response = await authService.acceptAgreement();
+      const currentUser = get().user;
+      const newUser = { ...currentUser, acceptedDiscussionAgreement: true };
+      localStorage.setItem('user', JSON.stringify(newUser));
+      set({ user: newUser });
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: error.response?.data?.message || 'Failed to accept agreement' };
+    }
+  },
+
   // GitHub integration
   fetchGitHubStatus: async () => {
     try {

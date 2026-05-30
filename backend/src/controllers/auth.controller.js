@@ -31,6 +31,8 @@ export const register = async (req, res) => {
       email: user.email,
       role: user.role,
       startDate: user.startDate,
+      isBanned: user.isBanned,
+      acceptedDiscussionAgreement: user.acceptedDiscussionAgreement,
       token: generateToken(user._id),
     });
   } catch (error) {
@@ -68,6 +70,8 @@ export const login = async (req, res) => {
       codechefHandle: user.codechefHandle,
       leetcodeHandle: user.leetcodeHandle,
       targetWeight: user.targetWeight,
+      isBanned: user.isBanned,
+      acceptedDiscussionAgreement: user.acceptedDiscussionAgreement,
       token: generateToken(user._id),
     });
   } catch (error) {
@@ -129,6 +133,8 @@ export const googleLogin = async (req, res) => {
       codechefHandle: user.codechefHandle,
       leetcodeHandle: user.leetcodeHandle,
       targetWeight: user.targetWeight,
+      isBanned: user.isBanned,
+      acceptedDiscussionAgreement: user.acceptedDiscussionAgreement,
       token: generateToken(user._id),
     });
   } catch (error) {
@@ -156,6 +162,8 @@ export const getMe = async (req, res) => {
       targetWeight: user.targetWeight,
       githubConnected: user.githubConnected,
       githubUsername: user.githubUsername,
+      isBanned: user.isBanned,
+      acceptedDiscussionAgreement: user.acceptedDiscussionAgreement,
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -199,6 +207,32 @@ export const updateProfile = async (req, res) => {
       targetWeight: user.targetWeight,
       githubConnected: user.githubConnected,
       githubUsername: user.githubUsername,
+      isBanned: user.isBanned,
+      acceptedDiscussionAgreement: user.acceptedDiscussionAgreement,
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Accept discussion community agreement
+// @route   PUT /api/auth/accept-agreement
+// @access  Private
+export const acceptAgreement = async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id);
+
+    if (user.acceptedDiscussionAgreement) {
+      return res.json({ message: 'Agreement already accepted' });
+    }
+
+    user.acceptedDiscussionAgreement = true;
+    user.acceptedDiscussionAgreementAt = new Date();
+    await user.save();
+
+    res.json({
+      message: 'Agreement accepted successfully',
+      acceptedDiscussionAgreement: true,
     });
   } catch (error) {
     res.status(500).json({ message: error.message });

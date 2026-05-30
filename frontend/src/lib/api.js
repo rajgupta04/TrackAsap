@@ -32,6 +32,13 @@ api.interceptors.response.use(
       localStorage.removeItem('user');
       window.location.href = '/login';
     }
+    // Handle banned user
+    if (error.response?.status === 403 && error.response?.data?.banned) {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      alert('Your account has been banned. Please contact support if you believe this is a mistake.');
+      window.location.href = '/login';
+    }
     return Promise.reject(error);
   }
 );

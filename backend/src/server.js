@@ -12,6 +12,8 @@ import sheetProblemRoutes from './routes/sheetProblem.routes.js';
 import sheetBucketRoutes from './routes/sheetBucket.routes.js';
 import platformStatsRoutes from './routes/platformStats.routes.js';
 import githubRoutes from './routes/github.routes.js';
+import discussionRoutes from './routes/discussion.routes.js';
+import adminRoutes from './routes/admin.routes.js';
 import { errorHandler, notFound } from './middleware/error.middleware.js';
 
 dotenv.config();
@@ -37,6 +39,8 @@ app.use('/api/sheet-problems', sheetProblemRoutes);
 app.use('/api/buckets', sheetBucketRoutes);
 app.use('/api/platform-stats', platformStatsRoutes);
 app.use('/api/github', githubRoutes);
+app.use('/api/discussions', discussionRoutes);
+app.use('/api/admin', adminRoutes);
 
 // Root route
 app.get('/', (req, res) => {
@@ -53,6 +57,8 @@ app.get('/', (req, res) => {
       sheets: '/api/sheets',
       platformStats: '/api/platform-stats',
       github: '/api/github',
+      discussions: '/api/discussions',
+      admin: '/api/admin',
     }
   });
 });

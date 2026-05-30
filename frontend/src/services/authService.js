@@ -25,4 +25,9 @@ export const authService = {
     const response = await api.put('/auth/profile', data);
     return response.data;
   },
+
+  acceptAgreement: async () => {
+    const response = await api.put('/auth/accept-agreement');
+    return response.data;
+  },
 };

@@ -8,6 +8,7 @@ import {
   googleLogin,
   getMe,
   updateProfile,
+  acceptAgreement,
 } from '../controllers/auth.controller.js';
 
 const router = express.Router();
@@ -36,5 +37,6 @@ router.post('/login', loginValidation, validate, login);
 router.post('/google', googleValidation, validate, googleLogin);
 router.get('/me', protect, getMe);
 router.put('/profile', protect, updateProfile);
+router.put('/accept-agreement', protect, acceptAgreement);
 
 export default router;

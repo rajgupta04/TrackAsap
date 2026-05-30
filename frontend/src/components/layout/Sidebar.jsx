@@ -16,6 +16,8 @@ import {
   Code,
   ChevronLeft,
   ChevronRight,
+  MessageSquare,
+  Shield,
 } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 
@@ -25,6 +27,7 @@ const navItems = [
   { path: '/analytics', icon: BarChart3, label: 'Analytics' },
   { path: '/sheets', icon: BookOpen, label: 'Sheets' },
   { path: '/problems', icon: Code, label: 'Problems' },
+  { path: '/discussion', icon: MessageSquare, label: 'Discussion' },
   { path: '/physique', icon: Dumbbell, label: 'Physique' },
   { path: '/profile', icon: User, label: 'Profile' },
 ];
@@ -146,6 +149,30 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
             );
           })}
         </nav>
+
+        {/* Admin link - only shown for admin users */}
+        {user?.role === 'admin' && (
+          <div className="px-2 md:px-4 pb-2">
+            <NavLink
+              to="/admin"
+              onClick={() => setIsOpen(false)}
+              title={isCollapsed ? 'Admin Panel' : ''}
+              className={({ isActive }) =>
+                `flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 ${
+                  isCollapsed ? 'md:justify-center md:px-3' : ''
+                } ${
+                  isActive
+                    ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                    : 'text-dark-300 hover:bg-dark-800/50 hover:text-white'
+                }`
+              }
+            >
+              <Shield size={20} className="flex-shrink-0" />
+              {!isCollapsed && <span className="font-medium hidden md:inline">Admin Panel</span>}
+              <span className="font-medium md:hidden">Admin Panel</span>
+            </NavLink>
+          </div>
+        )}
 
         {/* User section */}
         <div className="p-2 md:p-4 border-t border-dark-700/50">
