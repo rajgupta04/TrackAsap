@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import {
   Code2,
   Trophy,
@@ -18,6 +19,7 @@ import { useAuthStore } from '../store/authStore';
 
 const PlatformStats = () => {
   const { user } = useAuthStore();
+  const navigate = useNavigate();
   const [leetcodeStats, setLeetcodeStats] = useState(null);
   const [codeforcesStats, setCodeforcesStats] = useState(null);
   const [loading, setLoading] = useState({
@@ -84,15 +86,18 @@ const PlatformStats = () => {
 
   if (!hasAnyHandle) {
     return (
-      <GlassCard>
+      <GlassCard 
+        onClick={() => navigate('/profile#platform-handles')}
+        className="cursor-pointer hover:bg-white/5 transition-colors group"
+      >
         <div className="flex flex-col items-center justify-center py-8 text-center">
-          <Code2 className="w-12 h-12 text-dark-500 mb-3" />
-          <h3 className="text-lg font-semibold text-white mb-2">
+          <Code2 className="w-12 h-12 text-dark-500 mb-3 group-hover:text-neon-green transition-colors" />
+          <h3 className="text-lg font-semibold text-white mb-2 group-hover:text-neon-green transition-colors">
             Connect Your Coding Profiles
           </h3>
-          <p className="text-dark-400 text-sm max-w-md">
+          <p className="text-dark-400 text-sm max-w-md group-hover:text-dark-300 transition-colors">
             Add your LeetCode, Codeforces, or CodeChef username in your Profile
-            to see your coding stats here.
+            to see your coding stats here. Click to connect.
           </p>
         </div>
       </GlassCard>

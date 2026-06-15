@@ -208,7 +208,7 @@ const Dashboard = () => {
         </div>
       )}
 
-      {hasPlatformHistory && <PlatformStats />}
+      <PlatformStats />
 
       {(hasPlatformHistory || hasComplianceHistory) && (
         <div className={`grid grid-cols-1 ${statsGridCols} gap-4 md:gap-6`}>

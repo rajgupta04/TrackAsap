@@ -30,12 +30,12 @@ import githubService from '../services/githubService';
 import GlassCard from '../components/ui/GlassCard';
 import NumberInput from '../components/ui/NumberInput';
 
-const TRACKEX_REPO_URL = 'https://github.com/rajgupta04/TrackAsap/tree/main/extension/track-ex';
+const TRACKEX_DOWNLOAD_URL = '/track-ex.zip';
 
 const SETUP_STEPS = [
   {
     title: 'Download the Extension',
-    desc: 'Clone or download the TrackAsap repository from GitHub. The extension is in the extension/track-ex/ folder.',
+    desc: 'Download the track-ex.zip file and extract it on your computer.',
     icon: Download,
   },
   {
@@ -45,7 +45,7 @@ const SETUP_STEPS = [
   },
   {
     title: 'Load Unpacked',
-    desc: 'Click "Load unpacked" and select the extension/track-ex/ folder from the downloaded repository.',
+    desc: 'Click "Load unpacked" and select the extracted track-ex folder.',
     icon: CheckCircle2,
   },
   {
@@ -86,6 +86,21 @@ const Profile = () => {
   const handleChange = (field, value) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
+
+  // Handle hash scrolling
+  useEffect(() => {
+    if (window.location.hash) {
+      const id = window.location.hash.replace('#', '');
+      const element = document.getElementById(id);
+      if (element) {
+        setTimeout(() => {
+          element.scrollIntoView({ behavior: 'smooth' });
+          const firstInput = element.querySelector('input');
+          if (firstInput) firstInput.focus();
+        }, 100);
+      }
+    }
+  }, []);
 
   // GitHub integration
   useEffect(() => {
@@ -283,7 +298,7 @@ const Profile = () => {
         </GlassCard>
 
         {/* Platform Handles */}
-        <GlassCard className="mt-4 md:mt-6">
+        <GlassCard id="platform-handles" className="mt-4 md:mt-6 scroll-mt-24">
           <h3 className="text-base md:text-lg font-semibold text-white mb-4 md:mb-6">Platform Handles</h3>
           <p className="text-dark-400 text-xs md:text-sm mb-4">
             Add your competitive programming handles (optional)
@@ -472,9 +487,8 @@ const Profile = () => {
 
           <div className="flex flex-wrap gap-3">
             <motion.a
-              href={TRACKEX_REPO_URL}
-              target="_blank"
-              rel="noopener noreferrer"
+              href={TRACKEX_DOWNLOAD_URL}
+              download="track-ex.zip"
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               className="flex items-center gap-2 px-4 py-2.5 bg-purple-500/15 hover:bg-purple-500/25 border border-purple-500/20 rounded-lg transition-all text-purple-400 font-medium text-sm"
@@ -593,9 +607,8 @@ const Profile = () => {
                 {/* Footer */}
                 <div className="mt-4 pt-4 border-t border-white/10 flex flex-col sm:flex-row gap-3">
                   <a
-                    href={TRACKEX_REPO_URL}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                    href={TRACKEX_DOWNLOAD_URL}
+                    download="track-ex.zip"
                     className="flex items-center justify-center gap-2 px-4 py-2.5 bg-purple-500/15 hover:bg-purple-500/25 border border-purple-500/20 rounded-lg transition-all text-purple-400 font-medium text-sm flex-1"
                   >
                     <Download className="w-4 h-4" />
