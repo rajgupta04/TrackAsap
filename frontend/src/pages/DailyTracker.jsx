@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { format, addDays, subDays, parseISO } from 'date-fns';
+import { format, addDays, subDays, parseISO, getDay, differenceInDays } from 'date-fns';
 import toast from 'react-hot-toast';
 import {
   ChevronLeft,
@@ -69,6 +69,26 @@ const DailyTracker = () => {
   const [showStreakAnimation, setShowStreakAnimation] = useState(false);
   const [currentStreak, setCurrentStreak] = useState(0);
   const [todayProblems, setTodayProblems] = useState([]);
+  const [cfContests, setCfContests] = useState([]);
+
+  useEffect(() => {
+    const fetchCFContests = async () => {
+      try {
+        const response = await fetch('https://codeforces.com/api/contest.list?gym=false');
+        const data = await response.json();
+        if (data.status === 'OK') {
+          const dates = data.result.map(c => {
+            const date = new Date(c.startTimeSeconds * 1000);
+            return format(date, 'yyyy-MM-dd');
+          });
+          setCfContests([...new Set(dates)]);
+        }
+      } catch (err) {
+        console.error('Failed to fetch CF contests:', err);
+      }
+    };
+    fetchCFContests();
+  }, []);
 
   useEffect(() => {
     fetchLogByDate(selectedDate);
@@ -155,6 +175,32 @@ const DailyTracker = () => {
       }
     }
   };
+
+  const hasContest = useCallback((platform, dateString) => {
+    if (!dateString) return false;
+    const date = parseISO(dateString);
+    const dayOfWeek = getDay(date);
+    
+    if (platform === 'leetcode') {
+      if (dayOfWeek === 0) return true; // Weekly
+      if (dayOfWeek === 6) { // Biweekly
+        const knownBiweekly = new Date('2024-03-02T00:00:00Z');
+        const diffDays = differenceInDays(date, knownBiweekly);
+        if (Math.abs(diffDays) % 14 === 0) return true;
+      }
+      return false;
+    }
+    
+    if (platform === 'codechef') {
+      return dayOfWeek === 3; // Starters on Wednesday
+    }
+    
+    if (platform === 'codeforces') {
+      return cfContests.includes(dateString);
+    }
+    
+    return false;
+  }, [cfContests]);
 
   // Calculate completion score
   const calculateCompletionScore = () => {
@@ -253,11 +299,13 @@ const DailyTracker = () => {
           </div>
 
           <div className="space-y-4">
-            <Checkbox
-              checked={currentLog?.leetcode?.contestParticipated || false}
-              onChange={(val) => updateCurrentLog('leetcode.contestParticipated', val)}
-              label="Contest Participated"
-            />
+            {hasContest('leetcode', localDate) && (
+              <Checkbox
+                checked={currentLog?.leetcode?.contestParticipated || false}
+                onChange={(val) => updateCurrentLog('leetcode.contestParticipated', val)}
+                label="Contest Participated"
+              />
+            )}
 
             <NumberInput
               label="Problems Solved"
@@ -322,11 +370,13 @@ const DailyTracker = () => {
               label="Daily Problem"
             />
 
-            <Checkbox
-              checked={currentLog?.codechef?.contestParticipated || false}
-              onChange={(val) => updateCurrentLog('codechef.contestParticipated', val)}
-              label="Contest Participated"
-            />
+            {hasContest('codechef', localDate) && (
+              <Checkbox
+                checked={currentLog?.codechef?.contestParticipated || false}
+                onChange={(val) => updateCurrentLog('codechef.contestParticipated', val)}
+                label="Contest Participated"
+              />
+            )}
 
             <NumberInput
               label="Problems Solved"
@@ -378,11 +428,13 @@ const DailyTracker = () => {
           </div>
 
           <div className="space-y-4">
-            <Checkbox
-              checked={currentLog?.codeforces?.contestParticipated || false}
-              onChange={(val) => updateCurrentLog('codeforces.contestParticipated', val)}
-              label="Contest Participated"
-            />
+            {hasContest('codeforces', localDate) && (
+              <Checkbox
+                checked={currentLog?.codeforces?.contestParticipated || false}
+                onChange={(val) => updateCurrentLog('codeforces.contestParticipated', val)}
+                label="Contest Participated"
+              />
+            )}
 
             <NumberInput
               label="Problems Solved"
