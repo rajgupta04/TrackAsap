@@ -69,6 +69,9 @@ const Sheets = () => {
   const [showBucketPicker, setShowBucketPicker] = useState(false);
   const [selectedSheet, setSelectedSheet] = useState(null);
   const [currentQuoteIndex, setCurrentQuoteIndex] = useState(0);
+  const [sheetToDelete, setSheetToDelete] = useState(null);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  const [isDeleting, setIsDeleting] = useState(false);
   const [newSheetData, setNewSheetData] = useState({
     category: '',
     name: '',
@@ -108,19 +111,28 @@ const Sheets = () => {
     }
   };
 
-  const handleDeleteSheet = async (id, e) => {
+  const handleDeleteSheetClick = (sheet, e) => {
     e.stopPropagation();
-    if (window.confirm('Are you sure you want to delete this sheet?')) {
-      try {
-        await deleteSheet(id);
-        toast.success('Sheet deleted');
-        if (selectedSheet === id) {
-          setSelectedSheet(null);
-          clearCurrentSheet();
-        }
-      } catch (error) {
-        toast.error('Failed to delete sheet');
+    setSheetToDelete(sheet);
+    setDeleteConfirmText('');
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!sheetToDelete || deleteConfirmText.toLowerCase() !== 'delete') return;
+    
+    setIsDeleting(true);
+    try {
+      await deleteSheet(sheetToDelete._id);
+      toast.success('Sheet deleted');
+      if (selectedSheet === sheetToDelete._id) {
+        setSelectedSheet(null);
+        clearCurrentSheet();
       }
+      setSheetToDelete(null);
+    } catch (error) {
+      toast.error('Failed to delete sheet');
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -209,7 +221,7 @@ const Sheets = () => {
                                 {sheet.name}
                               </h3>
                               <button
-                                onClick={(e) => handleDeleteSheet(sheet._id, e)}
+                                onClick={(e) => handleDeleteSheetClick(sheet, e)}
                                 className="p-1 text-gray-600 hover:text-red-400 rounded opacity-0 group-hover:opacity-100 transition-all"
                               >
                                 <Trash2 className="w-3 h-3" />
@@ -337,6 +349,16 @@ const Sheets = () => {
               onStatsUpdate={() => {
                 fetchSheets(true);
                 fetchSheet(selectedSheet, true);
+              }}
+              onDelete={async () => {
+                try {
+                  await deleteSheet(currentSheet._id);
+                  toast.success('Sheet deleted');
+                  setSelectedSheet(null);
+                  clearCurrentSheet();
+                } catch (error) {
+                  toast.error('Failed to delete sheet');
+                }
               }}
             />
           ) : (
@@ -622,6 +644,75 @@ const Sheets = () => {
                   >
                     {loading ? 'Creating...' : 'Create Sheet'}
                   </button>
+                </div>
+              </GlassCard>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Delete Confirmation Modal */}
+      <AnimatePresence>
+        {sheetToDelete && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            onClick={() => setSheetToDelete(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="w-full max-w-md"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <GlassCard className="p-6">
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-xl font-bold text-red-500">Delete Sheet</h2>
+                  <button
+                    onClick={() => setSheetToDelete(null)}
+                    className="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+                
+                <div className="space-y-4">
+                  <p className="text-gray-300">
+                    Are you sure you want to delete <span className="text-white font-semibold">{sheetToDelete.name}</span>? 
+                    This action cannot be undone.
+                  </p>
+                  
+                  <div>
+                    <label className="block text-sm text-gray-400 mb-2">
+                      Please type <span className="text-red-400 font-bold select-all">delete</span> to confirm:
+                    </label>
+                    <input
+                      type="text"
+                      value={deleteConfirmText}
+                      onChange={(e) => setDeleteConfirmText(e.target.value)}
+                      placeholder="Type delete here..."
+                      className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:border-red-500 focus:ring-1 focus:ring-red-500 outline-none transition-all"
+                    />
+                  </div>
+
+                  <div className="flex justify-end gap-3 mt-6">
+                    <button
+                      onClick={() => setSheetToDelete(null)}
+                      className="px-6 py-2.5 text-gray-300 hover:text-white border border-white/10 hover:border-white/20 rounded-lg transition-all"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleConfirmDelete}
+                      disabled={deleteConfirmText.toLowerCase() !== 'delete' || isDeleting}
+                      className="px-6 py-2.5 bg-red-500 text-white font-semibold rounded-lg hover:bg-red-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {isDeleting ? 'Deleting...' : 'Delete'}
+                    </button>
+                  </div>
                 </div>
               </GlassCard>
             </motion.div>
