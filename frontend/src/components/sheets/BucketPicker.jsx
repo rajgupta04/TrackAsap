@@ -16,6 +16,7 @@ import {
   Trophy,
   Cpu,
   Database,
+  AlertTriangle,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import GlassCard from '../ui/GlassCard';
@@ -57,6 +58,11 @@ const BucketPicker = ({ isOpen, onClose, onImport, sheets = [] }) => {
   const [importMode, setImportMode] = useState('new'); // 'new' | 'existing'
   const [selectedSheet, setSelectedSheet] = useState('');
   const [newSheetName, setNewSheetName] = useState('');
+  const [existingSheetForBucket, setExistingSheetForBucket] = useState(null);
+  const [allowDuplicateCreation, setAllowDuplicateCreation] = useState(false);
+
+  const isDuplicateName = sheets.some(s => s.name.toLowerCase() === newSheetName.trim().toLowerCase());
+  const canImportNew = !isDuplicateName && newSheetName.trim().length > 0;
 
   useEffect(() => {
     if (isOpen) {
@@ -98,6 +104,7 @@ const BucketPicker = ({ isOpen, onClose, onImport, sheets = [] }) => {
   const handleSelectBucket = async (bucket) => {
     setSelectedBucket(bucket);
     setMode('details');
+
     try {
       const details = await bucketService.getBucket(bucket._id);
       setBucketDetails(details);
@@ -109,6 +116,17 @@ const BucketPicker = ({ isOpen, onClose, onImport, sheets = [] }) => {
 
   const handleImport = async () => {
     if (!selectedBucket) return;
+
+    if (importMode === 'new') {
+      const targetName = (newSheetName || selectedBucket.name).trim();
+      const duplicateSheet = sheets.find(s => s.name.toLowerCase() === targetName.toLowerCase());
+      
+      if (duplicateSheet && !allowDuplicateCreation) {
+        setExistingSheetForBucket(duplicateSheet);
+        setMode('duplicate-warning');
+        return;
+      }
+    }
 
     try {
       setImporting(true);
@@ -147,6 +165,8 @@ const BucketPicker = ({ isOpen, onClose, onImport, sheets = [] }) => {
     setImportMode('new');
     setSelectedSheet('');
     setNewSheetName('');
+    setExistingSheetForBucket(null);
+    setAllowDuplicateCreation(false);
   };
 
   const handleBack = () => {
@@ -155,7 +175,12 @@ const BucketPicker = ({ isOpen, onClose, onImport, sheets = [] }) => {
     } else if (mode === 'details') {
       setSelectedBucket(null);
       setBucketDetails(null);
+      setExistingSheetForBucket(null);
+      setAllowDuplicateCreation(false);
       setMode('list');
+    } else if (mode === 'duplicate-warning') {
+      setMode('details');
+      setAllowDuplicateCreation(false);
     } else if (mode === 'list') {
       setSelectedCategory(null);
       setMode('categories');
@@ -373,64 +398,146 @@ const BucketPicker = ({ isOpen, onClose, onImport, sheets = [] }) => {
                 </div>
 
                 {/* Import Options */}
-                <div className="pt-4 border-t border-white/10 space-y-4">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <button
-                      onClick={() => setImportMode('new')}
-                      className={`flex-1 p-3 rounded-lg border transition-all ${
-                        importMode === 'new'
-                          ? 'border-neon-green bg-neon-green/10 text-neon-green'
-                          : 'border-white/10 text-gray-400 hover:border-white/20'
-                      }`}
-                    >
-                      <Plus className="w-5 h-5 mx-auto mb-1" />
-                      <span className="text-sm">Create New Sheet</span>
-                    </button>
-                    <button
-                      onClick={() => setImportMode('existing')}
-                      className={`flex-1 p-3 rounded-lg border transition-all ${
-                        importMode === 'existing'
-                          ? 'border-neon-green bg-neon-green/10 text-neon-green'
-                          : 'border-white/10 text-gray-400 hover:border-white/20'
-                      }`}
-                    >
-                      <Download className="w-5 h-5 mx-auto mb-1" />
-                      <span className="text-sm">Add to Existing</span>
-                    </button>
-                  </div>
+                <div className="pt-4 border-t border-white/10 space-y-4 mt-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <button
+                        onClick={() => setImportMode('new')}
+                        className={`flex-1 p-3 rounded-lg border transition-all ${
+                          importMode === 'new'
+                            ? 'border-neon-green bg-neon-green/10 text-neon-green'
+                            : 'border-white/10 text-gray-400 hover:border-white/20'
+                        }`}
+                      >
+                        <Plus className="w-5 h-5 mx-auto mb-1" />
+                        <span className="text-sm">Create New Sheet</span>
+                      </button>
+                      <button
+                        onClick={() => setImportMode('existing')}
+                        className={`flex-1 p-3 rounded-lg border transition-all ${
+                          importMode === 'existing'
+                            ? 'border-neon-green bg-neon-green/10 text-neon-green'
+                            : 'border-white/10 text-gray-400 hover:border-white/20'
+                        }`}
+                      >
+                        <Download className="w-5 h-5 mx-auto mb-1" />
+                        <span className="text-sm">Add to Existing</span>
+                      </button>
+                    </div>
 
-                  {importMode === 'new' ? (
-                    <div>
-                      <label className="block text-sm font-medium text-gray-300 mb-2">
-                        Sheet Name
-                      </label>
-                      <input
-                        type="text"
-                        value={newSheetName}
-                        onChange={(e) => setNewSheetName(e.target.value)}
-                        placeholder={selectedBucket?.name}
-                        className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white placeholder-gray-500 focus:border-neon-green outline-none"
+                    {importMode === 'new' ? (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-300 mb-2">
+                          Sheet Name
+                        </label>
+                        <input
+                          type="text"
+                          value={newSheetName}
+                          onChange={(e) => setNewSheetName(e.target.value)}
+                          placeholder={selectedBucket?.name}
+                          className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white placeholder-gray-500 focus:border-neon-green outline-none transition-colors"
+                        />
+                      </div>
+                    ) : (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-300 mb-2">
+                          Select Sheet
+                        </label>
+                        <select
+                          value={selectedSheet}
+                          onChange={(e) => setSelectedSheet(e.target.value)}
+                          className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white outline-none focus:border-neon-green"
+                        >
+                          <option value="">Choose a sheet...</option>
+                          {sheets.map((sheet) => (
+                            <option key={sheet._id} value={sheet._id}>
+                              {sheet.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+                  </div>
+              </div>
+            ) : mode === 'duplicate-warning' && existingSheetForBucket ? (
+              /* Duplicate Warning Screen */
+              <div className="space-y-6 max-w-md mx-auto py-6">
+                <div className="flex flex-col items-center text-center space-y-4">
+                  <div className="w-16 h-16 bg-yellow-500/20 rounded-2xl flex items-center justify-center">
+                    <AlertTriangle className="w-8 h-8 text-yellow-500" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold text-white">Oops! You already have this</h3>
+                    <p className="text-gray-400 mt-2 text-sm">
+                      You imported "{existingSheetForBucket.name}" previously. Importing it again might duplicate your tracking.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="bg-dark-800/50 rounded-xl p-4 border border-white/5">
+                  <div className="flex justify-between items-center mb-3">
+                    <span className="text-sm font-medium text-gray-300">Your Current Progress</span>
+                    <span className="text-sm font-bold text-white">
+                      {existingSheetForBucket.solvedProblems} / {existingSheetForBucket.totalProblems}
+                    </span>
+                  </div>
+                  <div className="h-2.5 bg-gray-700 rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-neon-green transition-all duration-500"
+                      style={{ width: `${existingSheetForBucket.totalProblems > 0 ? Math.round((existingSheetForBucket.solvedProblems / existingSheetForBucket.totalProblems) * 100) : 0}%` }}
+                    />
+                  </div>
+                  <div className="mt-2 text-right text-xs font-bold text-neon-green">
+                    {existingSheetForBucket.totalProblems > 0 ? Math.round((existingSheetForBucket.solvedProblems / existingSheetForBucket.totalProblems) * 100) : 0}% Complete
+                  </div>
+                </div>
+
+                <div className="space-y-4 pt-4 border-t border-white/10">
+                  <label className="flex items-center gap-3 cursor-pointer group">
+                    <div className="relative flex items-center justify-center">
+                      <input 
+                        type="checkbox" 
+                        checked={allowDuplicateCreation}
+                        onChange={(e) => {
+                          setAllowDuplicateCreation(e.target.checked);
+                          if (!e.target.checked) setNewSheetName(selectedBucket.name);
+                        }}
+                        className="w-5 h-5 rounded border-gray-600 text-neon-green focus:ring-neon-green bg-dark-700 cursor-pointer transition-all"
                       />
                     </div>
-                  ) : (
-                    <div>
-                      <label className="block text-sm font-medium text-gray-300 mb-2">
-                        Select Sheet
-                      </label>
-                      <select
-                        value={selectedSheet}
-                        onChange={(e) => setSelectedSheet(e.target.value)}
-                        className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white outline-none focus:border-neon-green"
+                    <span className="text-gray-300 group-hover:text-white transition-colors font-medium">
+                      I want to create another one anyway
+                    </span>
+                  </label>
+
+                  <AnimatePresence>
+                    {allowDuplicateCreation && (
+                      <motion.div 
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="overflow-hidden"
                       >
-                        <option value="">Choose a sheet...</option>
-                        {sheets.map((sheet) => (
-                          <option key={sheet._id} value={sheet._id}>
-                            {sheet.name}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  )}
+                        <label className="block text-sm font-medium text-gray-300 mb-2">
+                          New Sheet Name
+                        </label>
+                        <input
+                          type="text"
+                          value={newSheetName}
+                          onChange={(e) => setNewSheetName(e.target.value)}
+                          placeholder="Enter a unique name..."
+                          className={`w-full bg-white/5 border rounded-lg px-4 py-3 text-white placeholder-gray-500 outline-none transition-colors ${
+                            isDuplicateName ? 'border-red-500/50 focus:border-red-500' : 'border-white/10 focus:border-neon-green'
+                          }`}
+                        />
+                        {isDuplicateName && (
+                          <p className="text-xs text-red-400 mt-2 flex items-center gap-1">
+                            <AlertTriangle className="w-3 h-3" />
+                            A sheet with this name already exists.
+                          </p>
+                        )}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
               </div>
             ) : null}
@@ -459,6 +566,34 @@ const BucketPicker = ({ isOpen, onClose, onImport, sheets = [] }) => {
                   <>
                     <CheckCircle2 className="w-4 h-4" />
                     Import {bucketDetails?.totalProblems || 0} Problems
+                  </>
+                )}
+              </button>
+            </div>
+          )}
+
+          {mode === 'duplicate-warning' && (
+            <div className="p-3 sm:p-4 border-t border-white/10 flex flex-col-reverse sm:flex-row sm:justify-end gap-3">
+              <button
+                onClick={handleBack}
+                className="w-full sm:w-auto px-6 py-2.5 text-gray-300 hover:text-white border border-white/10 hover:border-white/20 rounded-lg transition-all"
+              >
+                Go Back
+              </button>
+              <button
+                onClick={handleImport}
+                disabled={importing || !allowDuplicateCreation || !canImportNew}
+                className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-2.5 bg-yellow-500 text-black font-semibold rounded-lg hover:bg-yellow-400 transition-all disabled:opacity-50"
+              >
+                {importing ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Importing...
+                  </>
+                ) : (
+                  <>
+                    <AlertTriangle className="w-4 h-4" />
+                    Import Anyway
                   </>
                 )}
               </button>
