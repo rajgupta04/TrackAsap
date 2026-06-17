@@ -13,6 +13,9 @@ import {
   Plus,
   Loader2,
   CheckCircle2,
+  Trophy,
+  Cpu,
+  Database,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import GlassCard from '../ui/GlassCard';
@@ -33,13 +36,24 @@ const DIFFICULTY_COLORS = {
   hard: 'text-red-400',
 };
 
+const SUBJECT_CATEGORIES = [
+  { id: 'dsa', label: 'DSA Sheet', icon: Binary, color: '#00FF88' },
+  { id: 'cp', label: 'Competitive Programming', icon: Trophy, color: '#3b82f6' },
+  { id: 'os', label: 'Operating Systems', icon: Cpu, color: '#a855f7' },
+  { id: 'cn', label: 'Computer Networks', icon: Network, color: '#14b8a6' },
+  { id: 'oop', label: 'Object Oriented Programming', icon: Boxes, color: '#f59e0b' },
+  { id: 'dev', label: 'Development', icon: Code, color: '#22c55e' },
+  { id: 'database', label: 'Database', icon: Database, color: '#f43f5e' },
+];
+
 const BucketPicker = ({ isOpen, onClose, onImport, sheets = [] }) => {
   const [buckets, setBuckets] = useState([]);
   const [selectedBucket, setSelectedBucket] = useState(null);
   const [bucketDetails, setBucketDetails] = useState(null);
   const [loading, setLoading] = useState(true);
   const [importing, setImporting] = useState(false);
-  const [mode, setMode] = useState('list'); // 'list' | 'details' | 'import'
+  const [mode, setMode] = useState('categories'); // 'categories' | 'list' | 'details' | 'import'
+  const [selectedCategory, setSelectedCategory] = useState(null);
   const [importMode, setImportMode] = useState('new'); // 'new' | 'existing'
   const [selectedSheet, setSelectedSheet] = useState('');
   const [newSheetName, setNewSheetName] = useState('');
@@ -60,6 +74,25 @@ const BucketPicker = ({ isOpen, onClose, onImport, sheets = [] }) => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const getFilteredBuckets = () => {
+    if (!selectedCategory) return buckets;
+    return buckets.filter(b => {
+      if (b.category === selectedCategory) return true;
+      // Map legacy categories to DSA
+      if (selectedCategory === 'dsa' && !['cp', 'os', 'cn', 'oop', 'dev', 'database'].includes(b.category)) {
+        return true;
+      }
+      return false;
+    });
+  };
+
+  const filteredBuckets = getFilteredBuckets();
+
+  const handleSelectCategory = (categoryId) => {
+    setSelectedCategory(categoryId);
+    setMode('list');
   };
 
   const handleSelectBucket = async (bucket) => {
@@ -107,9 +140,10 @@ const BucketPicker = ({ isOpen, onClose, onImport, sheets = [] }) => {
   };
 
   const resetState = () => {
+    setSelectedCategory(null);
     setSelectedBucket(null);
     setBucketDetails(null);
-    setMode('list');
+    setMode('categories');
     setImportMode('new');
     setSelectedSheet('');
     setNewSheetName('');
@@ -122,6 +156,9 @@ const BucketPicker = ({ isOpen, onClose, onImport, sheets = [] }) => {
       setSelectedBucket(null);
       setBucketDetails(null);
       setMode('list');
+    } else if (mode === 'list') {
+      setSelectedCategory(null);
+      setMode('categories');
     }
   };
 
@@ -146,7 +183,7 @@ const BucketPicker = ({ isOpen, onClose, onImport, sheets = [] }) => {
           {/* Header */}
           <div className="flex items-start sm:items-center justify-between p-4 border-b border-white/10 gap-3">
             <div className="flex items-start sm:items-center gap-3 min-w-0">
-              {mode !== 'list' && (
+              {mode !== 'categories' && (
                 <button
                   onClick={handleBack}
                   className="p-2 hover:bg-white/10 rounded-lg transition-colors text-gray-400 hover:text-white"
@@ -155,7 +192,8 @@ const BucketPicker = ({ isOpen, onClose, onImport, sheets = [] }) => {
                 </button>
               )}
               <h2 className="text-base sm:text-xl font-bold text-white break-words leading-tight">
-                {mode === 'list' && 'Problem Buckets'}
+                {mode === 'categories' && 'Select Category'}
+                {mode === 'list' && (SUBJECT_CATEGORIES.find(c => c.id === selectedCategory)?.label || 'Problem Buckets')}
                 {mode === 'details' && selectedBucket?.name}
                 {mode === 'import' && 'Import to Sheet'}
               </h2>
@@ -174,10 +212,43 @@ const BucketPicker = ({ isOpen, onClose, onImport, sheets = [] }) => {
               <div className="flex items-center justify-center py-12">
                 <Loader2 className="w-8 h-8 animate-spin text-neon-green" />
               </div>
+            ) : mode === 'categories' ? (
+              /* Category List */
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {SUBJECT_CATEGORIES.map((cat) => {
+                  const Icon = cat.icon;
+                  const catBuckets = buckets.filter(b => {
+                    if (b.category === cat.id) return true;
+                    if (cat.id === 'dsa' && !['cp', 'os', 'cn', 'oop', 'dev', 'database'].includes(b.category)) return true;
+                    return false;
+                  });
+                  const totalProbs = catBuckets.reduce((acc, b) => acc + (b.totalProblems || 0), 0);
+                  
+                  return (
+                    <motion.button
+                      key={cat.id}
+                      whileHover={{ scale: 1.02 }}
+                      onClick={() => handleSelectCategory(cat.id)}
+                      className="flex items-center gap-4 p-5 bg-dark-800 border border-white/10 hover:border-white/20 rounded-xl text-left transition-all"
+                    >
+                      <div
+                        className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0"
+                        style={{ backgroundColor: `${cat.color}20` }}
+                      >
+                        <Icon className="w-6 h-6" style={{ color: cat.color }} />
+                      </div>
+                      <div>
+                        <h3 className="font-bold text-white text-base">{cat.label}</h3>
+                        <p className="text-sm text-gray-400">{totalProbs} problems</p>
+                      </div>
+                    </motion.button>
+                  );
+                })}
+              </div>
             ) : mode === 'list' ? (
               /* Bucket List */
               <div className="grid gap-3">
-                {buckets.map((bucket) => {
+                {filteredBuckets.map((bucket) => {
                   const Icon = CATEGORY_ICONS[bucket.category] || CATEGORY_ICONS.default;
                   return (
                     <motion.button
@@ -219,10 +290,11 @@ const BucketPicker = ({ isOpen, onClose, onImport, sheets = [] }) => {
                   );
                 })}
 
-                {buckets.length === 0 && (
+                {filteredBuckets.length === 0 && (
                   <div className="text-center py-12">
                     <BookOpen className="w-12 h-12 text-gray-600 mx-auto mb-3" />
-                    <p className="text-gray-400">No buckets available</p>
+                    <h3 className="text-lg font-semibold text-white mb-1">Coming Soon</h3>
+                    <p className="text-gray-400">There are no templates available in this category yet. Check back later!</p>
                   </div>
                 )}
               </div>

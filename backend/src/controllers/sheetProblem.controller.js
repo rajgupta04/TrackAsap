@@ -13,7 +13,7 @@ export const getSheetProblems = async (req, res) => {
     const problems = await SheetProblem.find({
       sheet: sheetId,
       user: req.user._id,
-    }).sort({ topic: 1, order: 1 });
+    }).sort({ order: 1 });
 
     // Group by topic
     const groupedProblems = problems.reduce((acc, problem) => {
@@ -243,7 +243,7 @@ export const exportToExcel = async (req, res) => {
     const problems = await SheetProblem.find({
       sheet: sheetId,
       user: req.user._id,
-    }).sort({ topic: 1, order: 1 });
+    }).sort({ order: 1 });
 
     const sheet = await Sheet.findById(sheetId);
 

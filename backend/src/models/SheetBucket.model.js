@@ -58,7 +58,12 @@ const sheetBucketSchema = new mongoose.Schema(
     category: {
       type: String,
       required: true,
-      enum: ['dsa', 'graph', 'dp', 'trees', 'strings', 'arrays', 'linked-list', 'stack-queue', 'binary-search', 'greedy', 'backtracking', 'bit-manipulation', 'math', 'system-design', 'other'],
+      enum: [
+        'dsa', 'cp', 'os', 'cn', 'oop', 'dev', 'database',
+        'graph', 'dp', 'trees', 'strings', 'arrays', 'linked-list', 
+        'stack-queue', 'binary-search', 'greedy', 'backtracking', 
+        'bit-manipulation', 'math', 'system-design', 'other'
+      ],
     },
     icon: {
       type: String,

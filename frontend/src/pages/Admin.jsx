@@ -78,9 +78,10 @@ function parseCSVToProblems(csvText) {
 }
 
 const BUCKET_CATEGORIES = [
-  'dsa', 'graph', 'dp', 'trees', 'strings', 'arrays',
-  'linked-list', 'stack-queue', 'binary-search', 'greedy',
-  'backtracking', 'bit-manipulation', 'math', 'system-design', 'other',
+  'dsa', 'cp', 'os', 'cn', 'oop', 'dev', 'database',
+  'graph', 'dp', 'trees', 'strings', 'arrays', 'linked-list', 
+  'stack-queue', 'binary-search', 'greedy', 'backtracking', 
+  'bit-manipulation', 'math', 'system-design', 'other'
 ];
 
 const Admin = () => {
