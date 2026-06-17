@@ -3,6 +3,7 @@ import SheetProblem from '../models/SheetProblem.model.js';
 import Sheet from '../models/Sheet.model.js';
 import mongoose from 'mongoose';
 import { buildProblemKey, inferPlatform, normalizePlatform } from '../utils/problemIdentity.js';
+import { getCache, setCache, delCache } from '../config/redis.js';
 
 const VALID_SHEET_CATEGORIES = new Set([
   'dsa',
@@ -26,10 +27,18 @@ function mapBucketCategoryToSheetCategory(bucketCategory = '') {
 // Get all available buckets
 export const getBuckets = async (req, res) => {
   try {
+    const cacheKey = 'sheetBuckets:all';
+    const cachedBuckets = await getCache(cacheKey);
+    
+    if (cachedBuckets) {
+      return res.json(cachedBuckets);
+    }
+
     const buckets = await SheetBucket.find({ isActive: true })
       .select('name description category icon color totalProblems difficultyBreakdown topics popularity')
       .sort({ popularity: -1, name: 1 });
 
+    await setCache(cacheKey, buckets, 3600); // Cache for 1 hour
     res.json(buckets);
   } catch (error) {
     console.error('Get buckets error:', error);
@@ -40,12 +49,21 @@ export const getBuckets = async (req, res) => {
 // Get single bucket with all problems
 export const getBucket = async (req, res) => {
   try {
-    const bucket = await SheetBucket.findById(req.params.id);
+    const { id } = req.params;
+    const cacheKey = `sheetBucket:${id}`;
+    const cachedBucket = await getCache(cacheKey);
+
+    if (cachedBucket) {
+      return res.json(cachedBucket);
+    }
+
+    const bucket = await SheetBucket.findById(id);
 
     if (!bucket) {
       return res.status(404).json({ message: 'Bucket not found' });
     }
 
+    await setCache(cacheKey, bucket, 3600); // Cache for 1 hour
     res.json(bucket);
   } catch (error) {
     console.error('Get bucket error:', error);
@@ -216,6 +234,10 @@ export const upsertBucket = async (req, res) => {
       },
       { upsert: true, new: true }
     );
+
+    // Invalidate caches since a bucket was updated
+    await delCache('sheetBuckets:all');
+    await delCache(`sheetBucket:${bucket._id}`);
 
     res.json(bucket);
   } catch (error) {

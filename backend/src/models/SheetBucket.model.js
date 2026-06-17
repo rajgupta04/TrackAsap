@@ -146,6 +146,9 @@ sheetBucketSchema.pre('findOneAndUpdate', function (next) {
   return next();
 });
 
+// Indexes for performance
+sheetBucketSchema.index({ isActive: 1, popularity: -1, name: 1 });
+
 const SheetBucket = mongoose.model('SheetBucket', sheetBucketSchema);
 
 export default SheetBucket;
