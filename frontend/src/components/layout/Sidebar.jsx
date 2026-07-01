@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import {
   LayoutDashboard,
   Calendar,
@@ -8,8 +8,6 @@ import {
   Dumbbell,
   User,
   LogOut,
-  Menu,
-  X,
   Target,
   Flame,
   BookOpen,
@@ -33,11 +31,9 @@ const navItems = [
 ];
 
 const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
-  const [isOpen, setIsOpen] = useState(false);
   const { logout, user, githubStatus, fetchGitHubStatus } = useAuthStore();
   const location = useLocation();
 
-  const toggleSidebar = () => setIsOpen(!isOpen);
   const toggleCollapse = () => setIsCollapsed(!isCollapsed);
 
   useEffect(() => {
@@ -52,38 +48,14 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
 
   return (
     <>
-      {/* Mobile menu button */}
-      <button
-        onClick={toggleSidebar}
-        className="md:hidden fixed top-4 left-4 z-50 p-2.5 rounded-xl bg-dark-800/90 backdrop-blur-xl border border-dark-700/50 text-white shadow-lg active:scale-95 transition-transform"
-      >
-        {isOpen ? <X size={22} /> : <Menu size={22} />}
-      </button>
-
-      {/* Overlay */}
-      <AnimatePresence>
-        {isOpen && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={toggleSidebar}
-            className="md:hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-40"
-          />
-        )}
-      </AnimatePresence>
-
-      {/* Sidebar */}
+      {/* Sidebar - Hidden on mobile, visible on desktop/tablet */}
       <aside
         className={`
+          hidden md:flex flex-col
           fixed top-0 left-0 h-full z-50 
           bg-dark-900/80 backdrop-blur-xl border-r border-dark-700/50
-          flex flex-col
           transition-all duration-300
-          ${isOpen ? 'translate-x-0' : '-translate-x-full'}
-          md:translate-x-0
           ${isCollapsed ? 'md:w-20' : 'md:w-64'}
-          w-64
         `}
       >
         {/* Logo */}

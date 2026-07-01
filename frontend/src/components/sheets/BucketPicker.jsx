@@ -239,7 +239,7 @@ const BucketPicker = ({ isOpen, onClose, onImport, sheets = [] }) => {
               </div>
             ) : mode === 'categories' ? (
               /* Category List */
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-2.5 sm:gap-4">
                 {SUBJECT_CATEGORIES.map((cat) => {
                   const Icon = cat.icon;
                   const catBuckets = buckets.filter(b => {
@@ -253,18 +253,19 @@ const BucketPicker = ({ isOpen, onClose, onImport, sheets = [] }) => {
                     <motion.button
                       key={cat.id}
                       whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.96 }}
                       onClick={() => handleSelectCategory(cat.id)}
-                      className="flex items-center gap-4 p-5 bg-dark-800 border border-white/10 hover:border-white/20 rounded-xl text-left transition-all"
+                      className="flex flex-col sm:flex-row items-start sm:items-center gap-2.5 sm:gap-4 p-3.5 sm:p-5 bg-dark-800 border border-white/10 hover:border-white/20 rounded-xl text-left transition-all shadow-sm"
                     >
                       <div
-                        className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0"
+                        className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center shrink-0 shadow-inner"
                         style={{ backgroundColor: `${cat.color}20` }}
                       >
-                        <Icon className="w-6 h-6" style={{ color: cat.color }} />
+                        <Icon className="w-5 h-5 sm:w-6 sm:h-6" style={{ color: cat.color }} />
                       </div>
-                      <div>
-                        <h3 className="font-bold text-white text-base">{cat.label}</h3>
-                        <p className="text-sm text-gray-400">{totalProbs} problems</p>
+                      <div className="min-w-0">
+                        <h3 className="font-bold text-white text-xs sm:text-base truncate">{cat.label}</h3>
+                        <p className="text-[11px] sm:text-sm text-gray-400 mt-0.5">{totalProbs} problems</p>
                       </div>
                     </motion.button>
                   );

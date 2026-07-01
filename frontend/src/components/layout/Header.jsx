@@ -48,16 +48,16 @@ const Header = () => {
     <header className="sticky top-0 z-30 bg-dark-950/50 backdrop-blur-xl border-b border-dark-800/50">
       <div className="flex items-center justify-between px-3 sm:px-4 md:px-6 lg:px-8 py-3 md:py-4">
         {/* Page Title */}
-        <div className="ml-12 md:ml-0">
+        <div>
           <motion.h1
             key={pageTitle}
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="text-xl sm:text-2xl font-bold text-white"
+            className="text-lg sm:text-xl md:text-2xl font-bold text-white truncate max-w-[150px] xs:max-w-[200px] sm:max-w-none"
           >
             {pageTitle}
           </motion.h1>
-          <p className="text-xs sm:text-sm text-dark-400">
+          <p className="text-[11px] sm:text-xs md:text-sm text-dark-400">
             Day {currentDay} of 75 • {75 - currentDay} days remaining
           </p>
         </div>
@@ -117,21 +117,23 @@ const Header = () => {
           </button>
         </div>
 
-        {/* Compact stats for tablet - also clickable */}
-        <div className="hidden md:flex lg:hidden items-center gap-2">
+        {/* Compact stats for mobile/tablet - also clickable */}
+        <div className="flex lg:hidden items-center gap-1.5 sm:gap-2 pr-12 md:pr-0">
           <button
             onClick={() => navigate('/analytics')}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-dark-800/50 border border-dark-700/50 hover:bg-dark-700/50 transition-all"
+            title="Analytics Progress"
+            className="flex items-center gap-1 px-2 py-1 sm:px-3 sm:py-1.5 rounded-lg bg-dark-800/80 border border-dark-700/50 hover:bg-dark-700/50 transition-all"
           >
-            <Target size={16} className="text-neon-green" />
-            <span className="text-sm font-semibold text-white">{progress}%</span>
+            <Target size={14} className="text-neon-green" />
+            <span className="text-xs sm:text-sm font-semibold text-white">{progress}%</span>
           </button>
           <button
             onClick={handleRefreshStats}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-dark-800/50 border border-dark-700/50 hover:bg-dark-700/50 transition-all"
+            title="Refresh Streak"
+            className="flex items-center gap-1 px-2 py-1 sm:px-3 sm:py-1.5 rounded-lg bg-dark-800/80 border border-dark-700/50 hover:bg-dark-700/50 transition-all"
           >
-            <Flame size={16} className={`text-orange-500 ${isRefreshing ? 'animate-pulse' : ''}`} />
-            <span className="text-sm font-semibold text-white">{streak?.currentStreak || 0}</span>
+            <Flame size={14} className={`text-orange-500 ${isRefreshing ? 'animate-pulse' : ''}`} />
+            <span className="text-xs sm:text-sm font-semibold text-white">{streak?.currentStreak || 0}</span>
           </button>
         </div>
       </div>
