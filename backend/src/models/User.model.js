@@ -37,6 +37,10 @@ const userSchema = new mongoose.Schema(
       type: Number,
       default: null,
     },
+    enablePhysique: {
+      type: Boolean,
+      default: false,
+    },
     codeforcesHandle: {
       type: String,
       default: '',

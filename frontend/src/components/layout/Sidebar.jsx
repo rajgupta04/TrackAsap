@@ -115,7 +115,14 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
 
         {/* Navigation */}
         <nav className="flex-1 p-2 md:p-4 space-y-1.5 md:space-y-2 overflow-y-auto">
-          {navItems.map((item) => {
+          {navItems
+            .filter((item) => {
+              if (item.path === '/physique' && !user?.enablePhysique) {
+                return false;
+              }
+              return true;
+            })
+            .map((item) => {
             const isActive = location.pathname === item.path;
             return (
               <NavLink

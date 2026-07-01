@@ -12,6 +12,7 @@ import {
   Loader2,
   Github,
   RefreshCw,
+  Dumbbell,
   Unlink,
   ExternalLink,
   Puzzle,
@@ -78,6 +79,7 @@ const Profile = () => {
     codechefHandle: user?.codechefHandle || '',
     leetcodeHandle: user?.leetcodeHandle || '',
     targetWeight: user?.targetWeight || '',
+    enablePhysique: Boolean(user?.enablePhysique),
     startDate: user?.startDate
       ? format(new Date(user.startDate), 'yyyy-MM-dd')
       : format(new Date(), 'yyyy-MM-dd'),
@@ -284,16 +286,40 @@ const Profile = () => {
               </div>
             </div>
 
+            {/* Enable Physique Tracking Toggle */}
+            <div className="md:col-span-2 flex items-center justify-between p-4 bg-white/5 border border-white/10 rounded-xl mt-2">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 bg-neon-green/10 rounded-lg text-neon-green">
+                  <Dumbbell className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="font-semibold text-white text-sm">Physique & Fitness Tracking</h4>
+                  <p className="text-xs text-dark-400">Enable gym workouts, diet tracking, and body weight logs</p>
+                </div>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={formData.enablePhysique}
+                  onChange={(e) => handleChange('enablePhysique', e.target.checked)}
+                  className="sr-only peer"
+                />
+                <div className="w-11 h-6 bg-dark-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-neon-green"></div>
+              </label>
+            </div>
+
             {/* Target Weight */}
-            <NumberInput
-              label="Target Weight (kg)"
-              value={formData.targetWeight}
-              onChange={(val) => handleChange('targetWeight', val)}
-              min={20}
-              max={300}
-              step={0.1}
-              placeholder="Your goal weight"
-            />
+            {formData.enablePhysique && (
+              <NumberInput
+                label="Target Weight (kg)"
+                value={formData.targetWeight}
+                onChange={(val) => handleChange('targetWeight', val)}
+                min={20}
+                max={300}
+                step={0.1}
+                placeholder="Your goal weight"
+              />
+            )}
           </div>
         </GlassCard>
 

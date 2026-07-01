@@ -206,13 +206,16 @@ const DailyTracker = () => {
   const calculateCompletionScore = () => {
     if (!currentLog) return 0;
     let score = 0;
-    const totalChecks = 5;
+    const isPhysique = Boolean(user?.enablePhysique);
+    const totalChecks = isPhysique ? 5 : 3;
 
     if (currentLog.leetcode?.problemsSolved > 0 || currentLog.leetcode?.contestParticipated) score++;
     if (currentLog.codechef?.dailyProblem || currentLog.codechef?.contestParticipated) score++;
     if (currentLog.codeforces?.problemsSolved > 0 || currentLog.codeforces?.contestParticipated) score++;
-    if (currentLog.gym?.completed) score++;
-    if (currentLog.diet?.cleanDiet) score++;
+    if (isPhysique) {
+      if (currentLog.gym?.completed) score++;
+      if (currentLog.diet?.cleanDiet) score++;
+    }
 
     return Math.round((score / totalChecks) * 100);
   };
@@ -478,9 +481,10 @@ const DailyTracker = () => {
       </div>
 
       {/* Gym & Diet */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Gym */}
-        <GlassCard>
+      {user?.enablePhysique && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Gym */}
+          <GlassCard>
           <div className="flex items-center gap-3 mb-4">
             <div className="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center">
               <Dumbbell className="w-5 h-5 text-purple-400" />
@@ -564,6 +568,7 @@ const DailyTracker = () => {
           </div>
         </GlassCard>
       </div>
+      )}
 
       {/* Internship Prep */}
       <GlassCard>

@@ -67,6 +67,10 @@ const dailyLogSchema = new mongoose.Schema(
       min: 1,
       max: 75,
     },
+    enablePhysique: {
+      type: Boolean,
+      default: false,
+    },
   },
   {
     timestamps: true,
@@ -88,13 +92,16 @@ dailyLogSchema.virtual('totalProblemsSolved').get(function () {
 // Virtual for daily completion score (0-100)
 dailyLogSchema.virtual('completionScore').get(function () {
   let score = 0;
-  const totalChecks = 5;
+  const isPhysique = Boolean(this.enablePhysique);
+  const totalChecks = isPhysique ? 5 : 3;
 
   if (this.leetcode.problemsSolved > 0 || this.leetcode.contestParticipated) score++;
   if (this.codechef.dailyProblem || this.codechef.contestParticipated) score++;
   if (this.codeforces.problemsSolved > 0 || this.codeforces.contestParticipated) score++;
-  if (this.gym.completed) score++;
-  if (this.diet.cleanDiet) score++;
+  if (isPhysique) {
+    if (this.gym.completed) score++;
+    if (this.diet.cleanDiet) score++;
+  }
 
   return Math.round((score / totalChecks) * 100);
 });

@@ -33,6 +33,7 @@ export const register = async (req, res) => {
       startDate: user.startDate,
       isBanned: user.isBanned,
       acceptedDiscussionAgreement: user.acceptedDiscussionAgreement,
+      enablePhysique: Boolean(user.enablePhysique),
       token: generateToken(user._id),
     });
   } catch (error) {
@@ -70,6 +71,7 @@ export const login = async (req, res) => {
       codechefHandle: user.codechefHandle,
       leetcodeHandle: user.leetcodeHandle,
       targetWeight: user.targetWeight,
+      enablePhysique: Boolean(user.enablePhysique),
       isBanned: user.isBanned,
       acceptedDiscussionAgreement: user.acceptedDiscussionAgreement,
       token: generateToken(user._id),
@@ -133,6 +135,7 @@ export const googleLogin = async (req, res) => {
       codechefHandle: user.codechefHandle,
       leetcodeHandle: user.leetcodeHandle,
       targetWeight: user.targetWeight,
+      enablePhysique: Boolean(user.enablePhysique),
       isBanned: user.isBanned,
       acceptedDiscussionAgreement: user.acceptedDiscussionAgreement,
       token: generateToken(user._id),
@@ -160,6 +163,7 @@ export const getMe = async (req, res) => {
       codechefHandle: user.codechefHandle,
       leetcodeHandle: user.leetcodeHandle,
       targetWeight: user.targetWeight,
+      enablePhysique: Boolean(user.enablePhysique),
       githubConnected: user.githubConnected,
       githubUsername: user.githubUsername,
       isBanned: user.isBanned,
@@ -181,6 +185,7 @@ export const updateProfile = async (req, res) => {
       codechefHandle,
       leetcodeHandle,
       targetWeight,
+      enablePhysique,
       startDate,
     } = req.body;
 
@@ -191,6 +196,7 @@ export const updateProfile = async (req, res) => {
     if (codechefHandle !== undefined) user.codechefHandle = codechefHandle;
     if (leetcodeHandle !== undefined) user.leetcodeHandle = leetcodeHandle;
     if (targetWeight !== undefined) user.targetWeight = targetWeight;
+    if (enablePhysique !== undefined) user.enablePhysique = enablePhysique;
     if (startDate) user.startDate = startDate;
 
     await user.save();
@@ -205,6 +211,7 @@ export const updateProfile = async (req, res) => {
       codechefHandle: user.codechefHandle,
       leetcodeHandle: user.leetcodeHandle,
       targetWeight: user.targetWeight,
+      enablePhysique: Boolean(user.enablePhysique),
       githubConnected: user.githubConnected,
       githubUsername: user.githubUsername,
       isBanned: user.isBanned,

@@ -103,6 +103,18 @@ const PhysiqueTracker = () => {
 
   return (
     <div className="space-y-4 md:space-y-6 p-4 md:p-6">
+      {!user?.enablePhysique && (
+        <GlassCard className="border-orange-500/30 bg-orange-500/5">
+          <div className="flex items-center gap-3">
+            <span className="text-xl">ℹ️</span>
+            <div>
+              <h4 className="font-semibold text-white text-sm">Physique Tracking is currently Disabled</h4>
+              <p className="text-xs text-dark-400">You turned off Physique & Fitness tracking in your Profile settings. You can re-enable it anytime from your Profile page.</p>
+            </div>
+          </div>
+        </GlassCard>
+      )}
+
       {/* Stats Row */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
         <StatCard

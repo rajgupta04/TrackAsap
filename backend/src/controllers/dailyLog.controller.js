@@ -51,6 +51,7 @@ export const createOrUpdateDailyLog = async (req, res) => {
       if (internshipPrep) dailyLog.internshipPrep = { ...dailyLog.internshipPrep, ...internshipPrep };
       if (notes !== undefined) dailyLog.notes = notes;
       dailyLog.dayNumber = dayNumber;
+      dailyLog.enablePhysique = Boolean(user.enablePhysique);
 
       await dailyLog.save();
     } else {
@@ -66,6 +67,7 @@ export const createOrUpdateDailyLog = async (req, res) => {
         diet: diet || {},
         internshipPrep: internshipPrep || {},
         notes: notes || '',
+        enablePhysique: Boolean(user.enablePhysique),
       });
     }
 
@@ -103,7 +105,14 @@ export const getDailyLog = async (req, res) => {
         diet: { cleanDiet: false, calories: null, protein: null, notes: '' },
         internshipPrep: { completed: false, hoursSpent: 0, topics: [] },
         notes: '',
+        enablePhysique: Boolean(user.enablePhysique),
       });
+    }
+
+    const user = await User.findById(req.user._id);
+    if (dailyLog.enablePhysique !== Boolean(user.enablePhysique)) {
+      dailyLog.enablePhysique = Boolean(user.enablePhysique);
+      await dailyLog.save();
     }
 
     res.json(dailyLog);
