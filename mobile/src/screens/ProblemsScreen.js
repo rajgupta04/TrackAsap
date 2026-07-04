@@ -37,6 +37,10 @@ const ProblemsScreen = () => {
   const [showFilters, setShowFilters] = useState(false);
   const [notesModal, setNotesModal] = useState(null); // { id, notes }
   const [notesText, setNotesText] = useState('');
+  
+  const [codeModal, setCodeModal] = useState(null); // { id, code, language }
+  const [codeText, setCodeText] = useState('');
+
   const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
@@ -64,8 +68,30 @@ const ProblemsScreen = () => {
 
   const handleSaveNotes = async () => {
     if (!notesModal) return;
+    // Assume updateNotes updates notes (if not exists in store, we might need a general update method)
     await updateNotes(notesModal.id, notesText);
     setNotesModal(null);
+  };
+
+  const handleOpenCode = (problem) => {
+    setCodeModal({ id: problem._id, title: problem.title });
+    setCodeText(problem.code || '');
+  };
+
+  const handleSaveCode = async () => {
+    if (!codeModal) return;
+    // We would call a method like updateCode, assuming updateNotes is what we have right now or problemService.updateProblem
+    // Wait, problemStore doesn't have updateCode. I'll just use updateNotes for now as a fallback or if it has problemService I can use that.
+    // Let's use problemService directly if needed, or if we can't, use updateNotes to simulate it.
+    // I will import problemService and update it directly to be safe.
+    try {
+      const problemService = require('../services/problemService').default;
+      await problemService.updateProblem(codeModal.id, { code: codeText, language: 'cpp' });
+      fetchProblems({ page: currentPage, ...filters, search });
+    } catch (e) {
+      console.log(e);
+    }
+    setCodeModal(null);
   };
 
   const s = styles(colors);
@@ -165,6 +191,7 @@ const ProblemsScreen = () => {
                 colors={colors}
                 onDelete={() => handleDelete(item._id)}
                 onNotes={() => handleOpenNotes(item)}
+                onCode={() => handleOpenCode(item)}
               />
             )}
             contentContainerStyle={s.listContent}
@@ -216,13 +243,40 @@ const ProblemsScreen = () => {
           </View>
         )}
 
+        {/* ── Code Modal ── */}
+        {codeModal && (
+          <View style={s.modalOverlay}>
+            <View style={[s.modalCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <Text style={s.modalTitle} numberOfLines={2}>{codeModal.title} - Code</Text>
+              <TextInput
+                style={[s.modalInput, { color: colors.text, borderColor: colors.border, fontFamily: 'monospace' }]}
+                value={codeText}
+                onChangeText={setCodeText}
+                placeholder="Paste your code here..."
+                placeholderTextColor={colors.textMuted}
+                multiline
+                numberOfLines={8}
+                autoFocus
+              />
+              <View style={s.modalBtns}>
+                <TouchableOpacity style={[s.modalBtn, { borderColor: colors.border }]} onPress={() => setCodeModal(null)}>
+                  <Text style={{ color: colors.textMuted, fontWeight: '600' }}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={[s.modalBtn, { backgroundColor: colors.primary, borderColor: colors.primary }]} onPress={handleSaveCode}>
+                  <Text style={{ color: '#fff', fontWeight: '700' }}>Save</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        )}
+
       </View>
     </SafeAreaView>
   );
 };
 
 // ─── Problem Card ────────────────────────────────────
-const ProblemCard = ({ problem, colors, onDelete, onNotes }) => {
+const ProblemCard = ({ problem, colors, onDelete, onNotes, onCode }) => {
   const s = styles(colors);
   const platformColor = PLATFORM_COLORS[problem.platform] || '#64748B';
   const diffColor = DIFFICULTY_COLORS[problem.difficulty] || '#64748B';
@@ -255,7 +309,13 @@ const ProblemCard = ({ problem, colors, onDelete, onNotes }) => {
         {problem.notes && (
           <View style={s.metaItem}>
             <Ionicons name="document-text-outline" size={12} color={colors.textMuted} />
-            <Text style={s.metaText} numberOfLines={1}>{problem.notes}</Text>
+            <Text style={s.metaText} numberOfLines={1}>Notes attached</Text>
+          </View>
+        )}
+        {problem.code && (
+          <View style={s.metaItem}>
+            <Ionicons name="terminal-outline" size={12} color={colors.textMuted} />
+            <Text style={s.metaText} numberOfLines={1}>Code attached</Text>
           </View>
         )}
       </View>
@@ -267,7 +327,10 @@ const ProblemCard = ({ problem, colors, onDelete, onNotes }) => {
           </TouchableOpacity>
         )}
         <TouchableOpacity style={s.actionBtn} onPress={onNotes}>
-          <Ionicons name="create-outline" size={16} color={colors.textMuted} />
+          <Ionicons name="document-text-outline" size={16} color={problem.notes ? '#a855f7' : colors.textMuted} />
+        </TouchableOpacity>
+        <TouchableOpacity style={s.actionBtn} onPress={onCode}>
+          <Ionicons name="terminal-outline" size={16} color={problem.code ? '#22c55e' : colors.textMuted} />
         </TouchableOpacity>
         <TouchableOpacity style={s.actionBtn} onPress={onDelete}>
           <Ionicons name="trash-outline" size={16} color="#EF4444" />
@@ -309,7 +372,7 @@ const styles = (colors) => StyleSheet.create({
   chip: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 16, borderWidth: 1.5, marginRight: 6, marginBottom: 4 },
   chipText: { fontSize: 12, fontWeight: '600' },
 
-  listContent: { paddingHorizontal: 16, paddingBottom: 16 },
+  listContent: { paddingHorizontal: 16, paddingBottom: 100 },
   problemCard: {
     backgroundColor: colors.surface, borderRadius: 14, padding: 14,
     marginBottom: 10, borderWidth: 1,

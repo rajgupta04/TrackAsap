@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet,
-  ActivityIndicator, TextInput, Alert, LayoutAnimation, UIManager, Platform
+  ActivityIndicator, TextInput, Alert, LayoutAnimation, UIManager, Platform,
+  Linking, Modal
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -35,6 +36,11 @@ const SheetDetailScreen = ({ route, navigation }) => {
   const [expandedTopics, setExpandedTopics] = useState({});
   const [searchQuery, setSearchQuery] = useState('');
   const [updatingId, setUpdatingId] = useState(null);
+
+  // Modals state
+  const [notesModal, setNotesModal] = useState(null); // { problemId, notes }
+  const [codeModal, setCodeModal] = useState(null); // { problemId, code, language }
+  const [inputText, setInputText] = useState('');
 
   useEffect(() => {
     navigation.setOptions({
@@ -86,6 +92,30 @@ const SheetDetailScreen = ({ route, navigation }) => {
       loadProblems(); // Revert
     } finally {
       setUpdatingId(null);
+    }
+  };
+
+  const handleSaveNotes = async () => {
+    if (!notesModal) return;
+    try {
+      await sheetProblemService.updateProblem(notesModal.problemId, { notes: inputText });
+      Alert.alert('Success', 'Notes saved');
+      setNotesModal(null);
+      loadProblems();
+    } catch (e) {
+      Alert.alert('Error', 'Failed to save notes');
+    }
+  };
+
+  const handleSaveCode = async () => {
+    if (!codeModal) return;
+    try {
+      await sheetProblemService.updateProblem(codeModal.problemId, { code: inputText, language: codeModal.language || 'cpp' });
+      Alert.alert('Success', 'Code saved');
+      setCodeModal(null);
+      loadProblems();
+    } catch (e) {
+      Alert.alert('Error', 'Failed to save code');
     }
   };
 
@@ -218,6 +248,45 @@ const SheetDetailScreen = ({ route, navigation }) => {
                                 ))}
                               </View>
                             )}
+
+                            {/* Links & Actions */}
+                            <View style={s.problemActionsRow}>
+                              <View style={s.linksRow}>
+                                {problem.problemLink && (
+                                  <TouchableOpacity style={s.linkBtn} onPress={() => Linking.openURL(problem.problemLink)}>
+                                    <Ionicons name="code-slash" size={14} color="#3b82f6" />
+                                    <Text style={[s.linkText, { color: '#3b82f6' }]}>Solve</Text>
+                                  </TouchableOpacity>
+                                )}
+                                {problem.articleLink && (
+                                  <TouchableOpacity style={s.linkBtn} onPress={() => Linking.openURL(problem.articleLink)}>
+                                    <Ionicons name="document-text" size={14} color="#f97316" />
+                                  </TouchableOpacity>
+                                )}
+                                {problem.youtubeLink && (
+                                  <TouchableOpacity style={s.linkBtn} onPress={() => Linking.openURL(problem.youtubeLink)}>
+                                    <Ionicons name="logo-youtube" size={14} color="#ef4444" />
+                                  </TouchableOpacity>
+                                )}
+                              </View>
+
+                              <View style={s.actionsRight}>
+                                <TouchableOpacity
+                                  style={[s.actionBtn, problem.notes ? { backgroundColor: 'rgba(168, 85, 247, 0.1)', borderColor: 'rgba(168, 85, 247, 0.3)' } : {}]}
+                                  onPress={() => { setNotesModal({ problemId: problem._id, notes: problem.notes }); setInputText(problem.notes || ''); }}
+                                >
+                                  <Ionicons name="document-text-outline" size={14} color={problem.notes ? '#a855f7' : colors.textMuted} />
+                                  {problem.notes && <Text style={[s.actionBtnText, { color: '#a855f7' }]}>Notes</Text>}
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                  style={[s.actionBtn, problem.code ? { backgroundColor: 'rgba(34, 197, 94, 0.1)', borderColor: 'rgba(34, 197, 94, 0.3)' } : {}]}
+                                  onPress={() => { setCodeModal({ problemId: problem._id, code: problem.code, language: problem.language }); setInputText(problem.code || ''); }}
+                                >
+                                  <Ionicons name="terminal-outline" size={14} color={problem.code ? '#22c55e' : colors.textMuted} />
+                                  {problem.code && <Text style={[s.actionBtnText, { color: '#22c55e' }]}>Code</Text>}
+                                </TouchableOpacity>
+                              </View>
+                            </View>
                           </View>
                         </View>
                       );
@@ -229,6 +298,58 @@ const SheetDetailScreen = ({ route, navigation }) => {
           })
         )}
       </ScrollView>
+
+      {/* Notes Modal */}
+      <Modal visible={!!notesModal} animationType="slide" transparent>
+        <View style={s.modalOverlay}>
+          <View style={s.modalCard}>
+            <Text style={s.modalTitle}>Notes</Text>
+            <TextInput
+              style={s.modalInput}
+              value={inputText}
+              onChangeText={setInputText}
+              placeholder="Write your notes here..."
+              placeholderTextColor={colors.textMuted}
+              multiline
+              autoFocus
+            />
+            <View style={s.modalBtnRow}>
+              <TouchableOpacity style={s.modalCancelBtn} onPress={() => setNotesModal(null)}>
+                <Text style={s.modalCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={s.modalSaveBtn} onPress={handleSaveNotes}>
+                <Text style={s.modalSaveText}>Save</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Code Modal */}
+      <Modal visible={!!codeModal} animationType="slide" transparent>
+        <View style={s.modalOverlay}>
+          <View style={s.modalCard}>
+            <Text style={s.modalTitle}>Code</Text>
+            <TextInput
+              style={[s.modalInput, { fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace' }]}
+              value={inputText}
+              onChangeText={setInputText}
+              placeholder="Paste your code here..."
+              placeholderTextColor={colors.textMuted}
+              multiline
+              autoFocus
+            />
+            <View style={s.modalBtnRow}>
+              <TouchableOpacity style={s.modalCancelBtn} onPress={() => setCodeModal(null)}>
+                <Text style={s.modalCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={s.modalSaveBtn} onPress={handleSaveCode}>
+                <Text style={s.modalSaveText}>Save</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -272,7 +393,7 @@ const styles = (colors) => StyleSheet.create({
   problemContent: { flex: 1 },
   problemHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 },
   problemTitle: { flex: 1, fontSize: 15, fontWeight: '600', color: colors.text, lineHeight: 22 },
-  problemTitleSolved: { color: 'rgba(34, 197, 94, 0.8)' },
+  problemTitleSolved: { color: 'rgba(34, 197, 94, 0.6)', textDecorationLine: 'line-through' },
   
   diffBadge: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6, borderWidth: 1 },
   diffText: { fontSize: 10, fontWeight: '700', textTransform: 'uppercase' },
@@ -280,6 +401,24 @@ const styles = (colors) => StyleSheet.create({
   tagsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 8 },
   tagChip: { backgroundColor: colors.background, borderWidth: 1, borderColor: colors.border, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 },
   tagText: { fontSize: 10, color: colors.textMuted },
+  
+  problemActionsRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: colors.border },
+  linksRow: { flexDirection: 'row', gap: 6 },
+  linkBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 6, borderRadius: 8, backgroundColor: colors.background, borderWidth: 1, borderColor: colors.border },
+  linkText: { fontSize: 11, fontWeight: '600' },
+  actionsRight: { flexDirection: 'row', gap: 6 },
+  actionBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 6, borderRadius: 8, backgroundColor: colors.background, borderWidth: 1, borderColor: colors.border },
+  actionBtnText: { fontSize: 11, fontWeight: '600' },
+
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', padding: 20 },
+  modalCard: { backgroundColor: colors.surface, borderRadius: 16, padding: 20, borderWidth: 1, borderColor: colors.border },
+  modalTitle: { fontSize: 18, fontWeight: '700', color: colors.text, marginBottom: 12 },
+  modalInput: { backgroundColor: colors.background, borderWidth: 1, borderColor: colors.border, borderRadius: 10, padding: 12, fontSize: 14, color: colors.text, minHeight: 150, textAlignVertical: 'top' },
+  modalBtnRow: { flexDirection: 'row', gap: 12, marginTop: 16 },
+  modalCancelBtn: { flex: 1, padding: 14, borderRadius: 10, borderWidth: 1, borderColor: colors.border, alignItems: 'center' },
+  modalCancelText: { fontSize: 14, fontWeight: '600', color: colors.textMuted },
+  modalSaveBtn: { flex: 1, padding: 14, borderRadius: 10, backgroundColor: colors.primary, alignItems: 'center' },
+  modalSaveText: { fontSize: 14, fontWeight: '700', color: '#000' },
 });
 
 export default SheetDetailScreen;

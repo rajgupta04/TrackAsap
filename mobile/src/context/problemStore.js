@@ -1,12 +1,18 @@
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import problemService from '../services/problemService';
 
-const useProblemStore = create((set, get) => ({
+const useProblemStore = create(
+  persist(
+    (set, get) => ({
   problems: [],
   stats: null,
   pagination: { page: 1, totalPages: 1, total: 0 },
   loading: false,
   error: null,
+  
+  clearStore: () => set({ problems: [], stats: null, pagination: { page: 1, totalPages: 1, total: 0 }, loading: false, error: null }),
 
   fetchProblems: async (params = {}) => {
     set({ loading: true });
@@ -67,6 +73,9 @@ const useProblemStore = create((set, get) => ({
       return { success: false, error: err.message };
     }
   },
+}), {
+  name: 'problem-storage',
+  storage: createJSONStorage(() => AsyncStorage),
 }));
 
 export default useProblemStore;

@@ -1,13 +1,19 @@
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import physiqueService from '../services/physiqueService';
 
-const usePhysiqueStore = create((set) => ({
+const usePhysiqueStore = create(
+  persist(
+    (set) => ({
   logs: [],
   progress: null,
   isLoading: false,
   isSaving: false,
   error: null,
 
+  clearStore: () => set({ logs: [], progress: null, isLoading: false, isSaving: false, error: null }),
+  
   fetchAll: async () => {
     set({ isLoading: true });
     try {
@@ -58,6 +64,9 @@ const usePhysiqueStore = create((set) => ({
       return { success: false, error: msg };
     }
   },
+}), {
+  name: 'physique-storage',
+  storage: createJSONStorage(() => AsyncStorage),
 }));
 
 export default usePhysiqueStore;

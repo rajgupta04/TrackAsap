@@ -13,7 +13,7 @@ import UserAgreementModal from '../components/UserAgreementModal';
 import { formatDistanceToNow } from 'date-fns';
 import discussionService from '../services/discussionService';
 
-const DiscussionScreen = () => {
+const DiscussionScreen = ({ navigation }) => {
   const colors = useThemeStore((state) => state.colors);
   const { user } = useAuthStore();
   const { posts, pagination, isLoading, fetchPosts, createPost, likePost, addComment, deletePost, cloneSheet } = useDiscussionStore();
@@ -375,7 +375,7 @@ const DiscussionScreen = () => {
 const styles = (colors) => StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: colors.background },
   container: { flex: 1 },
-  scrollContent: { padding: 16, paddingBottom: 40 },
+  scrollContent: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 100 },
   
   header: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, paddingVertical: 12 },
   headerIconBox: { width: 44, height: 44, borderRadius: 12, backgroundColor: `${colors.primary}20`, justifyContent: 'center', alignItems: 'center' },

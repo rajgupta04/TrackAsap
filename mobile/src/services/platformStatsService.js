@@ -16,6 +16,14 @@ export const platformStatsService = {
     const response = await api.post('/platform-stats/refresh');
     return response.data;
   },
+
+  /**
+   * Get LeetCode stats
+   */
+  getLeetCodeStats: async (username) => {
+    const response = await api.get(`/platform-stats/leetcode/${username}`);
+    return response.data;
+  },
 };
 
 export default platformStatsService;

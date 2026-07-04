@@ -2,6 +2,7 @@ import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import useAuthStore from '../context/authStore';
+import useThemeStore from '../context/themeStore';
 import AuthNavigator from './AuthNavigator';
 import MainTabNavigator from './MainTabNavigator';
 import ProfileScreen from '../screens/ProfileScreen';
@@ -14,6 +15,7 @@ const Root = createNativeStackNavigator();
 
 const AppNavigator = () => {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const colors = useThemeStore((state) => state.colors);
 
   return (
     <NavigationContainer>
@@ -35,17 +37,38 @@ const AppNavigator = () => {
           <Root.Screen
             name="SheetDetail"
             component={SheetDetailScreen}
-            options={{ presentation: 'card', animation: 'slide_from_right', headerShown: true }}
+            options={{ 
+              presentation: 'card', 
+              animation: 'slide_from_right', 
+              headerShown: true,
+              headerStyle: { backgroundColor: colors.background },
+              headerTintColor: colors.text,
+              headerTitleStyle: { color: colors.text }
+            }}
           />
           <Root.Screen
             name="Analytics"
             component={AnalyticsScreen}
-            options={{ presentation: 'card', animation: 'slide_from_right', headerShown: true }}
+            options={{ 
+              presentation: 'card', 
+              animation: 'slide_from_right', 
+              headerShown: true,
+              headerStyle: { backgroundColor: colors.background },
+              headerTintColor: colors.text,
+              headerTitleStyle: { color: colors.text }
+            }}
           />
           <Root.Screen
             name="Discussion"
             component={DiscussionScreen}
-            options={{ presentation: 'card', animation: 'slide_from_right', headerShown: true }}
+            options={{ 
+              presentation: 'card', 
+              animation: 'slide_from_right', 
+              headerShown: true,
+              headerStyle: { backgroundColor: colors.background },
+              headerTintColor: colors.text,
+              headerTitleStyle: { color: colors.text }
+            }}
           />
         </Root.Navigator>
       ) : (

@@ -3,6 +3,7 @@ import React, { useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { CopilotProvider } from 'react-native-copilot';
 import AppNavigator from './src/navigation/AppNavigator';
 import useAuthStore from './src/context/authStore';
 import useThemeStore from './src/context/themeStore';
@@ -19,7 +20,24 @@ export default function App() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <StatusBar style={isDarkMode ? 'light' : 'dark'} />
-        <AppNavigator />
+        <CopilotProvider 
+          stopOnOutsideClick
+          androidStatusBarVisible
+          tooltipStyle={{
+            backgroundColor: isDarkMode ? '#1E293B' : '#FFFFFF',
+            borderRadius: 16,
+            paddingTop: 16,
+          }}
+          stepNumberComponent={() => null}
+          labels={{
+            skip: 'Skip Tour',
+            previous: 'Back',
+            next: 'Next',
+            finish: 'Got It!'
+          }}
+        >
+          <AppNavigator />
+        </CopilotProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

@@ -1,11 +1,17 @@
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import discussionService from '../services/discussionService';
 
-const useDiscussionStore = create((set, get) => ({
+const useDiscussionStore = create(
+  persist(
+    (set, get) => ({
   posts: [],
   pagination: null,
   isLoading: false,
   error: null,
+  
+  clearStore: () => set({ posts: [], pagination: null, isLoading: false, error: null }),
 
   fetchPosts: async (page = 1) => {
     set({ isLoading: true, error: null });
@@ -93,6 +99,9 @@ const useDiscussionStore = create((set, get) => ({
       return { success: false, error: error.response?.data?.message || 'Failed to clone sheet' };
     }
   },
+}), {
+  name: 'discussion-storage',
+  storage: createJSONStorage(() => AsyncStorage),
 }));
 
 export default useDiscussionStore;

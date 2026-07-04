@@ -171,7 +171,7 @@ const DailyTrackerScreen = () => {
 
   return (
     <SafeAreaView style={s.safeArea} edges={['top']}>
-      <ScrollView style={s.container} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+      <ScrollView style={s.container} contentContainerStyle={{ paddingBottom: 100 }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
 
         {/* Header: Date Navigation */}
         <View style={s.card}>

@@ -145,6 +145,26 @@ const useAuthStore = create((set, get) => ({
     try {
       await AsyncStorage.removeItem(STORAGE_KEYS.TOKEN);
       await AsyncStorage.removeItem(STORAGE_KEYS.USER);
+      
+      // Clear all other data from storage except theme and onboarding
+      const keys = await AsyncStorage.getAllKeys();
+      const keysToRemove = keys.filter(k => k !== 'theme-storage' && k !== 'onboarding-storage');
+      if (keysToRemove.length > 0) {
+        await AsyncStorage.multiRemove(keysToRemove);
+      }
+
+      // Reset all other Zustand stores in memory dynamically to avoid circular dependencies
+      try {
+        require('./analyticsStore').default.getState().clearStore();
+        require('./dailyLogStore').default.getState().clearStore();
+        require('./sheetStore').default.getState().clearStore();
+        require('./problemStore').default.getState().clearStore();
+        require('./discussionStore').default.getState().clearStore();
+        require('./physiqueStore').default.getState().clearStore();
+      } catch (e) {
+        console.warn('Could not reset some stores:', e);
+      }
+
       set({
         user: null,
         token: null,

@@ -1,4 +1,6 @@
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import taskService from '../services/taskService';
 import { formatToISODate } from '../utils/dateUtils';
 
@@ -13,7 +15,9 @@ const EMPTY_LOG = {
   notes: '',
 };
 
-const useDailyLogStore = create((set, get) => ({
+const useDailyLogStore = create(
+  persist(
+    (set, get) => ({
   currentLog: { ...EMPTY_LOG },
   selectedDate: formatToISODate(new Date()),
   streak: { currentStreak: 0, longestStreak: 0 },
@@ -21,6 +25,8 @@ const useDailyLogStore = create((set, get) => ({
   isLoading: false,
   isSaving: false,
   error: null,
+
+  clearStore: () => set({ currentLog: { ...EMPTY_LOG }, selectedDate: formatToISODate(new Date()), streak: { currentStreak: 0, longestStreak: 0 }, allLogs: [], isLoading: false, isSaving: false, error: null }),
 
   setSelectedDate: (date) => {
     set({ selectedDate: date });
@@ -105,6 +111,9 @@ const useDailyLogStore = create((set, get) => ({
       set({ allLogs: Array.isArray(data) ? data : [] });
     } catch (_) {}
   },
+}), {
+  name: 'daily-log-storage',
+  storage: createJSONStorage(() => AsyncStorage),
 }));
 
 export default useDailyLogStore;

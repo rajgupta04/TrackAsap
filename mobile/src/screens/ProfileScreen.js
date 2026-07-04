@@ -8,7 +8,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { format } from 'date-fns';
 import useAuthStore from '../context/authStore';
 import useThemeStore from '../context/themeStore';
+import useAnalyticsStore from '../context/analyticsStore';
 import userService from '../services/userService';
+import platformStatsService from '../services/platformStatsService';
+import LeetCodeHeatmap from '../components/LeetCodeHeatmap';
 
 const ProfileScreen = () => {
   const colors = useThemeStore((state) => state.colors);
@@ -17,6 +20,19 @@ const ProfileScreen = () => {
 
   const [isSaving, setIsSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState(null);
+  const [leetcodeCalendar, setLeetcodeCalendar] = useState(null);
+
+  useEffect(() => {
+    if (user?.leetcodeHandle) {
+      platformStatsService.getLeetCodeStats(user.leetcodeHandle)
+        .then(stats => {
+          if (stats?.data?.submissionCalendar) {
+            setLeetcodeCalendar(stats.data.submissionCalendar);
+          }
+        })
+        .catch(err => console.log('Failed to fetch LeetCode stats', err));
+    }
+  }, [user?.leetcodeHandle]);
   const [formData, setFormData] = useState({
     name: user?.name || '',
     codeforcesHandle: user?.codeforcesHandle || '',
@@ -49,6 +65,7 @@ const ProfileScreen = () => {
       const res = await userService.updateProfile(payload);
       const updated = res.data || res;
       await updateUser(updated);
+      useAnalyticsStore.getState().fetchAll();
       setSaveMsg('Profile updated!');
       setTimeout(() => setSaveMsg(null), 3000);
     } catch (err) {
@@ -79,7 +96,7 @@ const ProfileScreen = () => {
 
   return (
     <SafeAreaView style={s.safeArea} edges={['top']}>
-      <ScrollView style={s.container} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+      <ScrollView style={s.container} contentContainerStyle={{ paddingBottom: 100 }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
 
         {/* ── Hero Avatar ── */}
         <View style={s.heroCard}>
@@ -128,6 +145,13 @@ const ProfileScreen = () => {
           <FormField label="Codeforces Handle" icon="code-slash-outline" value={formData.codeforcesHandle}
             onChangeText={(v) => set('codeforcesHandle', v)} placeholder="handle" colors={colors}
             accentColor="#1F8ACB" />
+            
+          {/* LeetCode Heatmap */}
+          {user?.leetcodeHandle && leetcodeCalendar && (
+            <View style={{ marginTop: 16 }}>
+              <LeetCodeHeatmap submissionCalendar={leetcodeCalendar} colors={colors} />
+            </View>
+          )}
         </View>
 
         {/* ── Physique Settings ── */}

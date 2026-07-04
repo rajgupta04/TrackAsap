@@ -1,13 +1,19 @@
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import sheetService from '../services/sheetService';
 
-const useSheetStore = create((set, get) => ({
+const useSheetStore = create(
+  persist(
+    (set, get) => ({
   sheets: [],
   currentSheet: null,
   sheetProblems: [],
   templates: [],
   loading: false,
   error: null,
+  
+  clearStore: () => set({ sheets: [], currentSheet: null, sheetProblems: [], templates: [], loading: false, error: null }),
 
   // Fetch all sheets (silent = true for background refresh without loading state)
   fetchSheets: async (silent = false) => {
@@ -133,6 +139,9 @@ const useSheetStore = create((set, get) => ({
 
   // Clear error
   clearError: () => set({ error: null }),
+}), {
+  name: 'sheet-storage',
+  storage: createJSONStorage(() => AsyncStorage),
 }));
 
 export default useSheetStore;

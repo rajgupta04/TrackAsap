@@ -7,6 +7,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import useSheetStore from '../context/sheetStore';
 import useThemeStore from '../context/themeStore';
+import BucketPickerModal from '../components/BucketPickerModal';
+import { useCopilot, CopilotStep, walkthroughable } from 'react-native-copilot';
+import useOnboardingStore from '../context/onboardingStore';
+import useAuthStore from '../context/authStore';
+import DeleteConfirmationModal from '../components/DeleteConfirmationModal';
+
+const WalkthroughableView = walkthroughable(View);
+const WalkthroughableTouchableOpacity = walkthroughable(TouchableOpacity);
 
 // Icons mapping based on category
 const getCategoryIcon = (category) => {
@@ -30,17 +38,40 @@ const SheetsScreen = ({ navigation }) => {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showBucketModal, setShowBucketModal] = useState(false);
   const [newSheetData, setNewSheetData] = useState({ category: '', name: '', useTemplate: true });
+  
+  const [deleteModalVisible, setDeleteModalVisible] = useState(false);
+  const [sheetToDelete, setSheetToDelete] = useState(null);
+
+  const { start } = useCopilot();
+  const { hasUserSeenSheetsTour, setUserSeenSheetsTour } = useOnboardingStore();
+  const user = useAuthStore(state => state.user);
 
   useEffect(() => {
     fetchSheets();
     fetchTemplates();
-  }, []);
+    
+    // Trigger Onboarding Tour
+    if (user && user._id && !hasUserSeenSheetsTour(user._id)) {
+      setTimeout(() => {
+        start();
+        setUserSeenSheetsTour(user._id);
+      }, 1500);
+    }
+  }, [user]);
 
   const handleCreate = async () => {
     if (!newSheetData.category) {
       Alert.alert('Error', 'Please select a category');
       return;
     }
+    
+    // Duplicate check
+    const isDuplicate = sheets.some(s => s.name.toLowerCase() === (newSheetData.name || '').toLowerCase());
+    if (isDuplicate) {
+      Alert.alert('Error', 'A sheet with this name already exists.');
+      return;
+    }
+
     try {
       const template = templates.find((t) => t.category === newSheetData.category);
       await createSheet({
@@ -55,25 +86,21 @@ const SheetsScreen = ({ navigation }) => {
     }
   };
 
-  const handleImportTemplate = async (template) => {
-    try {
-      await createSheet({
-        category: template.category,
-        name: template.name,
-        useTemplate: true,
-      });
-      setShowBucketModal(false);
-      fetchSheets();
-    } catch (e) {
-      Alert.alert('Error', 'Failed to import bucket');
-    }
+  const handleImportTemplate = () => {
+    fetchSheets();
   };
 
   const handleDelete = (id, name) => {
-    Alert.alert('Delete Sheet', `Delete "${name}"? This cannot be undone.`, [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Delete', style: 'destructive', onPress: () => deleteSheet(id) },
-    ]);
+    setSheetToDelete({ id, name });
+    setDeleteModalVisible(true);
+  };
+
+  const confirmDelete = async () => {
+    if (sheetToDelete) {
+      await deleteSheet(sheetToDelete.id);
+      setDeleteModalVisible(false);
+      setSheetToDelete(null);
+    }
   };
 
   const s = styles(colors);
@@ -81,24 +108,44 @@ const SheetsScreen = ({ navigation }) => {
   return (
     <SafeAreaView style={s.safeArea} edges={['top']}>
       <View style={s.header}>
-        <Text style={s.pageTitle}>My Problem Sheets</Text>
+        <CopilotStep
+          text="Welcome to your Command Center! 🚀 This is where you organize your coding journey so you never feel lost."
+          order={1}
+          name="welcome"
+        >
+          <WalkthroughableView>
+            <Text style={s.pageTitle}>My Problem Sheets</Text>
+          </WalkthroughableView>
+        </CopilotStep>
         <View style={s.sheetCountBadge}>
           <Text style={s.sheetCountText}>{sheets.length} Sheets</Text>
         </View>
       </View>
 
       <View style={s.actionRow}>
-        <TouchableOpacity style={[s.actionBtn, { backgroundColor: `${colors.primary}15`, borderColor: `${colors.primary}30` }]}
-          onPress={() => setShowBucketModal(true)}>
-          <Ionicons name="folder-open" size={20} color={colors.primary} />
-          <Text style={[s.actionBtnText, { color: colors.primary }]}>Import Buckets</Text>
-        </TouchableOpacity>
+        <CopilotStep
+          text="Buckets are expertly curated problem lists (like Striver's SDE Sheet). Import a bucket to instantly get a structured path. No more guessing what to solve next!"
+          order={2}
+          name="import"
+        >
+          <WalkthroughableTouchableOpacity style={[s.actionBtn, { backgroundColor: `${colors.primary}15`, borderColor: `${colors.primary}30` }]}
+            onPress={() => setShowBucketModal(true)}>
+            <Ionicons name="folder-open" size={20} color={colors.primary} />
+            <Text style={[s.actionBtnText, { color: colors.primary }]}>Import Buckets</Text>
+          </WalkthroughableTouchableOpacity>
+        </CopilotStep>
         
-        <TouchableOpacity style={[s.actionBtn, { backgroundColor: '#39FF1415', borderColor: '#39FF1430' }]}
-          onPress={() => setShowCreateModal(true)}>
-          <Ionicons name="add" size={20} color="#39FF14" />
-          <Text style={[s.actionBtnText, { color: '#39FF14' }]}>New Custom</Text>
-        </TouchableOpacity>
+        <CopilotStep
+          text="Building your own list? Create custom sheets to stay hyper-focused on exactly what you need to master right now. Remember: Consistency is the only cheat code. Let's get that offer! 💼"
+          order={3}
+          name="custom"
+        >
+          <WalkthroughableTouchableOpacity style={[s.actionBtn, { backgroundColor: '#39FF1415', borderColor: '#39FF1430' }]}
+            onPress={() => setShowCreateModal(true)}>
+            <Ionicons name="add" size={20} color="#39FF14" />
+            <Text style={[s.actionBtnText, { color: '#39FF14' }]}>New Custom</Text>
+          </WalkthroughableTouchableOpacity>
+        </CopilotStep>
       </View>
 
       <ScrollView style={s.container} contentContainerStyle={s.scrollContent} showsVerticalScrollIndicator={false}>
@@ -183,36 +230,18 @@ const SheetsScreen = ({ navigation }) => {
         </View>
       </Modal>
 
-      {/* ── Import Buckets Modal ── */}
-      <Modal visible={showBucketModal} animationType="slide" transparent>
-        <View style={s.modalOverlay}>
-          <View style={[s.modalCard, { height: '80%' }]}>
-            <View style={s.modalHeader}>
-              <Text style={s.modalTitle}>Import Pre-built Buckets</Text>
-              <TouchableOpacity onPress={() => setShowBucketModal(false)}><Ionicons name="close" size={24} color={colors.text} /></TouchableOpacity>
-            </View>
-            <ScrollView showsVerticalScrollIndicator={false}>
-              {templates.map(t => (
-                <View key={t.category} style={s.templateCard}>
-                  <View style={[s.iconBox, { backgroundColor: `${t.color}20`, marginRight: 12 }]}>
-                    <Ionicons name={getCategoryIcon(t.category)} size={24} color={t.color} />
-                  </View>
-                  <View style={s.templateInfo}>
-                    <Text style={s.templateName}>{t.name}</Text>
-                    <Text style={s.templateDesc}>{t.description || `${t.totalProblems} curated problems`}</Text>
-                  </View>
-                  <TouchableOpacity
-                    style={[s.importBtn, { backgroundColor: t.color }]}
-                    onPress={() => handleImportTemplate(t)}
-                  >
-                    <Text style={s.importBtnText}>Import</Text>
-                  </TouchableOpacity>
-                </View>
-              ))}
-            </ScrollView>
-          </View>
-        </View>
-      </Modal>
+      <BucketPickerModal
+        visible={showBucketModal}
+        onClose={() => setShowBucketModal(false)}
+        onImport={handleImportTemplate}
+        sheets={sheets}
+      />
+      <DeleteConfirmationModal
+        visible={deleteModalVisible}
+        sheetName={sheetToDelete?.name || ''}
+        onCancel={() => setDeleteModalVisible(false)}
+        onConfirm={confirmDelete}
+      />
     </SafeAreaView>
   );
 };
@@ -229,7 +258,7 @@ const styles = (colors) => StyleSheet.create({
   actionBtnText: { fontSize: 14, fontWeight: '700' },
 
   container: { flex: 1 },
-  scrollContent: { padding: 16, paddingBottom: 40 },
+  scrollContent: { paddingHorizontal: 16, paddingTop: 10, paddingBottom: 100 },
 
   emptyState: { alignItems: 'center', paddingTop: 60, gap: 12 },
   emptyTitle: { fontSize: 18, fontWeight: '600', color: colors.text },

@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, StyleSheet, TouchableOpacity } from 'react-native';
+import React, { useRef, useEffect } from 'react';
+import { View, StyleSheet, TouchableOpacity, Animated, Easing, Dimensions } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import useThemeStore from '../context/themeStore';
@@ -11,61 +11,113 @@ import ProfileScreen from '../screens/ProfileScreen';
 import SheetsScreen from '../screens/SheetsScreen';
 
 const Tab = createBottomTabNavigator();
+const { width } = Dimensions.get('window');
+
+const TabIcon = ({ route, isFocused, onPress, colors }) => {
+  const scale = useRef(new Animated.Value(isFocused ? 1 : 0)).current;
+
+  useEffect(() => {
+    Animated.spring(scale, {
+      toValue: isFocused ? 1 : 0,
+      useNativeDriver: true,
+      friction: 5,
+      tension: 100,
+    }).start();
+  }, [isFocused]);
+
+  const icons = {
+    Dashboard: 'grid',
+    Sheets: 'book',
+    Problems: 'code-slash',
+    Profile: 'person',
+    'Daily Tracker': 'calendar',
+  };
+  const iconName = icons[route.name] || 'ellipse';
+
+  const iconScale = scale.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.9, 1.1],
+  });
+
+  return (
+    <TouchableOpacity onPress={onPress} activeOpacity={0.7} style={styles.tabButton}>
+      <View style={styles.iconContainer}>
+        <Animated.View style={{ transform: [{ scale: iconScale }] }}>
+          <Ionicons
+            name={isFocused ? iconName : `${iconName}-outline`}
+            size={22}
+            color={isFocused ? colors.primary : colors.textMuted}
+            style={isFocused ? { 
+              textShadowColor: colors.primary, 
+              textShadowRadius: 12,
+              textShadowOffset: { width: 0, height: 0 } 
+            } : undefined}
+          />
+        </Animated.View>
+      </View>
+    </TouchableOpacity>
+  );
+};
+
+const CustomTabBar = ({ state, descriptors, navigation, colors }) => {
+  const slideAnim = useRef(new Animated.Value(state.index)).current;
+
+  useEffect(() => {
+    Animated.spring(slideAnim, {
+      toValue: state.index,
+      useNativeDriver: true,
+      friction: 7,
+      tension: 65,
+    }).start();
+  }, [state.index]);
+
+  const tabWidth = 56; // 48 icon + 8 padding
+  const translateX = slideAnim.interpolate({
+    inputRange: state.routes.map((_, i) => i),
+    outputRange: state.routes.map((_, i) => i * tabWidth),
+  });
+
+  return (
+    <View style={styles.tabBarContainer}>
+      <View style={styles.pillContainer}>
+        {state.routes.map((route, index) => {
+          const { options } = descriptors[route.key];
+          const isFocused = state.index === index;
+
+          const onPress = () => {
+            const event = navigation.emit({
+              type: 'tabPress',
+              target: route.key,
+              canPreventDefault: true,
+            });
+
+            if (!isFocused && !event.defaultPrevented) {
+              navigation.navigate(route.name);
+            }
+          };
+
+          return (
+            <TabIcon
+              key={route.key}
+              route={route}
+              isFocused={isFocused}
+              onPress={onPress}
+              colors={colors}
+            />
+          );
+        })}
+      </View>
+    </View>
+  );
+};
 
 const MainTabNavigator = () => {
   const colors = useThemeStore((state) => state.colors);
 
   return (
     <Tab.Navigator
-      screenOptions={({ route }) => ({
-        headerShown: false,
-        tabBarShowLabel: false,
-        tabBarStyle: {
-          position: 'absolute',
-          bottom: 24,
-          alignSelf: 'center',
-          left: 20,
-          right: 20,
-          height: 70,
-          backgroundColor: 'rgba(20,20,20,0.95)', // dark-900/95
-          borderRadius: 24,
-          borderWidth: 1,
-          borderColor: 'rgba(255,255,255,0.15)',
-          paddingBottom: 0,
-          elevation: 10,
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: 10 },
-          shadowOpacity: 0.8,
-          shadowRadius: 20,
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'space-evenly',
-        },
-        tabBarIcon: ({ focused, color }) => {
-          const icons = {
-            Dashboard: 'home',
-            Sheets: 'book',
-            Problems: 'code-slash',
-            Profile: 'person',
-            'Daily Tracker': 'calendar',
-          };
-          const iconName = icons[route.name] || 'ellipse';
-
-          if (focused) {
-            return (
-              <View style={[styles.iconContainer, styles.iconActive, { backgroundColor: `${colors.primary}33`, borderColor: colors.primary }]}>
-                <Ionicons name={iconName} size={24} color={colors.primary} />
-              </View>
-            );
-          }
-
-          return (
-            <View style={[styles.iconContainer, styles.iconInactive]}>
-              <Ionicons name={`${iconName}-outline`} size={24} color={colors.textMuted} />
-            </View>
-          );
-        },
-      })}
+      tabBar={(props) => <CustomTabBar {...props} colors={colors} />}
+      screenOptions={{ headerShown: false }}
     >
       <Tab.Screen name="Dashboard" component={DashboardScreen} />
       <Tab.Screen name="Sheets" component={SheetsScreen} />
@@ -77,26 +129,36 @@ const MainTabNavigator = () => {
 };
 
 const styles = StyleSheet.create({
+  tabBarContainer: {
+    position: 'absolute',
+    bottom: 24,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 100,
+  },
+  pillContainer: {
+    flexDirection: 'row',
+    backgroundColor: 'rgba(15, 15, 20, 0.98)',
+    borderRadius: 24,
+    padding: 6,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 15 },
+    shadowOpacity: 0.8,
+    shadowRadius: 25,
+    elevation: 15,
+  },
+  tabButton: {
+    paddingHorizontal: 4,
+  },
   iconContainer: {
     width: 48,
     height: 48,
-    borderRadius: 14,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  iconActive: {
-    borderWidth: 2,
-    shadowColor: '#39FF14',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 5,
-    transform: [{ scale: 1.05 }],
-  },
-  iconInactive: {
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.05)',
   },
 });
 

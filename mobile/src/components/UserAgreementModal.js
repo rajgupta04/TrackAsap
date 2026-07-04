@@ -14,8 +14,8 @@ const UserAgreementModal = ({ visible, onAccept, onDecline }) => {
           <View style={s.iconContainer}>
             <Ionicons name="shield-checkmark" size={32} color={colors.primary} />
           </View>
-          <Text style={s.title}>Community Guidelines</Text>
-          <Text style={s.subtitle}>Welcome to the TrackAsap community! Before you post, please review our guidelines:</Text>
+          <Text style={s.title}>Terms and Conditions</Text>
+          <Text style={s.subtitle}>Before you join the discussions, please read and accept our Terms and Conditions.</Text>
           
           <ScrollView style={s.guidelinesContainer} showsVerticalScrollIndicator={false}>
             <View style={s.rule}>
@@ -40,6 +40,8 @@ const UserAgreementModal = ({ visible, onAccept, onDecline }) => {
               </View>
             </View>
           </ScrollView>
+
+          <Text style={s.agreementNote}>By clicking "I Agree", you acknowledge and accept our Terms and Conditions. Failure to comply may result in a permanent ban.</Text>
 
           <View style={s.actionsContainer}>
             <TouchableOpacity style={s.declineBtn} onPress={onDecline}>
@@ -68,6 +70,8 @@ const styles = (colors) => StyleSheet.create({
   ruleTextContainer: { flex: 1 },
   ruleTitle: { fontSize: 15, fontWeight: '700', color: colors.text, marginBottom: 4 },
   ruleDesc: { fontSize: 13, color: colors.textMuted, lineHeight: 18 },
+
+  agreementNote: { fontSize: 12, color: colors.textMuted, textAlign: 'center', marginBottom: 16, paddingHorizontal: 10, lineHeight: 18 },
 
   actionsContainer: { flexDirection: 'row', gap: 12 },
   declineBtn: { flex: 1, paddingVertical: 14, borderRadius: 12, alignItems: 'center', backgroundColor: colors.background, borderWidth: 1, borderColor: colors.border },

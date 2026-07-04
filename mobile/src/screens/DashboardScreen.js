@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { AreaChart, LineChart } from 'react-native-gifted-charts';
+import { LineChart } from 'react-native-gifted-charts';
 import { LinearGradient } from 'expo-linear-gradient';
 import { format } from 'date-fns';
 import useAuthStore from '../context/authStore';
@@ -13,6 +13,7 @@ import useThemeStore from '../context/themeStore';
 import useAnalyticsStore from '../context/analyticsStore';
 import useDailyLogStore from '../context/dailyLogStore';
 import usePhysiqueStore from '../context/physiqueStore';
+import useOnboardingStore from '../context/onboardingStore';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CHART_WIDTH = SCREEN_WIDTH - 64;
@@ -24,6 +25,7 @@ const DashboardScreen = ({ navigation }) => {
   const { dashboard, problemsTrend, isLoading, fetchAll } = useAnalyticsStore();
   const { streak, fetchStreak } = useDailyLogStore();
   const { logs: physiqueLogs, fetchAll: fetchPhysique } = usePhysiqueStore();
+  const { hasUserSeenSheetsTour } = useOnboardingStore();
 
   const [refreshing, setRefreshing] = useState(false);
 
@@ -38,8 +40,13 @@ const DashboardScreen = ({ navigation }) => {
   };
 
   useEffect(() => {
+    // Force redirect to Sheets tab if user hasn't seen the mandatory onboarding tour yet
+    if (user && user._id && !hasUserSeenSheetsTour(user._id)) {
+      navigation.navigate('Sheets');
+      return;
+    }
     loadData();
-  }, []);
+  }, [user]);
 
   const greeting = () => {
     const hour = new Date().getHours();
@@ -117,7 +124,8 @@ const DashboardScreen = ({ navigation }) => {
               <Ionicons name="trending-up" size={18} color="#39FF14" />
             </View>
             <View style={{ marginTop: 10 }}>
-              <AreaChart
+              <LineChart
+                areaChart
                 data={trendData}
                 width={CHART_WIDTH}
                 height={180}
@@ -248,7 +256,7 @@ const ComplianceRow = ({ icon, label, value, color, colors }) => {
 const styles = (colors) => StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: colors.background },
   container: { flex: 1, backgroundColor: colors.background },
-  scrollContent: { paddingHorizontal: 16, paddingTop: 10 },
+  scrollContent: { paddingHorizontal: 16, paddingTop: 10, paddingBottom: 100 },
   
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingTop: 10, paddingBottom: 10 },
   greeting: { fontSize: 14, color: colors.textMuted, fontWeight: '600' },
