@@ -7,7 +7,7 @@ import useAuthStore from '../context/authStore';
 import DashboardScreen from '../screens/DashboardScreen';
 import DailyTasksScreen from '../screens/DailyTasksScreen';
 import ProblemsScreen from '../screens/ProblemsScreen';
-import AnalyticsScreen from '../screens/AnalyticsScreen';
+import DiscussionScreen from '../screens/DiscussionScreen';
 import SheetsScreen from '../screens/SheetsScreen';
 const Tab = createBottomTabNavigator();
 
@@ -37,7 +37,7 @@ const MainTabNavigator = () => {
             Dashboard: focused ? 'home' : 'home-outline',
             'Daily Tracker': focused ? 'calendar' : 'calendar-outline',
             Problems: focused ? 'code-slash' : 'code-slash-outline',
-            Analytics: focused ? 'stats-chart' : 'stats-chart-outline',
+            Discussion: focused ? 'chatbubbles' : 'chatbubbles-outline',
             Sheets: focused ? 'book' : 'book-outline',
           };
           return <Ionicons name={icons[route.name] || 'ellipse'} size={22} color={color} />;
@@ -47,7 +47,7 @@ const MainTabNavigator = () => {
       <Tab.Screen name="Dashboard" component={DashboardScreen} />
       <Tab.Screen name="Daily Tracker" component={DailyTasksScreen} />
       <Tab.Screen name="Problems" component={ProblemsScreen} />
-      <Tab.Screen name="Analytics" component={AnalyticsScreen} />
+      <Tab.Screen name="Discussion" component={DiscussionScreen} />
       <Tab.Screen name="Sheets" component={SheetsScreen} />
     </Tab.Navigator>
   );

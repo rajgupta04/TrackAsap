@@ -7,6 +7,7 @@ import MainTabNavigator from './MainTabNavigator';
 import ProfileScreen from '../screens/ProfileScreen';
 import PhysiqueScreen from '../screens/PhysiqueScreen';
 import SheetDetailScreen from '../screens/SheetDetailScreen';
+import AnalyticsScreen from '../screens/AnalyticsScreen';
 
 const Root = createNativeStackNavigator();
 
@@ -33,6 +34,11 @@ const AppNavigator = () => {
           <Root.Screen
             name="SheetDetail"
             component={SheetDetailScreen}
+            options={{ presentation: 'card', animation: 'slide_from_right', headerShown: true }}
+          />
+          <Root.Screen
+            name="Analytics"
+            component={AnalyticsScreen}
             options={{ presentation: 'card', animation: 'slide_from_right', headerShown: true }}
           />
         </Root.Navigator>

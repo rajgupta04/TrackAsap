@@ -86,9 +86,14 @@ const DashboardScreen = ({ navigation }) => {
           <Text style={s.greeting}>{greeting()},</Text>
           <Text style={s.userName}>{user?.name?.split(' ')[0] || 'Challenger'}</Text>
         </View>
-        <TouchableOpacity onPress={() => navigation.navigate('Profile')} style={s.avatarBtn}>
-          <Ionicons name="person-circle" size={40} color={colors.primary} />
-        </TouchableOpacity>
+        <View style={s.headerActions}>
+          <TouchableOpacity onPress={() => navigation.navigate('Analytics')} style={s.iconBtn}>
+            <Ionicons name="stats-chart" size={24} color={colors.text} />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => navigation.navigate('Profile')} style={s.iconBtn}>
+            <Ionicons name="person-circle" size={32} color={colors.primary} />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <ScrollView
@@ -248,7 +253,8 @@ const styles = (colors) => StyleSheet.create({
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingTop: 10, paddingBottom: 10 },
   greeting: { fontSize: 14, color: colors.textMuted, fontWeight: '600' },
   userName: { fontSize: 24, fontWeight: '800', color: colors.text },
-  avatarBtn: { padding: 4 },
+  headerActions: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  iconBtn: { padding: 4, justifyContent: 'center', alignItems: 'center' },
 
   statsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 16 },
   statCardWrap: {
