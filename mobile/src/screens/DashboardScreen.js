@@ -90,8 +90,8 @@ const DashboardScreen = ({ navigation }) => {
           <TouchableOpacity onPress={() => navigation.navigate('Analytics')} style={s.iconBtn}>
             <Ionicons name="stats-chart" size={24} color={colors.text} />
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => navigation.navigate('Profile')} style={s.iconBtn}>
-            <Ionicons name="person-circle" size={32} color={colors.primary} />
+          <TouchableOpacity onPress={() => navigation.navigate('Discussion')} style={[s.iconBtn, s.discussionBtn]}>
+            <Ionicons name="chatbubbles" size={20} color={colors.primary} />
           </TouchableOpacity>
         </View>
       </View>
@@ -254,7 +254,8 @@ const styles = (colors) => StyleSheet.create({
   greeting: { fontSize: 14, color: colors.textMuted, fontWeight: '600' },
   userName: { fontSize: 24, fontWeight: '800', color: colors.text },
   headerActions: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  iconBtn: { padding: 4, justifyContent: 'center', alignItems: 'center' },
+  iconBtn: { padding: 8, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 12, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
+  discussionBtn: { backgroundColor: 'rgba(57, 255, 20, 0.1)', borderColor: 'rgba(57, 255, 20, 0.3)' },
 
   statsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 16 },
   statCardWrap: {

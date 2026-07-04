@@ -8,6 +8,7 @@ import ProfileScreen from '../screens/ProfileScreen';
 import PhysiqueScreen from '../screens/PhysiqueScreen';
 import SheetDetailScreen from '../screens/SheetDetailScreen';
 import AnalyticsScreen from '../screens/AnalyticsScreen';
+import DiscussionScreen from '../screens/DiscussionScreen';
 
 const Root = createNativeStackNavigator();
 
@@ -39,6 +40,11 @@ const AppNavigator = () => {
           <Root.Screen
             name="Analytics"
             component={AnalyticsScreen}
+            options={{ presentation: 'card', animation: 'slide_from_right', headerShown: true }}
+          />
+          <Root.Screen
+            name="Discussion"
+            component={DiscussionScreen}
             options={{ presentation: 'card', animation: 'slide_from_right', headerShown: true }}
           />
         </Root.Navigator>
