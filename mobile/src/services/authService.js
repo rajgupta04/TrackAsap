@@ -20,6 +20,15 @@ export const authService = {
   },
 
   /**
+   * Login/Register with Google
+   * @param {string} credential - Google idToken
+   */
+  googleLogin: async (credential) => {
+    const response = await api.post('/auth/google', { credential });
+    return response.data;
+  },
+
+  /**
    * Get currently logged in user details
    */
   getMe: async () => {

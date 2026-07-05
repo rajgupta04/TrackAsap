@@ -125,6 +125,40 @@ const useAuthStore = create((set, get) => ({
   },
 
   /**
+   * Login/Register with Google
+   */
+  loginWithGoogle: async (credential) => {
+    set({ isLoading: true, error: null });
+    try {
+      const data = await authService.googleLogin(credential);
+      const token = data.token;
+      const user = data.user || data.data || data;
+
+      if (!token) {
+        throw new Error('No authentication token received from server.');
+      }
+
+      await AsyncStorage.setItem(STORAGE_KEYS.TOKEN, token);
+      if (user) {
+        await AsyncStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(user));
+      }
+
+      set({
+        token,
+        user,
+        isAuthenticated: true,
+        isLoading: false,
+      });
+      return { success: true };
+    } catch (error) {
+      const errorMessage =
+        error?.response?.data?.message || error.message || 'Google Authentication failed.';
+      set({ error: errorMessage, isLoading: false });
+      return { success: false, error: errorMessage };
+    }
+  },
+
+  /**
    * Update current user profile in store
    */
   updateUser: async (newUserData) => {

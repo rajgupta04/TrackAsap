@@ -280,8 +280,8 @@ const styles = (colors) => StyleSheet.create({
   cardTitle: { fontSize: 16, fontWeight: '700', color: colors.text },
 
   platformGrid: { flexDirection: 'row', justifyContent: 'space-between' },
-  platformTile: { alignItems: 'center', backgroundColor: colors.background, paddingVertical: 16, borderRadius: 12, borderWidth: 1, borderColor: colors.border, width: '31%' },
-  platformIconBox: { width: 40, height: 40, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginBottom: 8 },
+  platformTile: { alignItems: 'center', backgroundColor: colors.surface, paddingVertical: 16, borderRadius: 12, borderWidth: 1, borderColor: colors.border, width: '31%' },
+  platformIconBox: { width: 40, height: 40, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginBottom: 8, backgroundColor: 'rgba(255,255,255,0.05)' },
   platformValue: { fontSize: 20, fontWeight: '800', color: colors.text },
   platformLabel: { fontSize: 11, color: colors.textMuted, marginTop: 2 },
 
@@ -289,7 +289,7 @@ const styles = (colors) => StyleSheet.create({
   compLeft: { flexDirection: 'row', alignItems: 'center', gap: 8, width: 80 },
   compLabel: { fontSize: 14, color: colors.textMuted, fontWeight: '500' },
   compRight: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12 },
-  compBarBg: { flex: 1, height: 8, backgroundColor: colors.background, borderRadius: 4, overflow: 'hidden' },
+  compBarBg: { flex: 1, height: 8, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 4, overflow: 'hidden' },
   compBarFill: { height: '100%', borderRadius: 4 },
   compPct: { width: 36, textAlign: 'right', fontSize: 13, fontWeight: '600', color: colors.text },
 });

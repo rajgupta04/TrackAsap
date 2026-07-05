@@ -58,9 +58,9 @@ const AnalyticsScreen = () => {
     ? difficultyBreakdown.map((d, i) => ({
         value: d.count || 0,
         color: DIFFICULTY_COLORS[i] || '#888',
-        gradientCenterColor: '#ffffff30',
+        gradientCenterColor: '#ffffff40',
       }))
-    : [{ value: 1, color: colors.border }];
+    : [{ value: 1, color: 'rgba(255,255,255,0.05)' }];
 
   const totalDifficultySolved = (difficultyBreakdown || []).reduce((acc, curr) => acc + (curr.count || 0), 0);
 
@@ -164,11 +164,19 @@ const AnalyticsScreen = () => {
             <View style={{ alignItems: 'center', marginTop: 10 }}>
               <PieChart
                 data={pieData}
-                radius={85}
+                radius={90}
+                innerRadius={60}
+                innerCircleColor={colors.surface}
                 isAnimated
                 strokeWidth={3}
                 strokeColor={colors.surface}
                 focusOnPress
+                showGradient
+                shadow
+                shadowColor="#000000"
+                shadowRadius={10}
+                shadowOpacity={0.4}
+                shadowOffset={{width: 0, height: 6}}
               />
             </View>
             

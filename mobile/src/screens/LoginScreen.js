@@ -5,6 +5,7 @@ import useAuthStore from '../context/authStore';
 import useThemeStore from '../context/themeStore';
 import InputField from '../components/InputField';
 import PrimaryButton from '../components/PrimaryButton';
+import GoogleSignInButton from '../components/GoogleSignInButton';
 
 const LoginScreen = ({ navigation }) => {
   const { login, isLoading, error } = useAuthStore();
@@ -95,6 +96,14 @@ const LoginScreen = ({ navigation }) => {
             loading={isLoading}
             style={styles.submitBtn}
           />
+
+          <View style={styles.dividerContainer}>
+            <View style={[styles.divider, { backgroundColor: colors.border }]} />
+            <Text style={[styles.dividerText, { color: colors.textSecondary }]}>OR</Text>
+            <View style={[styles.divider, { backgroundColor: colors.border }]} />
+          </View>
+
+          <GoogleSignInButton />
         </View>
 
         <View style={styles.footer}>
@@ -153,6 +162,20 @@ const styles = StyleSheet.create({
   },
   signupText: {
     fontWeight: '700',
+  },
+  dividerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 20,
+  },
+  divider: {
+    flex: 1,
+    height: 1,
+  },
+  dividerText: {
+    marginHorizontal: 12,
+    fontSize: 14,
+    fontWeight: '600',
   },
 });
 

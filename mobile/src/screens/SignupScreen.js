@@ -5,6 +5,7 @@ import useAuthStore from '../context/authStore';
 import useThemeStore from '../context/themeStore';
 import InputField from '../components/InputField';
 import PrimaryButton from '../components/PrimaryButton';
+import GoogleSignInButton from '../components/GoogleSignInButton';
 
 const SignupScreen = ({ navigation }) => {
   const { register: registerUser, isLoading, error } = useAuthStore();
@@ -19,6 +20,16 @@ const SignupScreen = ({ navigation }) => {
       name: '',
       email: '',
       password: '',
+      confirmPassword: '',
+    },
+  });
+
+  const { getValues } = useForm({
+    defaultValues: {
+      name: '',
+      email: '',
+      password: '',
+      confirmPassword: '',
     },
   });
 
@@ -114,12 +125,45 @@ const SignupScreen = ({ navigation }) => {
             )}
           />
 
+          <Controller
+            control={control}
+            name="confirmPassword"
+            rules={{
+              required: 'Please confirm your password',
+              validate: (val) => {
+                const { password } = getValues();
+                return password === val || 'Passwords do not match';
+              },
+            }}
+            render={({ field: { onChange, onBlur, value } }) => (
+              <InputField
+                label="Confirm Password"
+                placeholder="Re-type your password"
+                secureTextEntry
+                onBlur={onBlur}
+                onChangeText={onChange}
+                value={value}
+                error={errors.confirmPassword?.message}
+              />
+            )}
+          />
+
+
+
           <PrimaryButton
             title="Sign Up"
             onPress={handleSubmit(onSubmit)}
             loading={isLoading}
             style={styles.submitBtn}
           />
+
+          <View style={styles.dividerContainer}>
+            <View style={[styles.divider, { backgroundColor: colors.border }]} />
+            <Text style={[styles.dividerText, { color: colors.textSecondary }]}>OR</Text>
+            <View style={[styles.divider, { backgroundColor: colors.border }]} />
+          </View>
+
+          <GoogleSignInButton />
         </View>
 
         <View style={styles.footer}>
@@ -178,6 +222,20 @@ const styles = StyleSheet.create({
   },
   loginText: {
     fontWeight: '700',
+  },
+  dividerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 20,
+  },
+  divider: {
+    flex: 1,
+    height: 1,
+  },
+  dividerText: {
+    marginHorizontal: 12,
+    fontSize: 14,
+    fontWeight: '600',
   },
 });
 
