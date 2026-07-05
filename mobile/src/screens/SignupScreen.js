@@ -14,17 +14,9 @@ const SignupScreen = ({ navigation }) => {
   const {
     control,
     handleSubmit,
+    getValues,
     formState: { errors },
   } = useForm({
-    defaultValues: {
-      name: '',
-      email: '',
-      password: '',
-      confirmPassword: '',
-    },
-  });
-
-  const { getValues } = useForm({
     defaultValues: {
       name: '',
       email: '',
