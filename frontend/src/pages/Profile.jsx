@@ -552,7 +552,22 @@ const Profile = () => {
             </>
           )}
         </motion.button>
+
+        {/* Privacy Policy Link */}
+        <div className="mt-6 pt-5 border-t border-dark-800 flex items-center justify-center gap-2 text-sm text-dark-400">
+          <Shield className="w-4 h-4 text-dark-500" />
+          <span>By using TrackAsap, you agree to our</span>
+          <a
+            href="/privacy-policy"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-neon-green hover:underline font-medium transition-colors"
+          >
+            Privacy Policy
+          </a>
+        </div>
       </form>
+
 
       {/* TrackEx Setup Guide Modal */}
       <AnimatePresence>
