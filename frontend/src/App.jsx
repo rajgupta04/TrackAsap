@@ -12,6 +12,7 @@ import Sheets from './pages/Sheets';
 import Problems from './pages/Problems';
 import Discussion from './pages/Discussion';
 import Admin from './pages/Admin';
+import PrivacyPolicy from './pages/PrivacyPolicy';
 
 // Protected Route wrapper
 const ProtectedRoute = ({ children }) => {
@@ -54,6 +55,9 @@ const PublicRoute = ({ children }) => {
 function App() {
   return (
     <Routes>
+      {/* Fully public — no auth required */}
+      <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+
       {/* Public Routes */}
       <Route
         path="/login"
