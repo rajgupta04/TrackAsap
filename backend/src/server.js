@@ -56,8 +56,8 @@ app.use('/api/extension', extensionRoutes);
 
 // Root route
 app.get('/', (req, res) => {
-  res.json({ 
-    status: 'ok', 
+  res.json({
+    status: 'ok',
     message: '75-Day Tracker API is running',
     endpoints: {
       health: '/api/health',
