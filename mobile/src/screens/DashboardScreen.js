@@ -110,10 +110,10 @@ const DashboardScreen = ({ navigation }) => {
       >
         {/* ── Top stat cards ── */}
         <View style={s.statsGrid}>
-          <StatCard title="Total Problems" value={totals.totalProblems || 0} subtitle="Across all platforms" icon="code-slash" color="#39FF14" colors={colors} />
-          <StatCard title="Contests" value={totals.contestsParticipated || 0} subtitle="Participated" icon="trophy" color="#EAB308" colors={colors} />
-          <StatCard title="Current Streak" value={`${streak.currentStreak || 0}d`} subtitle={`Best: ${streak.longestStreak || 0}d`} icon="flame" color="#F97316" colors={colors} />
-          <StatCard title="Weekly Score" value={`${weeklyCompletion}%`} subtitle="Last 7 days" icon="flash" color="#06B6D4" colors={colors} />
+          <StatCard title="Total Problems" value={totals.totalProblems || 0} subtitle="Across all platforms" icon="code-slash" color="#39FF14" colors={colors} onPress={() => navigation.navigate('Analytics')} />
+          <StatCard title="Contests" value={totals.contestsParticipated || 0} subtitle="Participated" icon="trophy" color="#EAB308" colors={colors} onPress={() => navigation.navigate('Analytics')} />
+          <StatCard title="Current Streak" value={`${streak.currentStreak || 0}d`} subtitle={`Best: ${streak.longestStreak || 0}d`} icon="flame" color="#F97316" colors={colors} onPress={() => navigation.navigate('Analytics')} />
+          <StatCard title="Weekly Score" value={`${weeklyCompletion}%`} subtitle="Last 7 days" icon="flash" color="#06B6D4" colors={colors} onPress={() => navigation.navigate('Analytics')} />
         </View>
 
         {/* ── Problems Solved Chart ── */}
@@ -182,9 +182,9 @@ const DashboardScreen = ({ navigation }) => {
           <View style={s.card}>
             <Text style={[s.cardTitle, { marginBottom: 16 }]}>Platform Breakdown</Text>
             <View style={s.platformGrid}>
-              <PlatformTile icon="code-slash" label="LeetCode" value={totals.leetcodeProblems || 0} color="#FFA116" colors={colors} />
-              <PlatformTile icon="code-slash" label="CodeChef" value={totals.codechefProblems || 0} color="#a07a5a" colors={colors} />
-              <PlatformTile icon="code-slash" label="Codeforces" value={totals.codeforcesProblems || 0} color="#1F8ACB" colors={colors} />
+              <PlatformTile icon="code-slash" label="LeetCode" value={totals.leetcodeProblems || 0} color="#FFA116" colors={colors} onPress={() => navigation.navigate('Analytics')} />
+              <PlatformTile icon="code-slash" label="CodeChef" value={totals.codechefProblems || 0} color="#a07a5a" colors={colors} onPress={() => navigation.navigate('Analytics')} />
+              <PlatformTile icon="code-slash" label="Codeforces" value={totals.codeforcesProblems || 0} color="#1F8ACB" colors={colors} onPress={() => navigation.navigate('Analytics')} />
             </View>
           </View>
         )}
@@ -193,9 +193,9 @@ const DashboardScreen = ({ navigation }) => {
         {hasComplianceHistory && (
           <View style={s.card}>
             <Text style={[s.cardTitle, { marginBottom: 16 }]}>Compliance</Text>
-            <ComplianceRow icon="barbell" label="Gym" value={gymCompliance} color="#A855F7" colors={colors} />
-            <ComplianceRow icon="nutrition" label="Diet" value={dietCompliance} color="#22C55E" colors={colors} />
-            <ComplianceRow icon="flash" label="Weekly" value={weeklyCompletion} color="#06B6D4" colors={colors} />
+            <ComplianceRow icon="barbell" label="Gym" value={gymCompliance} color="#A855F7" colors={colors} onPress={() => navigation.navigate('Analytics')} />
+            <ComplianceRow icon="nutrition" label="Diet" value={dietCompliance} color="#22C55E" colors={colors} onPress={() => navigation.navigate('Analytics')} />
+            <ComplianceRow icon="flash" label="Weekly" value={weeklyCompletion} color="#06B6D4" colors={colors} onPress={() => navigation.navigate('Analytics')} />
           </View>
         )}
 
@@ -206,10 +206,10 @@ const DashboardScreen = ({ navigation }) => {
 };
 
 // ─── Subcomponents ─────────────────────────
-const StatCard = ({ title, subtitle, value, icon, color, colors }) => {
+const StatCard = ({ title, subtitle, value, icon, color, colors, onPress }) => {
   const s = styles(colors);
   return (
-    <View style={s.statCardWrap}>
+    <TouchableOpacity style={s.statCardWrap} onPress={onPress} activeOpacity={0.7}>
       <View style={[s.statIconBox, { backgroundColor: `${color}15` }]}>
         <Ionicons name={icon} size={20} color={color} />
       </View>
@@ -218,27 +218,27 @@ const StatCard = ({ title, subtitle, value, icon, color, colors }) => {
         <Text style={s.statTitle}>{title}</Text>
         <Text style={s.statSubtitle}>{subtitle}</Text>
       </View>
-    </View>
+    </TouchableOpacity>
   );
 };
 
-const PlatformTile = ({ icon, label, value, color, colors }) => {
+const PlatformTile = ({ icon, label, value, color, colors, onPress }) => {
   const s = styles(colors);
   return (
-    <View style={s.platformTile}>
+    <TouchableOpacity style={s.platformTile} onPress={onPress} activeOpacity={0.7}>
       <View style={[s.platformIconBox, { backgroundColor: `${color}15` }]}>
         <Ionicons name={icon} size={20} color={color} />
       </View>
       <Text style={s.platformValue}>{value}</Text>
       <Text style={s.platformLabel}>{label}</Text>
-    </View>
+    </TouchableOpacity>
   );
 };
 
-const ComplianceRow = ({ icon, label, value, color, colors }) => {
+const ComplianceRow = ({ icon, label, value, color, colors, onPress }) => {
   const s = styles(colors);
   return (
-    <View style={s.complianceRow}>
+    <TouchableOpacity style={s.complianceRow} onPress={onPress} activeOpacity={0.7}>
       <View style={s.compLeft}>
         <Ionicons name={icon} size={18} color={color} />
         <Text style={s.compLabel}>{label}</Text>
@@ -249,7 +249,7 @@ const ComplianceRow = ({ icon, label, value, color, colors }) => {
         </View>
         <Text style={s.compPct}>{value}%</Text>
       </View>
-    </View>
+    </TouchableOpacity>
   );
 };
 

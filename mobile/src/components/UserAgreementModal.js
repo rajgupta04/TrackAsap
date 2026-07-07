@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Modal, ScrollView } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Modal, ScrollView, Linking } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import useThemeStore from '../context/themeStore';
 
@@ -41,7 +41,16 @@ const UserAgreementModal = ({ visible, onAccept, onDecline }) => {
             </View>
           </ScrollView>
 
-          <Text style={s.agreementNote}>By clicking "I Agree", you acknowledge and accept our Terms and Conditions. Failure to comply may result in a permanent ban.</Text>
+          <Text style={s.agreementNote}>
+            By clicking "I Agree", you acknowledge and accept our{' '}
+            <Text 
+              style={{ color: colors.primary, textDecorationLine: 'underline' }}
+              onPress={() => Linking.openURL('https://track-asap.vercel.app/privacy-policy')}
+            >
+              Terms and Conditions
+            </Text>
+            . Failure to comply may result in a permanent ban.
+          </Text>
 
           <View style={s.actionsContainer}>
             <TouchableOpacity style={s.declineBtn} onPress={onDecline}>
