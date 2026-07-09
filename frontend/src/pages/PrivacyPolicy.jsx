@@ -6,11 +6,12 @@ export default function PrivacyPolicy() {
       {/* Header */}
       <div className="border-b border-dark-800 bg-dark-900">
         <div className="max-w-4xl mx-auto px-6 py-5 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-neon-green flex items-center justify-center">
-              <span className="text-dark-950 font-bold text-sm">T</span>
-            </div>
-            <span className="text-white font-bold text-lg">TrackAsap</span>
+          <div className="flex items-center">
+            <img
+              src="/logodefault.png"
+              alt="TrackAsap Logo"
+              className="h-8 w-auto object-contain brightness-[1.4] contrast-110 drop-shadow-[0_0_10px_rgba(57,255,20,0.45)]"
+            />
           </div>
           <Link
             to="/login"

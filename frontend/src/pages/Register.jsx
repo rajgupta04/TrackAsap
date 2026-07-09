@@ -54,12 +54,13 @@ const Register = () => {
         className="w-full max-w-md"
       >
         {/* Logo */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-neon-green to-emerald-500 mb-4">
-            <Target className="w-8 h-8 text-dark-950" />
-          </div>
-          <h1 className="text-3xl font-bold text-white">TrackAsap</h1>
-          <p className="text-dark-400 mt-2">Start Your 75 Day Challenge</p>
+        <div className="text-center mb-8 flex flex-col items-center">
+          <img
+            src="/logodefault.png"
+            alt="TrackAsap Logo"
+            className="h-14 sm:h-16 md:h-18 w-auto max-w-full object-contain brightness-[1.4] contrast-110 drop-shadow-[0_0_15px_rgba(57,255,20,0.45)] mb-3"
+          />
+          <p className="text-dark-400 mt-1">Start Your 75 Day Challenge</p>
         </div>
 
         {/* Register Form */}

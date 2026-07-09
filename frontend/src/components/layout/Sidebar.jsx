@@ -59,22 +59,20 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
         `}
       >
         {/* Logo */}
-        <div className="p-4 md:p-5 border-b border-dark-700/50">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-neon-green to-emerald-500 flex items-center justify-center flex-shrink-0">
-              <Target className="w-6 h-6 text-dark-950" />
-            </div>
-            {!isCollapsed && (
-              <div className="hidden md:block">
-                <h1 className="text-xl font-bold text-white">TrackAsap</h1>
-                <p className="text-xs text-dark-400">75 Day Challenge</p>
-              </div>
-            )}
-            <div className="md:hidden">
-              <h1 className="text-xl font-bold text-white">TrackAsap</h1>
-              <p className="text-xs text-dark-400">75 Day Challenge</p>
-            </div>
-          </div>
+        <div className="p-3.5 md:p-4 border-b border-dark-700/50 flex items-center justify-center min-h-[73px]">
+          {isCollapsed ? (
+            <img
+              src="/logodefault.png"
+              alt="TrackAsap Logo"
+              className="h-auto w-12 max-w-[48px] object-contain brightness-[1.4] contrast-110 drop-shadow-[0_0_10px_rgba(57,255,20,0.45)] transition-all duration-300"
+            />
+          ) : (
+            <img
+              src="/logodefault.png"
+              alt="TrackAsap Logo"
+              className="h-10 md:h-11 w-auto max-w-full object-contain brightness-[1.4] contrast-110 drop-shadow-[0_0_12px_rgba(57,255,20,0.45)] transition-all duration-300"
+            />
+          )}
         </div>
 
         {/* Collapse button - Tablet and Desktop */}
