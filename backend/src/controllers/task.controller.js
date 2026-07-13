@@ -135,7 +135,7 @@ export const getTaskStreak = async (req, res) => {
     // Streak only counts if active today or yesterday
     if (uniqueDates[0] === todayStr || uniqueDates[0] === yesterdayStr) {
       let currentDate = new Date(uniqueDates[0]);
-      currentStreak = 1;
+      let consecutiveDays = [uniqueDates[0]];
 
       for (let i = 1; i < uniqueDates.length; i++) {
         const expectedPrev = new Date(currentDate);
@@ -143,15 +143,22 @@ export const getTaskStreak = async (req, res) => {
         const expectedPrevStr = `${expectedPrev.getUTCFullYear()}-${String(expectedPrev.getUTCMonth() + 1).padStart(2, '0')}-${String(expectedPrev.getUTCDate()).padStart(2, '0')}`;
 
         if (uniqueDates[i] === expectedPrevStr) {
-          currentStreak++;
+          consecutiveDays.push(uniqueDates[i]);
           currentDate = expectedPrev;
         } else {
           break;
         }
       }
+
+      // Sum all tasks completed during these consecutive days for a "reward" streak
+      currentStreak = completedLogs.filter(log => {
+        const d = new Date(log.date);
+        const logDateStr = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`;
+        return consecutiveDays.includes(logDateStr);
+      }).length;
     }
 
-    res.json({ currentStreak, longestStreak: 0 }); // Can calculate longest streak later if needed
+    res.json({ currentStreak, longestStreak: 0 }); 
   } catch (error) {
     res.status(500).json({ message: 'Error calculating streak', error: error.message });
   }
