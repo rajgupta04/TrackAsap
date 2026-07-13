@@ -65,11 +65,6 @@ const problemSchema = new mongoose.Schema(
       type: Date,
       default: Date.now,
     },
-    // Associated daily log (optional)
-    dailyLog: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'DailyLog',
-    },
     // Sheet reference (optional)
     sheet: {
       type: mongoose.Schema.Types.ObjectId,
