@@ -388,6 +388,7 @@ const DailyTracker = () => {
                 </div>
               </div>
             </div>
+            </div>
           </GlassCard>
 
           {/* Quick Add Tasks */}
