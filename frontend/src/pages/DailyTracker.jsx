@@ -37,6 +37,21 @@ const RANGES = [
   { label: 'All', days: 9999 },
 ];
 
+const PREMADE_TASKS = [
+  "DSA",
+  "Computer Fundamentals",
+  "DBMS",
+  "LLD",
+  "HLD",
+  "Competitive Programming",
+  "Contest-Leetcode",
+  "Contest-Codechef",
+  "Web Development",
+  "Open Source",
+  "Gym/Fitness",
+  "Clean Diet"
+];
+
 const DailyTracker = () => {
   const { tasks, taskLogs, streak, isLoading, fetchTasks, fetchTaskLogs, toggleTaskLog, deleteTask, createTask } = useTaskStore();
   const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
@@ -66,6 +81,12 @@ const DailyTracker = () => {
     }
     setPrevStreak(streak?.currentStreak || 0);
   }, [streak?.currentStreak]);
+
+  const handleQuickAdd = (title) => {
+    setTaskTitle(title);
+    setTaskType('recurring'); // Default to recurring for habits
+    setIsModalOpen(true);
+  };
 
   const handleDateChange = (date) => setSelectedDate(date);
   const handlePrevDay = () => handleDateChange(format(subDays(parseISO(selectedDate), 1), 'yyyy-MM-dd'));
@@ -366,6 +387,22 @@ const DailyTracker = () => {
                   <Flame className="w-5 h-5 text-orange-500" />
                 </div>
               </div>
+            </div>
+          </GlassCard>
+
+          {/* Quick Add Tasks */}
+          <GlassCard>
+            <h3 className="text-lg font-semibold text-white mb-4">Quick Add</h3>
+            <div className="flex flex-wrap gap-2">
+              {PREMADE_TASKS.map((title) => (
+                <button
+                  key={title}
+                  onClick={() => handleQuickAdd(title)}
+                  className="px-3 py-1.5 rounded-lg text-sm font-medium bg-dark-800/80 border border-white/5 text-dark-300 hover:text-white hover:border-neon-green/50 hover:bg-neon-green/10 transition-colors"
+                >
+                  + {title}
+                </button>
+              ))}
             </div>
           </GlassCard>
         </div>
