@@ -98,7 +98,6 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
               <NavLink
                 key={item.path}
                 to={item.path}
-                onClick={() => setIsOpen(false)}
                 title={isCollapsed ? item.label : ''}
                 className={`
                   flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300
@@ -132,7 +131,6 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
           <div className="px-2 md:px-4 pb-2">
             <NavLink
               to="/admin"
-              onClick={() => setIsOpen(false)}
               title={isCollapsed ? 'Admin Panel' : ''}
               className={({ isActive }) =>
                 `flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 ${
@@ -155,7 +153,6 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
         <div className="p-2 md:p-4 border-t border-dark-700/50">
           <NavLink
             to="/profile"
-            onClick={() => setIsOpen(false)}
             title={isCollapsed ? 'Profile' : ''}
             className={`flex items-center gap-3 px-3 md:px-4 py-3 mb-2 rounded-xl transition-all duration-300 hover:bg-dark-800/50 ${
               isCollapsed ? 'md:justify-center' : ''
