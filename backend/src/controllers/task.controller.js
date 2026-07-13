@@ -6,9 +6,18 @@ export const createTask = async (req, res) => {
   try {
     const { title, startDate, endDate, daysOfWeek, specificDate } = req.body;
 
+    const existingTask = await CustomTask.findOne({ 
+      user: req.user._id, 
+      title: { $regex: new RegExp(`^${title.trim()}$`, 'i') } 
+    });
+    
+    if (existingTask) {
+      return res.status(400).json({ message: 'A task with this title already exists' });
+    }
+
     const task = await CustomTask.create({
       user: req.user._id,
-      title,
+      title: title.trim(),
       startDate,
       endDate,
       daysOfWeek,
