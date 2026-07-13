@@ -6,14 +6,11 @@ A full-stack personal analytics dashboard to track your 75-day journey for compe
 
 ## 🎯 Features
 
-### Core Tracking
-- **Daily Tracker** - Log daily progress with checkboxes for each goal
-- **LeetCode** - Contest participation & problems solved
-- **CodeChef** - Daily problems & contest tracking
-- **Codeforces** - Problems solved & rating updates
-- **Gym** - Workout completion & type tracking
-- **Diet** - Clean diet compliance & macro tracking
-- **Internship Prep** - Study hours logging
+### Core Tracking (Revamped! 🚀)
+- **Custom Daily Tracker** - Create and manage your own custom flexible tasks!
+- **Premade Task Bucket** - Quick-add pre-built tasks (DSA, LLD, HLD, Codeforces, Gym, Clean Diet, etc.)
+- **Recurring Habits** - Set tasks to recur daily, on specific days of the week, or for a custom date range.
+- **Time-Series Analytics** - Visual Area charts tracking your daily completions over time.
 
 ### 📝 Problem Tracking (NEW!)
 - **Save Solutions** - Store problem title, link, code, and notes
@@ -216,44 +213,26 @@ Visit `http://localhost:3000` to use the application.
 }
 ```
 
-### DailyLog Model
+### CustomTask Model
 ```javascript
 {
   user: ObjectId,
+  title: String,
+  startDate: Date,
+  endDate: Date,
+  specificDate: Date,
+  daysOfWeek: [Number], // 0 (Sun) - 6 (Sat)
+  timestamps: true
+}
+```
+
+### TaskLog Model
+```javascript
+{
+  user: ObjectId,
+  task: ObjectId (ref: 'CustomTask'),
   date: Date,
-  dayNumber: Number (1-75),
-  leetcode: {
-    contestParticipated: Boolean,
-    problemsSolved: Number,
-    problemDifficulty: enum ['easy', 'medium', 'hard', 'none']
-  },
-  codechef: {
-    dailyProblem: Boolean,
-    contestParticipated: Boolean,
-    problemsSolved: Number
-  },
-  codeforces: {
-    problemsSolved: Number,
-    contestParticipated: Boolean,
-    rating: Number
-  },
-  gym: {
-    completed: Boolean,
-    workoutType: enum ['push', 'pull', 'legs', 'cardio', 'rest', 'other', 'none'],
-    duration: Number
-  },
-  diet: {
-    cleanDiet: Boolean,
-    calories: Number,
-    protein: Number,
-    notes: String
-  },
-  internshipPrep: {
-    completed: Boolean,
-    hoursSpent: Number,
-    topics: [String]
-  },
-  notes: String,
+  completed: Boolean,
   timestamps: true
 }
 ```
@@ -288,15 +267,15 @@ Visit `http://localhost:3000` to use the application.
 | GET | `/api/auth/me` | Get current user |
 | PUT | `/api/auth/profile` | Update profile |
 
-### Daily Logs
+### Custom Tasks
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/api/daily-logs` | Get all logs |
-| POST | `/api/daily-logs` | Create/Update log |
-| GET | `/api/daily-logs/:date` | Get log by date |
-| DELETE | `/api/daily-logs/:date` | Delete log |
-| GET | `/api/daily-logs/streak` | Get streak info |
-| GET | `/api/daily-logs/weekly-summary` | Get weekly stats |
+| GET | `/api/tasks` | Get all active tasks |
+| POST | `/api/tasks` | Create a new task |
+| DELETE | `/api/tasks/:id` | Delete task |
+| GET | `/api/tasks/logs` | Get task completion logs |
+| POST | `/api/tasks/toggle` | Toggle task completion status |
+| GET | `/api/tasks/streak` | Get current streak multiplier |
 
 ### Physique
 | Method | Endpoint | Description |
@@ -340,34 +319,23 @@ Visit `http://localhost:3000` to use the application.
 | POST | `/api/sheets/:id/topics` | Add topic to sheet |
 | PUT | `/api/sheets/:id/topics/:topicName` | Update topic progress |
 
-## 🔥 Streak Calculation Logic
+## 🔥 Streak Calculation Logic (Multiplier Reward)
 
 ```javascript
-// Streak is calculated based on completion score >= 60%
-// A day is "active" if user completes at least 3/5 of:
-// 1. LeetCode (solved problems or participated)
-// 2. CodeChef (daily problem or contest)
-// 3. Codeforces (solved problems or contest)
-// 4. Gym (workout completed)
-// 5. Diet (clean diet maintained)
+// A day is considered "active" if the user completes AT LEAST ONE task.
+// The streak is NO LONGER just the number of consecutive active days.
 
-const calculateCompletionScore = (log) => {
-  let score = 0;
-  const totalChecks = 5;
+// Instead, the streak is a Multiplier Reward:
+// It counts the TOTAL NUMBER OF TASKS completed across all active consecutive days!
 
-  if (log.leetcode.problemsSolved > 0 || log.leetcode.contestParticipated) score++;
-  if (log.codechef.dailyProblem || log.codechef.contestParticipated) score++;
-  if (log.codeforces.problemsSolved > 0 || log.codeforces.contestParticipated) score++;
-  if (log.gym.completed) score++;
-  if (log.diet.cleanDiet) score++;
+// Example: 
+// Day 1: Completed 2 tasks
+// Day 2: Completed 3 tasks
+// Day 3 (Today): Completed 1 task so far
+// Current Streak = 2 + 3 + 1 = 6 🔥 
 
-  return Math.round((score / totalChecks) * 100);
-};
-
-// Current streak: Count consecutive days from today backwards
-// where each day has completionScore >= 60%
-
-// Longest streak: Maximum consecutive active days in all logs
+// If you complete another task today, your streak instantly jumps to 7!
+// This rewards users heavily for doing more tasks every single day.
 ```
 
 ## 🎨 State Management (Zustand)
@@ -383,14 +351,14 @@ const useAuthStore = create((set) => ({
   updateUser: async (data) => { ... },
 }));
 
-// Daily Log Store
-const useDailyLogStore = create((set, get) => ({
-  currentLog: null,
-  selectedDate: today,
+// Task Store (Zustand)
+const useTaskStore = create((set, get) => ({
+  tasks: [],
+  taskLogs: [],
   streak: { currentStreak: 0, longestStreak: 0 },
-  fetchLogByDate: async (date) => { ... },
-  saveLog: async (data) => { ... },
-  updateCurrentLog: (field, value) => { ... },
+  fetchTasks: async () => { ... },
+  createTask: async (data) => { ... },
+  toggleTaskLog: async (taskId, date) => { ... },
   fetchStreak: async () => { ... },
 }));
 
