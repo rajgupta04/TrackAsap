@@ -66,6 +66,13 @@ const DailyTracker = () => {
   const [startDate, setStartDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [endDate, setEndDate] = useState(format(addDays(new Date(), 30), 'yyyy-MM-dd'));
   const [specificDate, setSpecificDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+
+  // Filter out tasks that the user has already added
+  const availablePremadeTasks = useMemo(() => {
+    return PREMADE_TASKS.filter(
+      (title) => !tasks.some((t) => t.title.toLowerCase() === title.toLowerCase())
+    );
+  }, [tasks]);
   
   useEffect(() => {
     fetchTasks();
@@ -362,7 +369,7 @@ const DailyTracker = () => {
         </div>
 
         {/* Sidebar/Stats could go here */}
-        <div className="space-y-6">
+        <div className="space-y-6 lg:sticky lg:top-6 self-start">
           <GlassCard>
             <h3 className="text-lg font-semibold text-white mb-4">Quick Stats</h3>
             <div className="space-y-4">
@@ -392,20 +399,22 @@ const DailyTracker = () => {
           </GlassCard>
 
           {/* Quick Add Tasks */}
-          <GlassCard>
-            <h3 className="text-lg font-semibold text-white mb-4">Quick Add</h3>
-            <div className="flex flex-wrap gap-2">
-              {PREMADE_TASKS.map((title) => (
-                <button
-                  key={title}
-                  onClick={() => handleQuickAdd(title)}
-                  className="px-3 py-1.5 rounded-lg text-sm font-medium bg-dark-800/80 border border-white/5 text-dark-300 hover:text-white hover:border-neon-green/50 hover:bg-neon-green/10 transition-colors"
-                >
-                  + {title}
-                </button>
-              ))}
-            </div>
-          </GlassCard>
+          {availablePremadeTasks.length > 0 && (
+            <GlassCard>
+              <h3 className="text-lg font-semibold text-white mb-4">Quick Add</h3>
+              <div className="flex flex-wrap gap-2">
+                {availablePremadeTasks.map((title) => (
+                  <button
+                    key={title}
+                    onClick={() => handleQuickAdd(title)}
+                    className="px-3 py-1.5 rounded-lg text-sm font-medium bg-dark-800/80 border border-white/5 text-dark-300 hover:text-white hover:border-neon-green/50 hover:bg-neon-green/10 transition-colors"
+                  >
+                    + {title}
+                  </button>
+                ))}
+              </div>
+            </GlassCard>
+          )}
         </div>
       </div>
 
