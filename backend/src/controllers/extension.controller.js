@@ -1,5 +1,4 @@
 import Problem from '../models/Problem.model.js';
-import DailyLog from '../models/DailyLog.model.js';
 
 // Language mapping from LeetCode language slugs to our enum values
 const LANG_MAP = {
@@ -102,21 +101,6 @@ export const submitFromExtension = async (req, res) => {
       notes: notes || '',
     });
 
-    // Auto-associate with today's daily log if it exists
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const dailyLog = await DailyLog.findOne({
-      user: req.user._id,
-      date: today,
-    });
-
-    if (dailyLog) {
-      problem.dailyLog = dailyLog._id;
-      await problem.save();
-
-      dailyLog.leetcode.problemsSolved += 1;
-      await dailyLog.save();
-    }
 
     res.status(201).json({
       message: 'Submission synced',

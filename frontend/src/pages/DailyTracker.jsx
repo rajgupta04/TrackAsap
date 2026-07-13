@@ -1,237 +1,198 @@
-import { useEffect, useState, useCallback } from 'react';
-import { motion } from 'framer-motion';
-import { format, addDays, subDays, parseISO, getDay, differenceInDays } from 'date-fns';
+import { useEffect, useState, useMemo } from 'react';
+import { format, addDays, subDays, parseISO, startOfDay, isWithinInterval } from 'date-fns';
 import toast from 'react-hot-toast';
 import {
   ChevronLeft,
   ChevronRight,
   Calendar,
-  Save,
-  Code2,
-  Trophy,
-  Dumbbell,
-  Apple,
-  BookOpen,
-  Loader2,
-  Trash2,
   Plus,
-  ExternalLink,
+  Trash2,
+  Activity,
+  CheckCircle2,
+  Circle,
+  X
 } from 'lucide-react';
-import { useDailyLogStore } from '../store/dailyLogStore';
-import { useAuthStore } from '../store/authStore';
-import useProblemStore from '../store/problemStore';
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  Area,
+  AreaChart
+} from 'recharts';
+import { useTaskStore } from '../store/taskStore';
 import GlassCard from '../components/ui/GlassCard';
-import Checkbox from '../components/ui/Checkbox';
-import NumberInput from '../components/ui/NumberInput';
-import Select from '../components/ui/Select';
-import ProgressRing from '../components/ui/ProgressRing';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
-import ProblemModal from '../components/ProblemModal';
 import StreakAnimation from '../components/StreakAnimation';
+import { Flame } from 'lucide-react';
 
-const workoutTypes = [
-  { value: 'none', label: 'None' },
-  { value: 'push', label: 'Push Day' },
-  { value: 'pull', label: 'Pull Day' },
-  { value: 'legs', label: 'Leg Day' },
-  { value: 'cardio', label: 'Cardio' },
-  { value: 'rest', label: 'Rest Day' },
-  { value: 'other', label: 'Other' },
+const RANGES = [
+  { label: '7D', days: 7 },
+  { label: '1M', days: 30 },
+  { label: '3M', days: 90 },
+  { label: '1Y', days: 365 },
+  { label: 'All', days: 9999 },
 ];
 
-const difficultyOptions = [
-  { value: 'none', label: 'None' },
-  { value: 'easy', label: 'Easy' },
-  { value: 'medium', label: 'Medium' },
-  { value: 'hard', label: 'Hard' },
+const PREMADE_TASKS = [
+  "DSA",
+  "Computer Fundamentals",
+  "DBMS",
+  "LLD",
+  "HLD",
+  "Competitive Programming",
+  "Contest-Leetcode",
+  "Contest-Codechef",
+  "Web Development",
+  "Open Source",
+  "Gym/Fitness",
+  "Clean Diet"
 ];
 
 const DailyTracker = () => {
-  const { user } = useAuthStore();
-  const {
-    currentLog,
-    selectedDate,
-    setSelectedDate,
-    fetchLogByDate,
-    saveLog,
-    updateCurrentLog,
-    deleteLog,
-    fetchStreak,
-    isLoading,
-    isSaving,
-  } = useDailyLogStore();
-
-  const { problems, fetchProblemsByDate } = useProblemStore();
-
-  const [localDate, setLocalDate] = useState(selectedDate);
-  const [showProblemModal, setShowProblemModal] = useState(false);
-  const [selectedPlatform, setSelectedPlatform] = useState(null);
+  const { tasks, taskLogs, streak, isLoading, fetchTasks, fetchTaskLogs, toggleTaskLog, deleteTask, createTask } = useTaskStore();
+  const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+  const [chartRange, setChartRange] = useState(7);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [showStreakAnimation, setShowStreakAnimation] = useState(false);
-  const [currentStreak, setCurrentStreak] = useState(0);
-  const [todayProblems, setTodayProblems] = useState([]);
-  const [cfContests, setCfContests] = useState([]);
+  const [prevStreak, setPrevStreak] = useState(0);
+  
+  // Modal state
+  const [taskTitle, setTaskTitle] = useState('');
+  const [taskType, setTaskType] = useState('recurring'); // 'recurring' or 'one_time'
+  const [startDate, setStartDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+  const [endDate, setEndDate] = useState(format(addDays(new Date(), 30), 'yyyy-MM-dd'));
+  const [specificDate, setSpecificDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+
+  // Filter out tasks that the user has already added
+  const availablePremadeTasks = useMemo(() => {
+    return PREMADE_TASKS.filter(
+      (title) => !tasks.some((t) => t.title.toLowerCase() === title.toLowerCase())
+    );
+  }, [tasks]);
+  
+  useEffect(() => {
+    fetchTasks();
+    // Fetch logs for the selected chart range
+    const start = format(subDays(new Date(), chartRange === 9999 ? 365 * 5 : chartRange), 'yyyy-MM-dd');
+    const end = format(new Date(), 'yyyy-MM-dd');
+    fetchTaskLogs(start, end);
+  }, [chartRange, fetchTasks, fetchTaskLogs]);
 
   useEffect(() => {
-    const fetchCFContests = async () => {
-      try {
-        const response = await fetch('https://codeforces.com/api/contest.list?gym=false');
-        const data = await response.json();
-        if (data.status === 'OK') {
-          const dates = data.result.map(c => {
-            const date = new Date(c.startTimeSeconds * 1000);
-            return format(date, 'yyyy-MM-dd');
-          });
-          setCfContests([...new Set(dates)]);
-        }
-      } catch (err) {
-        console.error('Failed to fetch CF contests:', err);
-      }
-    };
-    fetchCFContests();
-  }, []);
-
-  useEffect(() => {
-    fetchLogByDate(selectedDate);
-    loadTodayProblems(selectedDate);
-  }, [selectedDate]);
-
-  const loadTodayProblems = async (date) => {
-    const probs = await fetchProblemsByDate(date);
-    setTodayProblems(probs || []);
-  };
-
-  const handleDateChange = (date) => {
-    setLocalDate(date);
-    setSelectedDate(date);
-  };
-
-  const handlePrevDay = () => {
-    const prev = format(subDays(parseISO(localDate), 1), 'yyyy-MM-dd');
-    handleDateChange(prev);
-  };
-
-  const handleNextDay = () => {
-    const next = format(addDays(parseISO(localDate), 1), 'yyyy-MM-dd');
-    handleDateChange(next);
-  };
-
-  const isActiveToday = () => {
-    if (!currentLog) return false;
-    if (currentLog.leetcode?.problemsSolved > 0 || currentLog.leetcode?.contestParticipated) return true;
-    if (currentLog.codechef?.dailyProblem || currentLog.codechef?.contestParticipated || currentLog.codechef?.problemsSolved > 0) return true;
-    if (currentLog.codeforces?.problemsSolved > 0 || currentLog.codeforces?.contestParticipated) return true;
-    if (currentLog.gym?.completed) return true;
-    if (currentLog.diet?.cleanDiet) return true;
-    if ((currentLog.diet?.notes || '').trim()) return true;
-    if (currentLog.internshipPrep?.completed || (currentLog.internshipPrep?.hoursSpent || 0) > 0) return true;
-    if ((currentLog.notes || '').trim()) return true;
-    if (todayProblems.length > 0) return true;
-    return false;
-  };
-
-  const handleSave = async () => {
-    if (!currentLog) return;
-
-    const result = await saveLog(currentLog);
-    if (result.success) {
-      toast.success('Daily log saved!');
-
-      if (isActiveToday() && result.streak > 0 && result.streak !== currentStreak) {
-        setCurrentStreak(result.streak);
-        setShowStreakAnimation(true);
-      }
-    } else {
-      toast.error(result.error || 'Failed to save');
-    }
-  };
-
-  const handleAddProblem = (platform) => {
-    setSelectedPlatform(platform);
-    setShowProblemModal(true);
-  };
-
-  const handleProblemAdded = async () => {
-    loadTodayProblems(selectedDate);
-    // Update the problems count
-    if (selectedPlatform && currentLog) {
-      const platformKey = selectedPlatform;
-      const currentSolved = currentLog[platformKey]?.problemsSolved || 0;
-      updateCurrentLog(`${platformKey}.problemsSolved`, currentSolved + 1);
-    }
-
-    const streakData = await fetchStreak();
-    if (streakData?.currentStreak > 0 && streakData.currentStreak !== currentStreak) {
-      setCurrentStreak(streakData.currentStreak);
+    if (streak?.currentStreak > prevStreak && prevStreak > 0) {
       setShowStreakAnimation(true);
     }
+    setPrevStreak(streak?.currentStreak || 0);
+  }, [streak?.currentStreak]);
+
+  const handleQuickAdd = (title) => {
+    setTaskTitle(title);
+    setTaskType('recurring'); // Default to recurring for habits
+    setIsModalOpen(true);
   };
 
-  const handleDelete = async () => {
-    if (confirm('Are you sure you want to delete this log?')) {
-      const result = await deleteLog(selectedDate);
-      if (result.success) {
-        toast.success('Log deleted');
-        fetchLogByDate(selectedDate);
+  const handleDateChange = (date) => setSelectedDate(date);
+  const handlePrevDay = () => handleDateChange(format(subDays(parseISO(selectedDate), 1), 'yyyy-MM-dd'));
+  const handleNextDay = () => handleDateChange(format(addDays(parseISO(selectedDate), 1), 'yyyy-MM-dd'));
+
+  // Filter tasks for the selected date
+  const tasksForSelectedDate = useMemo(() => {
+    const date = parseISO(selectedDate);
+    const dayOfWeek = date.getDay();
+
+    return tasks.filter((task) => {
+      // If it's a one-time task
+      if (task.specificDate) {
+        return format(parseISO(task.specificDate), 'yyyy-MM-dd') === selectedDate;
       }
-    }
-  };
-
-  const hasContest = useCallback((platform, dateString) => {
-    if (!dateString) return false;
-    const date = parseISO(dateString);
-    const dayOfWeek = getDay(date);
-    
-    if (platform === 'leetcode') {
-      if (dayOfWeek === 0) return true; // Weekly
-      if (dayOfWeek === 6) { // Biweekly
-        const knownBiweekly = new Date('2024-03-02T00:00:00Z');
-        const diffDays = differenceInDays(date, knownBiweekly);
-        if (Math.abs(diffDays) % 14 === 0) return true;
+      
+      // If it's a recurring task
+      if (task.startDate) {
+        const start = parseISO(task.startDate);
+        const end = task.endDate ? parseISO(task.endDate) : new Date(2099, 0, 1);
+        
+        // Check if within date range
+        if (date >= startOfDay(start) && date <= startOfDay(end)) {
+          // Check days of week
+          if (!task.daysOfWeek || task.daysOfWeek.length === 0) return true; // Everyday
+          return task.daysOfWeek.includes(dayOfWeek);
+        }
       }
       return false;
-    }
-    
-    if (platform === 'codechef') {
-      return dayOfWeek === 3; // Starters on Wednesday
-    }
-    
-    if (platform === 'codeforces') {
-      return cfContests.includes(dateString);
-    }
-    
-    return false;
-  }, [cfContests]);
+    });
+  }, [tasks, selectedDate]);
 
-  // Calculate completion score
-  const calculateCompletionScore = () => {
-    if (!currentLog) return 0;
-    let score = 0;
-    const isPhysique = Boolean(user?.enablePhysique);
-    const totalChecks = isPhysique ? 5 : 3;
-
-    if (currentLog.leetcode?.problemsSolved > 0 || currentLog.leetcode?.contestParticipated) score++;
-    if (currentLog.codechef?.dailyProblem || currentLog.codechef?.contestParticipated) score++;
-    if (currentLog.codeforces?.problemsSolved > 0 || currentLog.codeforces?.contestParticipated) score++;
-    if (isPhysique) {
-      if (currentLog.gym?.completed) score++;
-      if (currentLog.diet?.cleanDiet) score++;
+  // Aggregate data for the chart
+  const chartData = useMemo(() => {
+    const data = [];
+    const today = new Date();
+    const daysToLookBack = chartRange === 9999 ? 365 : chartRange; // Limit "All" to 1 year for performance if needed
+    
+    for (let i = daysToLookBack - 1; i >= 0; i--) {
+      const d = subDays(today, i);
+      const dateStr = format(d, 'yyyy-MM-dd');
+      
+      // Count completed logs for this date
+      const completedCount = taskLogs.filter(
+        (log) => format(parseISO(log.date), 'yyyy-MM-dd') === dateStr && log.completed
+      ).length;
+      
+      data.push({
+        date: format(d, 'MMM dd'),
+        fullDate: dateStr,
+        completed: completedCount
+      });
     }
+    return data;
+  }, [taskLogs, chartRange]);
 
-    return Math.round((score / totalChecks) * 100);
+  const handleToggleTask = async (taskId) => {
+    try {
+      await toggleTaskLog(taskId, selectedDate);
+    } catch (err) {
+      toast.error('Failed to update task');
+    }
   };
 
-  // Calculate day number
-  const getDayNumber = () => {
-    if (!user?.startDate) return 1;
-    const start = new Date(user.startDate);
-    start.setHours(0, 0, 0, 0);
-    const selected = parseISO(localDate);
-    selected.setHours(0, 0, 0, 0);
-    const diff = Math.floor((selected - start) / (1000 * 60 * 60 * 24)) + 1;
-    return Math.max(1, Math.min(75, diff));
+  const handleDeleteTask = async (taskId) => {
+    if (confirm('Are you sure you want to delete this task completely?')) {
+      await deleteTask(taskId);
+      toast.success('Task deleted');
+    }
   };
 
-  if (isLoading) {
+  const handleCreateTask = async (e) => {
+    e.preventDefault();
+    if (!taskTitle.trim()) {
+      toast.error('Please enter a task title');
+      return;
+    }
+
+    const payload = { title: taskTitle.trim() };
+    if (taskType === 'one_time') {
+      payload.specificDate = specificDate;
+    } else {
+      payload.startDate = startDate;
+      if (endDate) payload.endDate = endDate;
+      // For simplicity, we apply to all days in range. 
+      // Could add days of week selector later if needed.
+    }
+
+    const res = await createTask(payload);
+    if (res.success) {
+      toast.success('Task created');
+      setIsModalOpen(false);
+      setTaskTitle('');
+    } else {
+      toast.error(res.error || 'Failed to create task');
+    }
+  };
+
+  if (isLoading && tasks.length === 0) {
     return (
       <div className="flex items-center justify-center h-96">
         <LoadingSpinner size="lg" />
@@ -239,412 +200,329 @@ const DailyTracker = () => {
     );
   }
 
-  const dayNumber = getDayNumber();
-  const completionScore = calculateCompletionScore();
-
   return (
-    <div className="max-w-4xl mx-auto space-y-4 md:space-y-6 p-4 md:p-6">
-      {/* Date Navigation */}
-      <GlassCard className="flex flex-col sm:flex-row items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <button
-            onClick={handlePrevDay}
-            className="p-2 rounded-xl bg-dark-800/50 hover:bg-dark-700/50 text-white transition-colors"
-          >
-            <ChevronLeft size={24} />
-          </button>
-
+    <div className="max-w-5xl mx-auto space-y-6 p-4 md:p-6 pb-24">
+      {/* Chart Section */}
+      <GlassCard className="relative overflow-hidden">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
           <div className="flex items-center gap-3">
-            <Calendar className="w-5 h-5 text-neon-green" />
-            <input
-              type="date"
-              value={localDate}
-              onChange={(e) => handleDateChange(e.target.value)}
-              className="bg-transparent text-white text-lg font-semibold focus:outline-none"
-            />
+            <Activity className="w-6 h-6 text-neon-green" />
+            <h2 className="text-xl font-bold text-white">Activity Overview</h2>
           </div>
-
-          <button
-            onClick={handleNextDay}
-            className="p-2 rounded-xl bg-dark-800/50 hover:bg-dark-700/50 text-white transition-colors"
-          >
-            <ChevronRight size={24} />
-          </button>
+          
+          <div className="flex bg-dark-800/80 rounded-lg p-1 border border-white/5">
+            {RANGES.map((range) => (
+              <button
+                key={range.label}
+                onClick={() => setChartRange(range.days)}
+                className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${
+                  chartRange === range.days
+                    ? 'bg-neon-green/20 text-neon-green'
+                    : 'text-dark-300 hover:text-white hover:bg-white/5'
+                }`}
+              >
+                {range.label}
+              </button>
+            ))}
+          </div>
         </div>
 
-        <div className="flex items-center gap-4">
-          <div className="text-center">
-            <p className="text-dark-400 text-sm">Day</p>
-            <p className="text-2xl font-bold text-neon-green">{dayNumber}</p>
-          </div>
-          <ProgressRing progress={completionScore} size={70} strokeWidth={5} />
+        <div className="h-[250px] w-full">
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+              <defs>
+                <linearGradient id="colorCompleted" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#39FF14" stopOpacity={0.3}/>
+                  <stop offset="95%" stopColor="#39FF14" stopOpacity={0}/>
+                </linearGradient>
+              </defs>
+              <XAxis 
+                dataKey="date" 
+                stroke="#64748b" 
+                tick={{ fill: '#94a3b8', fontSize: 12 }} 
+                axisLine={false}
+                tickLine={false}
+                minTickGap={30}
+              />
+              <YAxis 
+                stroke="#64748b" 
+                tick={{ fill: '#94a3b8', fontSize: 12 }} 
+                axisLine={false}
+                tickLine={false}
+                allowDecimals={false}
+              />
+              <Tooltip 
+                contentStyle={{ backgroundColor: '#111827', borderColor: '#334155', borderRadius: '8px' }}
+                itemStyle={{ color: '#39FF14' }}
+              />
+              <Area 
+                type="monotone" 
+                dataKey="completed" 
+                name="Tasks Completed" 
+                stroke="#39FF14" 
+                strokeWidth={2}
+                fillOpacity={1} 
+                fill="url(#colorCompleted)" 
+              />
+            </AreaChart>
+          </ResponsiveContainer>
         </div>
       </GlassCard>
 
-      {/* Coding Platforms */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {/* LeetCode */}
-        <GlassCard>
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-[#FFA116]/10 flex items-center justify-center">
-                <Code2 className="w-5 h-5 text-[#FFA116]" />
-              </div>
-              <h3 className="text-lg font-semibold text-white">LeetCode</h3>
-            </div>
+      {/* Daily Tasks Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 space-y-6">
+          {/* Date Navigator */}
+          <GlassCard className="flex items-center justify-between">
             <button
-              onClick={() => handleAddProblem('leetcode')}
-              className="p-2 rounded-lg bg-[#FFA116]/10 text-[#FFA116] hover:bg-[#FFA116]/20 transition-colors"
-              title="Add Problem"
+              onClick={handlePrevDay}
+              className="p-2 rounded-xl bg-dark-800/50 hover:bg-dark-700/50 text-white transition-colors"
             >
-              <Plus className="w-4 h-4" />
+              <ChevronLeft size={24} />
             </button>
-          </div>
 
-          <div className="space-y-4">
-            {hasContest('leetcode', localDate) && (
-              <Checkbox
-                checked={currentLog?.leetcode?.contestParticipated || false}
-                onChange={(val) => updateCurrentLog('leetcode.contestParticipated', val)}
-                label="Contest Participated"
-              />
-            )}
-
-            <NumberInput
-              label="Problems Solved"
-              value={currentLog?.leetcode?.problemsSolved}
-              onChange={(val) => updateCurrentLog('leetcode.problemsSolved', val)}
-              min={0}
-              max={50}
-            />
-
-            <Select
-              label="Difficulty"
-              value={currentLog?.leetcode?.problemDifficulty || 'none'}
-              onChange={(val) => updateCurrentLog('leetcode.problemDifficulty', val)}
-              options={difficultyOptions}
-            />
-
-            {/* Today's LeetCode problems */}
-            {todayProblems.filter(p => p.platform === 'leetcode').length > 0 && (
-              <div className="mt-3 pt-3 border-t border-white/10">
-                <p className="text-xs text-gray-400 mb-2">Today's Problems:</p>
-                <div className="space-y-1">
-                  {todayProblems.filter(p => p.platform === 'leetcode').map((p) => (
-                    <a
-                      key={p._id}
-                      href={p.link}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-2 text-sm text-gray-300 hover:text-[#FFA116] transition-colors"
-                    >
-                      <span className="truncate flex-1">{p.title}</span>
-                      <ExternalLink className="w-3 h-3 flex-shrink-0" />
-                    </a>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        </GlassCard>
-
-        {/* CodeChef */}
-        <GlassCard>
-          <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-[#5B4638]/20 flex items-center justify-center">
-                <Code2 className="w-5 h-5 text-[#a07a5a]" />
-              </div>
-              <h3 className="text-lg font-semibold text-white">CodeChef</h3>
-            </div>
-            <button
-              onClick={() => handleAddProblem('codechef')}
-              className="p-2 rounded-lg bg-[#5B4638]/20 text-[#a07a5a] hover:bg-[#5B4638]/30 transition-colors"
-              title="Add Problem"
-            >
-              <Plus className="w-4 h-4" />
-            </button>
-          </div>
-
-          <div className="space-y-4">
-            <Checkbox
-              checked={currentLog?.codechef?.dailyProblem || false}
-              onChange={(val) => updateCurrentLog('codechef.dailyProblem', val)}
-              label="Daily Problem"
-            />
-
-            {hasContest('codechef', localDate) && (
-              <Checkbox
-                checked={currentLog?.codechef?.contestParticipated || false}
-                onChange={(val) => updateCurrentLog('codechef.contestParticipated', val)}
-                label="Contest Participated"
+              <Calendar className="w-5 h-5 text-neon-green" />
+              <input
+                type="date"
+                value={selectedDate}
+                onChange={(e) => handleDateChange(e.target.value)}
+                className="bg-transparent text-white text-lg font-semibold focus:outline-none"
               />
-            )}
-
-            <NumberInput
-              label="Problems Solved"
-              value={currentLog?.codechef?.problemsSolved}
-              onChange={(val) => updateCurrentLog('codechef.problemsSolved', val)}
-              min={0}
-              max={50}
-            />
-
-            {/* Today's CodeChef problems */}
-            {todayProblems.filter(p => p.platform === 'codechef').length > 0 && (
-              <div className="mt-3 pt-3 border-t border-white/10">
-                <p className="text-xs text-gray-400 mb-2">Today's Problems:</p>
-                <div className="space-y-1">
-                  {todayProblems.filter(p => p.platform === 'codechef').map((p) => (
-                    <a
-                      key={p._id}
-                      href={p.link}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-2 text-sm text-gray-300 hover:text-[#a07a5a] transition-colors"
-                    >
-                      <span className="truncate flex-1">{p.title}</span>
-                      <ExternalLink className="w-3 h-3 flex-shrink-0" />
-                    </a>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        </GlassCard>
-
-        {/* Codeforces */}
-        <GlassCard>
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-[#1F8ACB]/10 flex items-center justify-center">
-                <Code2 className="w-5 h-5 text-[#1F8ACB]" />
-              </div>
-              <h3 className="text-lg font-semibold text-white">Codeforces</h3>
             </div>
+
             <button
-              onClick={() => handleAddProblem('codeforces')}
-              className="p-2 rounded-lg bg-[#1F8ACB]/10 text-[#1F8ACB] hover:bg-[#1F8ACB]/20 transition-colors"
-              title="Add Problem"
+              onClick={handleNextDay}
+              className="p-2 rounded-xl bg-dark-800/50 hover:bg-dark-700/50 text-white transition-colors"
             >
-              <Plus className="w-4 h-4" />
+              <ChevronRight size={24} />
             </button>
-          </div>
+          </GlassCard>
 
-          <div className="space-y-4">
-            {hasContest('codeforces', localDate) && (
-              <Checkbox
-                checked={currentLog?.codeforces?.contestParticipated || false}
-                onChange={(val) => updateCurrentLog('codeforces.contestParticipated', val)}
-                label="Contest Participated"
-              />
-            )}
-
-            <NumberInput
-              label="Problems Solved"
-              value={currentLog?.codeforces?.problemsSolved}
-              onChange={(val) => updateCurrentLog('codeforces.problemsSolved', val)}
-              min={0}
-              max={50}
-            />
-
-            <NumberInput
-              label="Rating (if updated)"
-              value={currentLog?.codeforces?.rating}
-              onChange={(val) => updateCurrentLog('codeforces.rating', val)}
-              min={0}
-              max={4000}
-              placeholder="Optional"
-            />
-
-            {/* Today's Codeforces problems */}
-            {todayProblems.filter(p => p.platform === 'codeforces').length > 0 && (
-              <div className="mt-3 pt-3 border-t border-white/10">
-                <p className="text-xs text-gray-400 mb-2">Today's Problems:</p>
-                <div className="space-y-1">
-                  {todayProblems.filter(p => p.platform === 'codeforces').map((p) => (
-                    <a
-                      key={p._id}
-                      href={p.link}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-2 text-sm text-gray-300 hover:text-[#1F8ACB] transition-colors"
-                    >
-                      <span className="truncate flex-1">{p.title}</span>
-                      <ExternalLink className="w-3 h-3 flex-shrink-0" />
-                    </a>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        </GlassCard>
-      </div>
-
-      {/* Gym & Diet */}
-      {user?.enablePhysique && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Gym */}
+          {/* Tasks List */}
           <GlassCard>
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center">
-              <Dumbbell className="w-5 h-5 text-purple-400" />
-            </div>
-            <h3 className="text-lg font-semibold text-white">Gym</h3>
-          </div>
-
-          <div className="space-y-4">
-            <Checkbox
-              checked={currentLog?.gym?.completed || false}
-              onChange={(val) => updateCurrentLog('gym.completed', val)}
-              label="Workout Completed"
-              sublabel="Did you hit the gym today?"
-            />
-
-            <Select
-              label="Workout Type"
-              value={currentLog?.gym?.workoutType || 'none'}
-              onChange={(val) => updateCurrentLog('gym.workoutType', val)}
-              options={workoutTypes}
-            />
-
-            <NumberInput
-              label="Duration (minutes)"
-              value={currentLog?.gym?.duration}
-              onChange={(val) => updateCurrentLog('gym.duration', val)}
-              min={0}
-              max={300}
-            />
-          </div>
-        </GlassCard>
-
-        {/* Diet */}
-        <GlassCard>
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 rounded-xl bg-green-500/10 flex items-center justify-center">
-              <Apple className="w-5 h-5 text-green-400" />
-            </div>
-            <h3 className="text-lg font-semibold text-white">Diet</h3>
-          </div>
-
-          <div className="space-y-4">
-            <Checkbox
-              checked={currentLog?.diet?.cleanDiet || false}
-              onChange={(val) => updateCurrentLog('diet.cleanDiet', val)}
-              label="Clean Diet"
-              sublabel="Stayed on track with nutrition"
-            />
-
-            <div className="grid grid-cols-2 gap-4">
-              <NumberInput
-                label="Calories"
-                value={currentLog?.diet?.calories}
-                onChange={(val) => updateCurrentLog('diet.calories', val)}
-                min={0}
-                max={10000}
-                placeholder="Optional"
-              />
-
-              <NumberInput
-                label="Protein (g)"
-                value={currentLog?.diet?.protein}
-                onChange={(val) => updateCurrentLog('diet.protein', val)}
-                min={0}
-                max={500}
-                placeholder="Optional"
-              />
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl font-semibold text-white">Daily Tasks</h3>
+              <button
+                onClick={() => setIsModalOpen(true)}
+                className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-neon-green/10 text-neon-green hover:bg-neon-green/20 transition-colors text-sm font-medium"
+              >
+                <Plus className="w-4 h-4" />
+                Add Task
+              </button>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-dark-300 mb-2">
-                Diet Notes
-              </label>
-              <textarea
-                value={currentLog?.diet?.notes || ''}
-                onChange={(e) => updateCurrentLog('diet.notes', e.target.value)}
-                className="input-field resize-none h-20"
-                placeholder="What did you eat today?"
-              />
-            </div>
-          </div>
-        </GlassCard>
-      </div>
-      )}
+            {tasksForSelectedDate.length === 0 ? (
+              <div className="text-center py-12">
+                <div className="w-16 h-16 bg-dark-700/50 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <CheckCircle2 className="w-8 h-8 text-dark-400" />
+                </div>
+                <p className="text-dark-300">No tasks scheduled for this day.</p>
+                <p className="text-sm text-dark-400 mt-1">Add a one-time task or a recurring habit.</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {tasksForSelectedDate.map((task) => {
+                  const isCompleted = taskLogs.some(
+                    (log) => log.task === task._id && format(parseISO(log.date), 'yyyy-MM-dd') === selectedDate && log.completed
+                  );
 
-      {/* Internship Prep */}
-      <GlassCard>
-        <div className="flex items-center gap-3 mb-4">
-          <div className="w-10 h-10 rounded-xl bg-cyan-500/10 flex items-center justify-center">
-            <BookOpen className="w-5 h-5 text-cyan-400" />
-          </div>
-          <h3 className="text-lg font-semibold text-white">Internship Prep</h3>
+                  return (
+                    <div 
+                      key={task._id} 
+                      className={`group flex items-center justify-between p-4 rounded-xl border transition-all cursor-pointer ${
+                        isCompleted 
+                          ? 'bg-neon-green/5 border-neon-green/20' 
+                          : 'bg-dark-800/40 border-white/5 hover:border-white/10 hover:bg-dark-700/40'
+                      }`}
+                      onClick={() => handleToggleTask(task._id)}
+                    >
+                      <div className="flex items-center gap-4">
+                        <button className={`transition-colors ${isCompleted ? 'text-neon-green' : 'text-dark-400 group-hover:text-dark-300'}`}>
+                          {isCompleted ? <CheckCircle2 className="w-6 h-6" /> : <Circle className="w-6 h-6" />}
+                        </button>
+                        <div>
+                          <p className={`font-medium transition-colors ${isCompleted ? 'text-white line-through opacity-70' : 'text-white'}`}>
+                            {task.title}
+                          </p>
+                          <p className="text-xs text-dark-400 mt-0.5">
+                            {task.specificDate ? 'One-time Task' : 'Recurring Habit'}
+                          </p>
+                        </div>
+                      </div>
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteTask(task._id);
+                        }}
+                        className="opacity-0 group-hover:opacity-100 p-2 text-dark-400 hover:text-red-400 transition-all rounded-lg hover:bg-red-400/10"
+                        title="Delete Task Completely"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </GlassCard>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Checkbox
-            checked={currentLog?.internshipPrep?.completed || false}
-            onChange={(val) => updateCurrentLog('internshipPrep.completed', val)}
-            label="Study Session Completed"
-          />
+        {/* Sidebar/Stats could go here */}
+        <div className="space-y-6 lg:sticky lg:top-6 self-start">
+          <GlassCard>
+            <h3 className="text-lg font-semibold text-white mb-4">Quick Stats</h3>
+            <div className="space-y-4">
+              <div className="p-4 rounded-xl bg-dark-800/50 border border-white/5">
+                <p className="text-sm text-dark-300">Total Active Tasks</p>
+                <p className="text-2xl font-bold text-white mt-1">{tasks.length}</p>
+              </div>
+              <div className="p-4 rounded-xl bg-neon-green/10 border border-neon-green/20">
+                <p className="text-sm text-neon-green">Completions Today</p>
+                <p className="text-2xl font-bold text-white mt-1">
+                  {taskLogs.filter(log => format(parseISO(log.date), 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd') && log.completed).length}
+                </p>
+            </div>
+            
+            <div className="p-4 rounded-xl bg-orange-500/10 border border-orange-500/20">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-orange-400">Current Streak</p>
+                  <p className="text-2xl font-bold text-white mt-1">{streak?.currentStreak || 0} Days</p>
+                </div>
+                <div className="w-10 h-10 rounded-full bg-orange-500/20 flex items-center justify-center">
+                  <Flame className="w-5 h-5 text-orange-500" />
+                </div>
+              </div>
+            </div>
+            </div>
+          </GlassCard>
 
-          <NumberInput
-            label="Hours Spent"
-            value={currentLog?.internshipPrep?.hoursSpent}
-            onChange={(val) => updateCurrentLog('internshipPrep.hoursSpent', val)}
-            min={0}
-            max={24}
-            step={0.5}
-          />
-        </div>
-      </GlassCard>
-
-      {/* Notes */}
-      <GlassCard>
-        <h3 className="text-lg font-semibold text-white mb-4">Daily Notes</h3>
-        <textarea
-          value={currentLog?.notes || ''}
-          onChange={(e) => updateCurrentLog('notes', e.target.value)}
-          className="input-field resize-none h-24"
-          placeholder="How was your day? Any reflections or achievements to note..."
-        />
-      </GlassCard>
-
-      {/* Action Buttons */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-        <button
-          onClick={handleDelete}
-          disabled={currentLog?.isNew}
-          className="btn-secondary flex items-center justify-center gap-2 text-red-400 hover:bg-red-500/10 disabled:opacity-50 w-full sm:w-auto"
-        >
-          <Trash2 size={20} />
-          Delete Log
-        </button>
-
-        <button
-          onClick={handleSave}
-          disabled={isSaving}
-          className="btn-primary flex items-center justify-center gap-2 w-full sm:w-auto"
-        >
-          {isSaving ? (
-            <Loader2 size={20} className="animate-spin" />
-          ) : (
-            <Save size={20} />
+          {/* Quick Add Tasks */}
+          {availablePremadeTasks.length > 0 && (
+            <GlassCard>
+              <h3 className="text-lg font-semibold text-white mb-4">Quick Add</h3>
+              <div className="flex flex-wrap gap-2">
+                {availablePremadeTasks.map((title) => (
+                  <button
+                    key={title}
+                    onClick={() => handleQuickAdd(title)}
+                    className="px-3 py-1.5 rounded-lg text-sm font-medium bg-dark-800/80 border border-white/5 text-dark-300 hover:text-white hover:border-neon-green/50 hover:bg-neon-green/10 transition-colors"
+                  >
+                    + {title}
+                  </button>
+                ))}
+              </div>
+            </GlassCard>
           )}
-          Save Progress
-        </button>
+        </div>
       </div>
 
-      {/* Problem Modal */}
-      <ProblemModal
-        isOpen={showProblemModal}
-        onClose={() => setShowProblemModal(false)}
-        platform={selectedPlatform}
-        date={selectedDate}
-        onSuccess={handleProblemAdded}
-      />
+
+      {/* Create Task Modal */}
+      {isModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <GlassCard className="w-full max-w-md p-6 relative animate-in fade-in zoom-in duration-200">
+            <button 
+              onClick={() => setIsModalOpen(false)}
+              className="absolute top-4 right-4 text-dark-300 hover:text-white transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            
+            <h2 className="text-xl font-bold text-white mb-6">Create New Task</h2>
+            
+            <form onSubmit={handleCreateTask} className="space-y-5">
+              <div>
+                <label className="block text-sm font-medium text-dark-300 mb-1.5">Task Title</label>
+                <input
+                  type="text"
+                  value={taskTitle}
+                  onChange={(e) => setTaskTitle(e.target.value)}
+                  className="w-full bg-dark-800 border border-dark-600 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-neon-green transition-colors"
+                  placeholder="e.g. Read 10 pages"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-dark-300 mb-2">Schedule Type</label>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setTaskType('recurring')}
+                    className={`py-2 rounded-lg text-sm font-medium transition-colors border ${
+                      taskType === 'recurring' 
+                        ? 'bg-neon-green/10 border-neon-green/30 text-neon-green' 
+                        : 'bg-dark-800 border-dark-600 text-dark-300 hover:text-white'
+                    }`}
+                  >
+                    Recurring
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTaskType('one_time')}
+                    className={`py-2 rounded-lg text-sm font-medium transition-colors border ${
+                      taskType === 'one_time' 
+                        ? 'bg-neon-green/10 border-neon-green/30 text-neon-green' 
+                        : 'bg-dark-800 border-dark-600 text-dark-300 hover:text-white'
+                    }`}
+                  >
+                    One-time
+                  </button>
+                </div>
+              </div>
+
+              {taskType === 'recurring' ? (
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-dark-300 mb-1.5">Start Date</label>
+                    <input
+                      type="date"
+                      value={startDate}
+                      onChange={(e) => setStartDate(e.target.value)}
+                      className="w-full bg-dark-800 border border-dark-600 rounded-xl px-3 py-2.5 text-white focus:outline-none focus:border-neon-green"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-dark-300 mb-1.5">End Date</label>
+                    <input
+                      type="date"
+                      value={endDate}
+                      onChange={(e) => setEndDate(e.target.value)}
+                      className="w-full bg-dark-800 border border-dark-600 rounded-xl px-3 py-2.5 text-white focus:outline-none focus:border-neon-green"
+                    />
+                    <p className="text-[10px] text-dark-400 mt-1">Leave empty for forever</p>
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <label className="block text-sm font-medium text-dark-300 mb-1.5">Specific Date</label>
+                  <input
+                    type="date"
+                    value={specificDate}
+                    onChange={(e) => setSpecificDate(e.target.value)}
+                    className="w-full bg-dark-800 border border-dark-600 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-neon-green"
+                    required
+                  />
+                </div>
+              )}
+
+              <button
+                type="submit"
+                className="w-full py-3 rounded-xl bg-neon-green text-dark-900 font-bold hover:bg-[#32e012] transition-colors mt-2 shadow-[0_0_15px_rgba(57,255,20,0.3)]"
+              >
+                Save Task
+              </button>
+            </form>
+          </GlassCard>
+        </div>
+      )}
 
       {/* Streak Animation */}
       <StreakAnimation
-        streak={currentStreak}
+        streak={streak?.currentStreak || 0}
         show={showStreakAnimation}
         onComplete={() => setShowStreakAnimation(false)}
       />

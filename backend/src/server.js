@@ -3,7 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import connectDB from './config/db.js';
 import authRoutes from './routes/auth.routes.js';
-import dailyLogRoutes from './routes/dailyLog.routes.js';
+import taskRoutes from './routes/task.routes.js';
 import physiqueRoutes from './routes/physique.routes.js';
 import analyticsRoutes from './routes/analytics.routes.js';
 import problemRoutes from './routes/problem.routes.js';
@@ -41,7 +41,7 @@ app.use(express.json());
 
 // Routes
 app.use('/api/auth', authRoutes);
-app.use('/api/daily-logs', dailyLogRoutes);
+app.use('/api/tasks', taskRoutes);
 app.use('/api/physique', physiqueRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/problems', problemRoutes);
@@ -62,7 +62,7 @@ app.get('/', (req, res) => {
     endpoints: {
       health: '/api/health',
       auth: '/api/auth',
-      dailyLogs: '/api/daily-logs',
+      tasks: '/api/tasks',
       physique: '/api/physique',
       analytics: '/api/analytics',
       problems: '/api/problems',

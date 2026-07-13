@@ -1,5 +1,5 @@
 import Problem from '../models/Problem.model.js';
-import DailyLog from '../models/DailyLog.model.js';
+
 import Sheet from '../models/Sheet.model.js';
 
 // @desc    Create a new problem
@@ -42,31 +42,6 @@ export const createProblem = async (req, res) => {
       sheetTopic: sheetTopic || null,
     });
 
-    // If associated with a daily log, update the log
-    if (dailyLogDate) {
-      const logDate = new Date(dailyLogDate);
-      logDate.setHours(0, 0, 0, 0);
-
-      const dailyLog = await DailyLog.findOne({
-        user: req.user._id,
-        date: logDate,
-      });
-
-      if (dailyLog) {
-        problem.dailyLog = dailyLog._id;
-        await problem.save();
-
-        // Update problem count in daily log
-        if (platform === 'leetcode') {
-          dailyLog.leetcode.problemsSolved += 1;
-        } else if (platform === 'codechef') {
-          dailyLog.codechef.problemsSolved += 1;
-        } else if (platform === 'codeforces') {
-          dailyLog.codeforces.problemsSolved += 1;
-        }
-        await dailyLog.save();
-      }
-    }
 
     // If associated with a sheet, update the sheet
     if (sheetId) {
