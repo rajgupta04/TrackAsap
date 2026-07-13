@@ -100,3 +100,59 @@ export const deleteTask = async (req, res) => {
     res.status(500).json({ message: 'Error deleting task', error: error.message });
   }
 };
+
+// Get the current streak based on task completions
+export const getTaskStreak = async (req, res) => {
+  try {
+    // Get all completed task logs for this user
+    const completedLogs = await TaskLog.find({
+      user: req.user._id,
+      completed: true,
+    }).sort({ date: -1 }).select('date');
+
+    // Get unique dates in YYYY-MM-DD format
+    const uniqueDates = [...new Set(completedLogs.map(log => {
+      const d = new Date(log.date);
+      return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`;
+    }))];
+
+    if (uniqueDates.length === 0) {
+      return res.json({ currentStreak: 0, longestStreak: 0 });
+    }
+
+    // Sort unique dates descending
+    uniqueDates.sort((a, b) => new Date(b) - new Date(a));
+
+    const today = new Date();
+    const todayStr = `${today.getUTCFullYear()}-${String(today.getUTCMonth() + 1).padStart(2, '0')}-${String(today.getUTCDate()).padStart(2, '0')}`;
+    
+    const yesterday = new Date(today);
+    yesterday.setUTCDate(yesterday.getUTCDate() - 1);
+    const yesterdayStr = `${yesterday.getUTCFullYear()}-${String(yesterday.getUTCMonth() + 1).padStart(2, '0')}-${String(yesterday.getUTCDate()).padStart(2, '0')}`;
+
+    let currentStreak = 0;
+    
+    // Streak only counts if active today or yesterday
+    if (uniqueDates[0] === todayStr || uniqueDates[0] === yesterdayStr) {
+      let currentDate = new Date(uniqueDates[0]);
+      currentStreak = 1;
+
+      for (let i = 1; i < uniqueDates.length; i++) {
+        const expectedPrev = new Date(currentDate);
+        expectedPrev.setUTCDate(expectedPrev.getUTCDate() - 1);
+        const expectedPrevStr = `${expectedPrev.getUTCFullYear()}-${String(expectedPrev.getUTCMonth() + 1).padStart(2, '0')}-${String(expectedPrev.getUTCDate()).padStart(2, '0')}`;
+
+        if (uniqueDates[i] === expectedPrevStr) {
+          currentStreak++;
+          currentDate = expectedPrev;
+        } else {
+          break;
+        }
+      }
+    }
+
+    res.json({ currentStreak, longestStreak: 0 }); // Can calculate longest streak later if needed
+  } catch (error) {
+    res.status(500).json({ message: 'Error calculating streak', error: error.message });
+  }
+};

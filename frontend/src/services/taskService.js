@@ -29,4 +29,9 @@ export const taskService = {
     const { data } = await api.post('/tasks/toggle', { taskId, date });
     return data;
   },
+
+  getStreak: async () => {
+    const { data } = await api.get('/tasks/streak');
+    return data;
+  },
 };

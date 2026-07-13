@@ -26,6 +26,8 @@ import {
 import { useTaskStore } from '../store/taskStore';
 import GlassCard from '../components/ui/GlassCard';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
+import StreakAnimation from '../components/StreakAnimation';
+import { Flame } from 'lucide-react';
 
 const RANGES = [
   { label: '7D', days: 7 },
@@ -36,10 +38,12 @@ const RANGES = [
 ];
 
 const DailyTracker = () => {
-  const { tasks, taskLogs, isLoading, fetchTasks, fetchTaskLogs, toggleTaskLog, deleteTask, createTask } = useTaskStore();
+  const { tasks, taskLogs, streak, isLoading, fetchTasks, fetchTaskLogs, toggleTaskLog, deleteTask, createTask } = useTaskStore();
   const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [chartRange, setChartRange] = useState(7);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [showStreakAnimation, setShowStreakAnimation] = useState(false);
+  const [prevStreak, setPrevStreak] = useState(0);
   
   // Modal state
   const [taskTitle, setTaskTitle] = useState('');
@@ -55,6 +59,13 @@ const DailyTracker = () => {
     const end = format(new Date(), 'yyyy-MM-dd');
     fetchTaskLogs(start, end);
   }, [chartRange, fetchTasks, fetchTaskLogs]);
+
+  useEffect(() => {
+    if (streak?.currentStreak > prevStreak && prevStreak > 0) {
+      setShowStreakAnimation(true);
+    }
+    setPrevStreak(streak?.currentStreak || 0);
+  }, [streak?.currentStreak]);
 
   const handleDateChange = (date) => setSelectedDate(date);
   const handlePrevDay = () => handleDateChange(format(subDays(parseISO(selectedDate), 1), 'yyyy-MM-dd'));
@@ -343,11 +354,23 @@ const DailyTracker = () => {
                 <p className="text-2xl font-bold text-white mt-1">
                   {taskLogs.filter(log => format(parseISO(log.date), 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd') && log.completed).length}
                 </p>
+            </div>
+            
+            <div className="p-4 rounded-xl bg-orange-500/10 border border-orange-500/20">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-orange-400">Current Streak</p>
+                  <p className="text-2xl font-bold text-white mt-1">{streak?.currentStreak || 0} Days</p>
+                </div>
+                <div className="w-10 h-10 rounded-full bg-orange-500/20 flex items-center justify-center">
+                  <Flame className="w-5 h-5 text-orange-500" />
+                </div>
               </div>
             </div>
           </GlassCard>
         </div>
       </div>
+
 
       {/* Create Task Modal */}
       {isModalOpen && (
@@ -449,6 +472,13 @@ const DailyTracker = () => {
           </GlassCard>
         </div>
       )}
+
+      {/* Streak Animation */}
+      <StreakAnimation
+        streak={streak?.currentStreak || 0}
+        show={showStreakAnimation}
+        onComplete={() => setShowStreakAnimation(false)}
+      />
     </div>
   );
 };

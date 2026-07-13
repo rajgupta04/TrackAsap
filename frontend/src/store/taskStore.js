@@ -4,6 +4,7 @@ import { taskService } from '../services/taskService';
 export const useTaskStore = create((set, get) => ({
   tasks: [],
   taskLogs: [],
+  streak: { currentStreak: 0, longestStreak: 0 },
   isLoading: false,
   error: null,
 
@@ -69,10 +70,21 @@ export const useTaskStore = create((set, get) => ({
         
         return { taskLogs: newLogs };
       });
+      get().fetchStreak();
       return newLog;
     } catch (error) {
       set({ error: error.message });
       throw error;
+    }
+  },
+
+  fetchStreak: async () => {
+    try {
+      const streak = await taskService.getStreak();
+      set({ streak });
+      return streak;
+    } catch (error) {
+      return get().streak;
     }
   },
 }));

@@ -6,6 +6,7 @@ import {
   toggleTaskLog,
   getTaskLogs,
   deleteTask,
+  getTaskStreak,
 } from '../controllers/task.controller.js';
 
 const router = express.Router();
@@ -20,6 +21,7 @@ router
 
 router.post('/toggle', toggleTaskLog);
 router.get('/logs', getTaskLogs);
+router.get('/streak', getTaskStreak);
 
 router
   .route('/:id')
