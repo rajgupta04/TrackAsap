@@ -1265,7 +1265,7 @@ const AddProblemModal = ({ sheet, onClose, onSuccess }) => {
             <div>
               <h3 className="text-sm font-bold text-purple-300">AI Auto-fill</h3>
               <p className="text-xs text-gray-400 mt-1 mb-2">
-                Paste a link or type a title below, then let Gemini AI extract the difficulty, topic, and tags automatically!
+                Paste a link or type a title below, then let AI extract the difficulty, topic, and tags automatically!
               </p>
               <button
                 type="button"
