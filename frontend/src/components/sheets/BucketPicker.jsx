@@ -110,13 +110,15 @@ const BucketPicker = ({ isOpen, onClose, onImport, sheets = [] }) => {
       );
     }
     
-    // Sort by popularity (descending) then by name
-    return result.sort((a, b) => {
-      const popA = a.popularity || 0;
-      const popB = b.popularity || 0;
-      if (popB !== popA) return popB - popA;
-      return a.name.localeCompare(b.name);
-    });
+    const top10 = result
+      .sort((a, b) => (b.popularity || 0) - (a.popularity || 0))
+      .slice(0, 10);
+    
+    const rest = result
+      .filter(b => !top10.some(t => t._id === b._id))
+      .sort((a, b) => a.name.localeCompare(b.name));
+
+    return [...top10, ...rest];
   };
 
   const filteredBuckets = getFilteredBuckets();
@@ -374,6 +376,7 @@ const BucketPicker = ({ isOpen, onClose, onImport, sheets = [] }) => {
                     </p>
                   </div>
                 )}
+                </div>
               </div>
             ) : mode === 'details' && bucketDetails ? (
               /* Bucket Details */
