@@ -23,7 +23,6 @@ import {
   Save,
   Terminal,
   Copy,
-  Copy,
   Check,
   Sparkles,
 } from 'lucide-react';
