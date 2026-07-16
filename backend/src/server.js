@@ -11,10 +11,12 @@ import sheetRoutes from './routes/sheet.routes.js';
 import sheetProblemRoutes from './routes/sheetProblem.routes.js';
 import sheetBucketRoutes from './routes/sheetBucket.routes.js';
 import platformStatsRoutes from './routes/platformStats.routes.js';
+import leaderboardRoutes from './routes/leaderboard.routes.js';
 import githubRoutes from './routes/github.routes.js';
 import discussionRoutes from './routes/discussion.routes.js';
 import adminRoutes from './routes/admin.routes.js';
 import extensionRoutes from './routes/extension.routes.js';
+import { initLeaderboardCron } from './cron/leaderboard.cron.js';
 import { errorHandler, notFound } from './middleware/error.middleware.js';
 
 dotenv.config();
@@ -24,6 +26,9 @@ const PORT = process.env.PORT || 5000;
 
 // Connect to MongoDB
 connectDB();
+
+// Initialize Cron Jobs
+initLeaderboardCron();
 
 // Middleware
 app.use(cors({
@@ -49,6 +54,7 @@ app.use('/api/sheets', sheetRoutes);
 app.use('/api/sheet-problems', sheetProblemRoutes);
 app.use('/api/buckets', sheetBucketRoutes);
 app.use('/api/platform-stats', platformStatsRoutes);
+app.use('/api/leaderboard', leaderboardRoutes);
 app.use('/api/github', githubRoutes);
 app.use('/api/discussions', discussionRoutes);
 app.use('/api/admin', adminRoutes);

@@ -16,12 +16,14 @@ import {
   ChevronRight,
   MessageSquare,
   Shield,
+  Trophy,
 } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 
 const navItems = [
   { path: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
   { path: '/daily-tracker', icon: Calendar, label: 'Daily Tracker' },
+  { path: '/leaderboard', icon: Trophy, label: 'Leaderboard' },
   { path: '/analytics', icon: BarChart3, label: 'Analytics' },
   { path: '/sheets', icon: BookOpen, label: 'Sheets' },
   { path: '/problems', icon: Code, label: 'Problems' },

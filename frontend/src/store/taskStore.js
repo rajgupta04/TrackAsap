@@ -25,8 +25,9 @@ export const useTaskStore = create((set, get) => ({
       set((state) => ({ tasks: [newTask, ...state.tasks], isLoading: false }));
       return { success: true };
     } catch (error) {
-      set({ error: error.message, isLoading: false });
-      return { success: false, error: error.message };
+      const errorMessage = error.response?.data?.message || error.message;
+      set({ error: errorMessage, isLoading: false });
+      return { success: false, error: errorMessage };
     }
   },
 
