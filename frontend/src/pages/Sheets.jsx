@@ -16,6 +16,7 @@ import {
   TrendingUp,
   Target,
   Flame,
+  Building,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import useSheetStore from '../store/sheetStore';
@@ -36,6 +37,7 @@ const CATEGORY_ICONS = {
   graph: Network,
   dp: Boxes,
   arrays: BookOpen,
+  'company-wise': Building,
 };
 
 const PROGRAMMER_QUOTES = [
