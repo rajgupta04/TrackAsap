@@ -1,6 +1,7 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLeaderboardStore } from '../../store/leaderboardStore';
 import { ArrowUpRight } from 'lucide-react';
+import { getAvatarSrc } from '../../utils/avatar';
 
 const CurrentUserBanner = () => {
   const { currentUserProfile, currentUserRanks, leaderboardData, activeTab, currentPage } = useLeaderboardStore();
@@ -26,7 +27,7 @@ const CurrentUserBanner = () => {
             <div className="relative">
               <div className="w-12 h-12 rounded-full border-2 border-primary-500 bg-dark-700 overflow-hidden">
                 <img
-                  src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${currentUserProfile.user?.name || 'You'}&backgroundColor=transparent`}
+                  src={getAvatarSrc(currentUserProfile.user)}
                   alt="You"
                   className="w-full h-full object-cover"
                 />

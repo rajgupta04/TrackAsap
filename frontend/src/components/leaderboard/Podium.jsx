@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion';
 import { Trophy } from 'lucide-react';
+import { getAvatarSrc } from '../../utils/avatar';
 
 const PodiumStep = ({ rank, user, score, height, color, delay }) => {
   if (!user) return <div className="w-24 md:w-32" />; // Placeholder if < 3 users
@@ -30,7 +31,7 @@ const PodiumStep = ({ rank, user, score, height, color, delay }) => {
             className={`w-16 h-16 md:w-20 md:h-20 rounded-full border-4 overflow-hidden ${color.border} ${color.shadow} bg-dark-800`}
           >
             <img
-              src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user.name}&backgroundColor=transparent`}
+              src={getAvatarSrc(user)}
               alt={user.name}
               className="w-full h-full object-cover"
             />
