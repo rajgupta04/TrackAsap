@@ -17,6 +17,7 @@ import {
   Cpu,
   Database,
   AlertTriangle,
+  Building,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import GlassCard from '../ui/GlassCard';
@@ -28,6 +29,7 @@ const CATEGORY_ICONS = {
   arrays: LayoutList,
   dsa: Binary,
   dev: Code,
+  'company-wise': Building,
   default: BookOpen,
 };
 
@@ -45,6 +47,7 @@ const SUBJECT_CATEGORIES = [
   { id: 'oop', label: 'Object Oriented Programming', icon: Boxes, color: '#f59e0b' },
   { id: 'dev', label: 'Development', icon: Code, color: '#22c55e' },
   { id: 'database', label: 'Database', icon: Database, color: '#f43f5e' },
+  { id: 'company-wise', label: 'Company Sheets', icon: Building, color: '#ef4444' },
 ];
 
 const BucketPicker = ({ isOpen, onClose, onImport, sheets = [] }) => {
