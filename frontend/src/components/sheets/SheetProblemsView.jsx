@@ -24,12 +24,14 @@ import {
   Terminal,
   Copy,
   Check,
+  Sparkles,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import CodeViewer from '../CodeViewer';
 import GlassCard from '../ui/GlassCard';
 import sheetProblemService from '../../services/sheetProblemService';
 import githubService from '../../services/githubService';
+import aiService from '../../services/aiService';
 import { useAuthStore } from '../../store/authStore';
 
 const DIFFICULTY_COLORS = {
@@ -1043,7 +1045,7 @@ const SheetProblemsView = ({ sheet, onStatsUpdate, onDelete }) => {
       <AnimatePresence>
         {showAddModal && (
           <AddProblemModal
-            sheetId={sheet._id}
+            sheet={sheet}
             onClose={() => setShowAddModal(false)}
             onSuccess={() => {
               fetchProblems(true);
@@ -1168,7 +1170,7 @@ const NotesModal = ({ problem, onClose, onSave }) => {
 
 
 // Add Problem Modal Component
-const AddProblemModal = ({ sheetId, onClose, onSuccess }) => {
+const AddProblemModal = ({ sheet, onClose, onSuccess }) => {
   const [formData, setFormData] = useState({
     title: '',
     topic: '',
@@ -1190,7 +1192,7 @@ const AddProblemModal = ({ sheetId, onClose, onSuccess }) => {
 
     try {
       setLoading(true);
-      await sheetProblemService.addProblem(sheetId, {
+      await sheetProblemService.addProblem(sheet._id, {
         ...formData,
         tags: formData.tags.split(',').map(t => t.trim()).filter(Boolean),
       });
@@ -1198,6 +1200,33 @@ const AddProblemModal = ({ sheetId, onClose, onSuccess }) => {
       onSuccess();
     } catch (error) {
       toast.error('Failed to add problem');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAIAutofill = async () => {
+    if (!formData.problemLink && !formData.title) {
+      toast.error('Please enter a problem link or title first');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const sheetTopics = sheet?.topics?.map(t => t.name) || [];
+      const data = await aiService.autofillProblem(formData.problemLink, formData.title, sheetTopics);
+      
+      setFormData(prev => ({
+        ...prev,
+        title: data.title || prev.title,
+        difficulty: data.difficulty || prev.difficulty,
+        topic: data.topic || prev.topic,
+        platform: data.platform || prev.platform,
+        tags: (data.tags || []).join(', ') || prev.tags,
+      }));
+      toast.success('Fields auto-filled successfully! ✨');
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to auto-fill');
     } finally {
       setLoading(false);
     }
@@ -1227,6 +1256,26 @@ const AddProblemModal = ({ sheetId, onClose, onSuccess }) => {
             >
               <X className="w-5 h-5" />
             </button>
+          </div>
+
+          <div className="mb-6 p-4 bg-purple-500/10 border border-purple-500/20 rounded-xl flex items-start gap-3">
+            <div className="p-2 bg-purple-500/20 rounded-lg text-purple-400 shrink-0">
+              <Sparkles className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-purple-300">AI Auto-fill</h3>
+              <p className="text-xs text-gray-400 mt-1 mb-2">
+                Paste a link or type a title below, then let Gemini AI extract the difficulty, topic, and tags automatically!
+              </p>
+              <button
+                type="button"
+                onClick={handleAIAutofill}
+                disabled={loading || (!formData.problemLink && !formData.title)}
+                className="px-4 py-1.5 bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 text-xs font-semibold border border-purple-500/30 rounded-lg transition-all disabled:opacity-50"
+              >
+                ✨ Auto-fill fields
+              </button>
+            </div>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">

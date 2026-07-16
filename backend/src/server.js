@@ -16,6 +16,7 @@ import githubRoutes from './routes/github.routes.js';
 import discussionRoutes from './routes/discussion.routes.js';
 import adminRoutes from './routes/admin.routes.js';
 import extensionRoutes from './routes/extension.routes.js';
+import aiRoutes from './routes/ai.routes.js';
 import { initLeaderboardCron } from './cron/leaderboard.cron.js';
 import { errorHandler, notFound } from './middleware/error.middleware.js';
 
@@ -59,6 +60,7 @@ app.use('/api/github', githubRoutes);
 app.use('/api/discussions', discussionRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/extension', extensionRoutes);
+app.use('/api/ai', aiRoutes);
 
 // Root route
 app.get('/', (req, res) => {
