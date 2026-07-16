@@ -96,6 +96,25 @@ export const useAuthStore = create((set, get) => ({
     }
   },
 
+  uploadProfilePicture: async (file) => {
+    set({ isLoading: true });
+    try {
+      const formData = new FormData();
+      formData.append('image', file);
+      
+      const response = await authService.uploadProfilePicture(formData);
+      const currentUser = get().user;
+      const newUser = { ...currentUser, profilePicture: response.profilePicture };
+      
+      localStorage.setItem('user', JSON.stringify(newUser));
+      set({ user: newUser, isLoading: false });
+      return { success: true };
+    } catch (error) {
+      set({ isLoading: false });
+      return { success: false, error: error.response?.data?.message || 'Failed to upload image' };
+    }
+  },
+
   clearError: () => set({ error: null }),
 
   acceptAgreement: async () => {

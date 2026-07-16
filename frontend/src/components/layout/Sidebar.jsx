@@ -43,6 +43,8 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
   }, [fetchGitHubStatus]);
 
   const avatarSrc =
+    user?.profilePicture ||
+    user?.googlePicture ||
     user?.avatarUrl ||
     (githubStatus?.connected && githubStatus?.username
       ? `https://github.com/${githubStatus.username}.png?size=80`

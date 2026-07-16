@@ -9,7 +9,9 @@ import {
   getMe,
   updateProfile,
   acceptAgreement,
+  uploadProfilePicture,
 } from '../controllers/auth.controller.js';
+import upload from '../middleware/upload.js';
 
 const router = express.Router();
 
@@ -37,6 +39,7 @@ router.post('/login', loginValidation, validate, login);
 router.post('/google', googleValidation, validate, googleLogin);
 router.get('/me', protect, getMe);
 router.put('/profile', protect, updateProfile);
+router.put('/profile/picture', protect, upload.single('image'), uploadProfilePicture);
 router.put('/accept-agreement', protect, acceptAgreement);
 
 export default router;
