@@ -273,7 +273,7 @@ const BucketPicker = ({ isOpen, onClose, onImport, sheets = [] }) => {
                   const Icon = cat.icon;
                   const catBuckets = buckets.filter(b => {
                     if (b.category === cat.id) return true;
-                    if (cat.id === 'dsa' && !['cp', 'os', 'cn', 'oop', 'dev', 'database'].includes(b.category)) return true;
+                    if (cat.id === 'dsa' && !['cp', 'os', 'cn', 'oop', 'dev', 'database', 'company-wise'].includes(b.category)) return true;
                     return false;
                   });
                   const totalProbs = catBuckets.reduce((acc, b) => acc + (b.totalProblems || 0), 0);
