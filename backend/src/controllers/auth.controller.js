@@ -34,6 +34,8 @@ export const register = async (req, res) => {
       isBanned: user.isBanned,
       acceptedDiscussionAgreement: user.acceptedDiscussionAgreement,
       enablePhysique: Boolean(user.enablePhysique),
+      profilePicture: user.profilePicture,
+      googlePicture: user.googlePicture,
       token: generateToken(user._id),
     });
   } catch (error) {
@@ -74,6 +76,8 @@ export const login = async (req, res) => {
       enablePhysique: Boolean(user.enablePhysique),
       isBanned: user.isBanned,
       acceptedDiscussionAgreement: user.acceptedDiscussionAgreement,
+      profilePicture: user.profilePicture,
+      googlePicture: user.googlePicture,
       token: generateToken(user._id),
     });
   } catch (error) {
@@ -121,7 +125,14 @@ export const googleLogin = async (req, res) => {
         email,
         password: randomPassword,
         startDate: new Date(),
+        googlePicture: avatarUrl,
       });
+    } else {
+      // Update googlePicture if missing or changed
+      if (avatarUrl && user.googlePicture !== avatarUrl) {
+        user.googlePicture = avatarUrl;
+        await user.save();
+      }
     }
 
     return res.json({
@@ -130,7 +141,8 @@ export const googleLogin = async (req, res) => {
       email: user.email,
       role: user.role,
       startDate: user.startDate,
-      avatarUrl,
+      profilePicture: user.profilePicture,
+      googlePicture: user.googlePicture,
       codeforcesHandle: user.codeforcesHandle,
       codechefHandle: user.codechefHandle,
       leetcodeHandle: user.leetcodeHandle,
@@ -168,6 +180,8 @@ export const getMe = async (req, res) => {
       githubUsername: user.githubUsername,
       isBanned: user.isBanned,
       acceptedDiscussionAgreement: user.acceptedDiscussionAgreement,
+      profilePicture: user.profilePicture,
+      googlePicture: user.googlePicture,
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -216,6 +230,8 @@ export const updateProfile = async (req, res) => {
       githubUsername: user.githubUsername,
       isBanned: user.isBanned,
       acceptedDiscussionAgreement: user.acceptedDiscussionAgreement,
+      profilePicture: user.profilePicture,
+      googlePicture: user.googlePicture,
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -240,6 +256,33 @@ export const acceptAgreement = async (req, res) => {
     res.json({
       message: 'Agreement accepted successfully',
       acceptedDiscussionAgreement: true,
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Upload profile picture
+// @route   PUT /api/auth/profile/picture
+// @access  Private
+export const uploadProfilePicture = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: 'No image file provided' });
+    }
+
+    const user = await User.findById(req.user._id);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // The Cloudinary URL is automatically provided by multer-storage-cloudinary
+    user.profilePicture = req.file.path;
+    await user.save();
+
+    res.json({
+      message: 'Profile picture updated successfully',
+      profilePicture: user.profilePicture,
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
