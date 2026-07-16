@@ -62,7 +62,7 @@ const sheetBucketSchema = new mongoose.Schema(
         'dsa', 'cp', 'os', 'cn', 'oop', 'dev', 'database',
         'graph', 'dp', 'trees', 'strings', 'arrays', 'linked-list', 
         'stack-queue', 'binary-search', 'greedy', 'backtracking', 
-        'bit-manipulation', 'math', 'system-design', 'other'
+        'bit-manipulation', 'math', 'system-design', 'other', 'company-wise'
       ],
     },
     icon: {
