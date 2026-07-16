@@ -18,7 +18,7 @@ const getPaginatedLeaderboard = async (query, sortCriteria, page, limit) => {
     .sort(sortCriteria)
     .skip(skip)
     .limit(limit)
-    .populate('user', 'name codeforcesHandle leetcodeHandle codechefHandle avatar college'); // Only fetching necessary fields
+    .populate('user', 'name codeforcesHandle leetcodeHandle codechefHandle profilePicture googlePicture githubUsername college'); // Only fetching necessary fields
 
   return {
     leaderboard,
