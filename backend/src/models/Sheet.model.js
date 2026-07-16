@@ -51,7 +51,7 @@ const sheetSchema = new mongoose.Schema(
     // Category of the sheet
     category: {
       type: String,
-      enum: ['dsa', 'cp', 'os', 'cn', 'oops', 'dev', 'system-design', 'custom'],
+      enum: ['dsa', 'cp', 'os', 'cn', 'oops', 'dev', 'system-design', 'custom', 'company-wise'],
       required: true,
     },
     // Color theme for the sheet
