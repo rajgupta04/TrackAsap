@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion';
 import { Flame, Medal, GraduationCap } from 'lucide-react';
 import { useLeaderboardStore } from '../../store/leaderboardStore';
+import { getAvatarSrc } from '../../utils/avatar';
 
 const LeaderboardTable = () => {
   const { leaderboardData, activeTab, currentPage } = useLeaderboardStore();
@@ -54,9 +55,9 @@ const LeaderboardTable = () => {
                 <td className="py-4 px-4">
                   <div className="flex items-center gap-3">
                     <img
-                      src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${item.user.name}&backgroundColor=transparent`}
+                      src={getAvatarSrc(item.user)}
                       alt={item.user.name}
-                      className="w-10 h-10 rounded-full bg-dark-700 border border-dark-600"
+                      className="w-10 h-10 rounded-full bg-dark-700 border border-dark-600 object-cover"
                     />
                     <div>
                       <p className="font-semibold text-white group-hover:text-primary-400 transition-colors">
