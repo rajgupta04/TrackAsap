@@ -624,7 +624,7 @@ const Sheets = () => {
                                 {template.name}
                               </p>
                               <p className="text-xs text-gray-400">
-                                {template.totalProblems} problems
+                                Starter Template
                               </p>
                             </div>
                           </div>
