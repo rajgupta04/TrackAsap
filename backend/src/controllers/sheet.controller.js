@@ -134,10 +134,10 @@ export const createSheet = async (req, res) => {
         ...sheetData,
         name: name || template.name,
         description: description || template.description,
-        topics: template.topics.map(t => ({ ...t, solvedProblems: 0 })),
+        topics: template.topics.map(t => ({ ...t, solvedProblems: 0, totalProblems: 0 })),
         color: color || template.color,
         icon: icon || template.icon,
-        totalProblems: template.topics.reduce((sum, t) => sum + t.totalProblems, 0),
+        totalProblems: 0,
       };
     }
 
@@ -320,7 +320,7 @@ export const getTemplates = async (req, res) => {
     const templates = Object.entries(defaultTemplates).map(([key, value]) => ({
       category: key,
       ...value,
-      totalProblems: value.topics.reduce((sum, t) => sum + t.totalProblems, 0),
+      totalProblems: 0,
     }));
 
     res.json(templates);
