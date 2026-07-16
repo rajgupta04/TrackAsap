@@ -25,6 +25,7 @@ import {
   CheckCircle2,
   Copy,
   Check,
+  Camera,
 } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import githubService from '../services/githubService';
@@ -62,16 +63,19 @@ const SETUP_STEPS = [
 ];
 
 const Profile = () => {
-  const { user, updateUser, isLoading, githubStatus, fetchGitHubStatus, setGitHubStatus } = useAuthStore();
+  const { user, updateUser, isLoading, githubStatus, fetchGitHubStatus, setGitHubStatus, uploadProfilePicture } = useAuthStore();
   const [syncing, setSyncing] = useState(false);
   const [connectingGithub, setConnectingGithub] = useState(false);
   const [showTrackExGuide, setShowTrackExGuide] = useState(false);
   const avatarSrc =
+    user?.profilePicture ||
+    user?.googlePicture ||
     user?.avatarUrl ||
     (githubStatus?.connected && githubStatus?.username
       ? `https://github.com/${githubStatus.username}.png?size=120`
       : '');
   const [creatingRepo, setCreatingRepo] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   const [formData, setFormData] = useState({
     name: user?.name || '',
@@ -157,6 +161,33 @@ const Profile = () => {
     }
   };
 
+  const handleImageChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    // Check if it's an image
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please upload an image file');
+      return;
+    }
+    
+    // Check size (e.g. 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Image size should be less than 5MB');
+      return;
+    }
+
+    setUploadingImage(true);
+    const toastId = toast.loading('Uploading profile picture...');
+    const result = await uploadProfilePicture(file);
+    if (result.success) {
+      toast.success('Profile picture updated!', { id: toastId });
+    } else {
+      toast.error(result.error || 'Upload failed', { id: toastId });
+    }
+    setUploadingImage(false);
+  };
+
   const handleInitRepo = async () => {
     setCreatingRepo(true);
     try {
@@ -201,7 +232,7 @@ const Profile = () => {
       {/* Profile Header */}
       <GlassCard>
         <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6 p-2 md:p-0">
-          <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl bg-gradient-to-br from-neon-green/20 to-cyan-500/20 flex items-center justify-center border border-dark-600/50 flex-shrink-0 overflow-hidden">
+          <div className="relative group w-20 h-20 sm:w-24 sm:h-24 rounded-2xl bg-gradient-to-br from-neon-green/20 to-cyan-500/20 flex items-center justify-center border border-dark-600/50 flex-shrink-0 overflow-hidden">
             {avatarSrc ? (
               <img
                 src={avatarSrc}
@@ -213,6 +244,14 @@ const Profile = () => {
                 {user?.name?.charAt(0).toUpperCase() || 'U'}
               </span>
             )}
+            <label className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
+              <input type="file" accept="image/*" className="hidden" onChange={handleImageChange} disabled={uploadingImage} />
+              {uploadingImage ? (
+                <Loader2 className="w-6 h-6 text-white animate-spin" />
+              ) : (
+                <Camera className="w-6 h-6 text-white" />
+              )}
+            </label>
           </div>
           <div className="text-center sm:text-left flex-1">
             <h2 className="text-xl sm:text-2xl font-bold text-white">{user?.name || 'User'}</h2>

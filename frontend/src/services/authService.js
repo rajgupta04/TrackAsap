@@ -26,6 +26,13 @@ export const authService = {
     return response.data;
   },
 
+  uploadProfilePicture: async (formData) => {
+    const response = await api.put('/auth/profile/picture', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data;
+  },
+
   acceptAgreement: async () => {
     const response = await api.put('/auth/accept-agreement');
     return response.data;
