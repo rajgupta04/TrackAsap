@@ -13,6 +13,7 @@ import Problems from './pages/Problems';
 import Discussion from './pages/Discussion';
 import Admin from './pages/Admin';
 import PrivacyPolicy from './pages/PrivacyPolicy';
+import Leaderboard from './pages/Leaderboard';
 
 // Protected Route wrapper
 const ProtectedRoute = ({ children }) => {
@@ -95,6 +96,7 @@ function App() {
         <Route path="problems" element={<Problems />} />
         <Route path="discussion" element={<Discussion />} />
         <Route path="admin" element={<Admin />} />
+        <Route path="leaderboard" element={<Leaderboard />} />
       </Route>
 
       {/* Catch all */}
