@@ -73,7 +73,7 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
               <img
                 src="/logoSmall.png"
                 alt="TrackAsap Logo"
-                className="absolute h-auto w-12 max-w-[48px] object-contain brightness-[1.4] contrast-110 drop-shadow-[0_0_10px_rgba(57,255,20,0.45)] transition-all duration-300 opacity-100 group-hover/logo:opacity-0"
+                className="absolute h-10 w-10 object-contain brightness-[1.4] contrast-110 drop-shadow-[0_0_10px_rgba(57,255,20,0.45)] transition-all duration-300 opacity-100 group-hover/logo:opacity-0"
               />
               <button
                 className="w-10 h-10 rounded-xl bg-dark-800 border border-dark-600 flex items-center justify-center text-dark-300 hover:text-white hover:bg-dark-700 transition-all shadow-sm opacity-0 group-hover/logo:opacity-100 z-10"
