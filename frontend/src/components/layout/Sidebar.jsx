@@ -63,7 +63,10 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
         `}
       >
         {/* Logo */}
-        <div className="p-3.5 md:p-4 border-b border-dark-700/50 flex items-center justify-center min-h-[73px]">
+        <div 
+          className="p-3.5 md:p-4 border-b border-dark-700/50 flex items-center justify-center min-h-[73px] cursor-pointer"
+          onMouseEnter={() => isCollapsed && setIsCollapsed(false)}
+        >
           {isCollapsed ? (
             <img
               src="/logodefault.png"
@@ -80,12 +83,14 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
         </div>
 
         {/* Collapse button - Tablet and Desktop */}
-        <button
-          onClick={toggleCollapse}
-          className="hidden md:flex absolute -right-3 top-20 w-6 h-6 rounded-full bg-dark-800 border border-dark-600 items-center justify-center text-dark-400 hover:text-white hover:bg-dark-700 transition-all z-50 shadow-lg"
-        >
-          {isCollapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
-        </button>
+        {!isCollapsed && (
+          <button
+            onClick={toggleCollapse}
+            className="hidden md:flex absolute -right-3 top-20 w-6 h-6 rounded-full bg-dark-800 border border-dark-600 items-center justify-center text-dark-400 hover:text-white hover:bg-dark-700 transition-all z-50 shadow-lg"
+          >
+            <ChevronLeft size={14} />
+          </button>
+        )}
 
         {/* Navigation */}
         <nav className="flex-1 p-2 md:p-4 space-y-1.5 md:space-y-2 overflow-y-auto">
