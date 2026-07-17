@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import sheetService from '../services/sheetService';
+import localforage from 'localforage';
 
 const useSheetStore = create((set, get) => ({
   sheets: [],
@@ -11,10 +12,21 @@ const useSheetStore = create((set, get) => ({
 
   // Fetch all sheets (silent = true for background refresh without loading state)
   fetchSheets: async (silent = false) => {
+    try {
+      const cachedSheets = await localforage.getItem('all_sheets');
+      if (cachedSheets) {
+        set({ sheets: cachedSheets });
+        silent = true; // Make network fetch silent if we have cache
+      }
+    } catch (err) {
+      console.warn('Failed to read sheets from cache', err);
+    }
+
     if (!silent) set({ loading: true, error: null });
     try {
       const sheets = await sheetService.getAll();
       set({ sheets, loading: false });
+      localforage.setItem('all_sheets', sheets).catch(console.warn);
     } catch (error) {
       if (!silent) set({ error: error.response?.data?.message || 'Failed to fetch sheets', loading: false });
     }
@@ -22,10 +34,21 @@ const useSheetStore = create((set, get) => ({
 
   // Fetch single sheet with problems (silent = true for background refresh)
   fetchSheet: async (id, silent = false) => {
+    try {
+      const cachedData = await localforage.getItem(`sheet_${id}`);
+      if (cachedData) {
+        set({ currentSheet: cachedData.sheet, sheetProblems: cachedData.problems });
+        silent = true;
+      }
+    } catch (err) {
+      console.warn('Failed to read sheet from cache', err);
+    }
+
     if (!silent) set({ loading: true, error: null });
     try {
       const { sheet, problems } = await sheetService.getById(id);
       set({ currentSheet: sheet, sheetProblems: problems, loading: false });
+      localforage.setItem(`sheet_${id}`, { sheet, problems }).catch(console.warn);
       return { sheet, problems };
     } catch (error) {
       if (!silent) set({ error: error.response?.data?.message || 'Failed to fetch sheet', loading: false });

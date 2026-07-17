@@ -17,6 +17,7 @@ import {
   MessageSquare,
   Shield,
   Trophy,
+  PanelLeftOpen,
 } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 
@@ -63,29 +64,45 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
         `}
       >
         {/* Logo */}
-        <div className="p-3.5 md:p-4 border-b border-dark-700/50 flex items-center justify-center min-h-[73px]">
+        <div 
+          className="group/logo p-3.5 md:p-4 border-b border-dark-700/50 flex items-center justify-center min-h-[73px] cursor-pointer relative"
+          onClick={() => isCollapsed && setIsCollapsed(false)}
+        >
           {isCollapsed ? (
-            <img
-              src="/logodefault.png"
-              alt="TrackAsap Logo"
-              className="h-auto w-12 max-w-[48px] object-contain brightness-[1.4] contrast-110 drop-shadow-[0_0_10px_rgba(57,255,20,0.45)] transition-all duration-300"
-            />
+            <div className="relative flex items-center justify-center w-full h-full">
+              <img
+                src="/logoSmall.png"
+                alt="TrackAsap Logo"
+                className="absolute h-10 w-10 object-contain brightness-[1.4] contrast-110 drop-shadow-[0_0_10px_rgba(57,255,20,0.45)] transition-all duration-300 opacity-100 group-hover/logo:opacity-0"
+              />
+              <button
+                className="w-10 h-10 rounded-xl bg-dark-800 border border-dark-600 flex items-center justify-center text-dark-300 hover:text-white hover:bg-dark-700 transition-all shadow-sm opacity-0 group-hover/logo:opacity-100 z-10"
+              >
+                <PanelLeftOpen size={20} />
+              </button>
+              {/* Tooltip */}
+              <div className="absolute left-14 px-3 py-1.5 bg-[#e5e5e5] text-black text-sm rounded-lg opacity-0 group-hover/logo:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50 font-medium shadow-md">
+                Open sidebar
+              </div>
+            </div>
           ) : (
             <img
               src="/logodefault.png"
               alt="TrackAsap Logo"
-              className="h-10 md:h-11 w-auto max-w-full object-contain brightness-[1.4] contrast-110 drop-shadow-[0_0_12px_rgba(57,255,20,0.45)] transition-all duration-300"
+              className="h-10 md:h-11 w-auto max-w-full object-contain brightness-[1.4] contrast-110 drop-shadow-[0_0_12px_rgba(57,255,20,0.45)] transition-all duration-300 cursor-pointer"
             />
           )}
         </div>
 
         {/* Collapse button - Tablet and Desktop */}
-        <button
-          onClick={toggleCollapse}
-          className="hidden md:flex absolute -right-3 top-20 w-6 h-6 rounded-full bg-dark-800 border border-dark-600 items-center justify-center text-dark-400 hover:text-white hover:bg-dark-700 transition-all z-50 shadow-lg"
-        >
-          {isCollapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
-        </button>
+        {!isCollapsed && (
+          <button
+            onClick={toggleCollapse}
+            className="hidden md:flex absolute -right-3 top-20 w-6 h-6 rounded-full bg-dark-800 border border-dark-600 items-center justify-center text-dark-400 hover:text-white hover:bg-dark-700 transition-all z-50 shadow-lg"
+          >
+            <ChevronLeft size={14} />
+          </button>
+        )}
 
         {/* Navigation */}
         <nav className="flex-1 p-2 md:p-4 space-y-1.5 md:space-y-2 overflow-y-auto">

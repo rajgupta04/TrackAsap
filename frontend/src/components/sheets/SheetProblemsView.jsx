@@ -33,6 +33,7 @@ import sheetProblemService from '../../services/sheetProblemService';
 import githubService from '../../services/githubService';
 import aiService from '../../services/aiService';
 import { useAuthStore } from '../../store/authStore';
+import localforage from 'localforage';
 
 const DIFFICULTY_COLORS = {
   easy: { bg: 'bg-green-500/20', text: 'text-green-400', border: 'border-green-500/30' },
@@ -82,11 +83,25 @@ const SheetProblemsView = ({ sheet, onStatsUpdate, onDelete }) => {
 
   const fetchProblems = async (silent = false) => {
     try {
+      try {
+        const cachedData = await localforage.getItem(`sheetProblems_${sheet._id}`);
+        if (cachedData) {
+          setProblems(cachedData.problems);
+          setRawProblems(cachedData.rawProblems);
+          setStats(cachedData.stats);
+          if (!silent) setLoading(false);
+          silent = true; // prevent loading spinner for network fetch
+        }
+      } catch (err) {
+        console.warn('Failed to read problems from cache', err);
+      }
+
       if (!silent) setLoading(true);
       const data = await sheetProblemService.getProblems(sheet._id);
       setProblems(data.problems);
       setRawProblems(data.rawProblems);
       setStats(data.stats);
+      localforage.setItem(`sheetProblems_${sheet._id}`, data).catch(console.warn);
       
       // Handle expanded topics - preserve existing state, expand new topics
       const currentExpanded = expandedTopicsRef.current;
