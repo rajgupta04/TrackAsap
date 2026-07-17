@@ -65,18 +65,23 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
       >
         {/* Logo */}
         <div 
-          className="p-3.5 md:p-4 border-b border-dark-700/50 flex items-center justify-center min-h-[73px]"
+          className="group/logo p-3.5 md:p-4 border-b border-dark-700/50 flex items-center justify-center min-h-[73px] cursor-pointer relative"
+          onClick={() => isCollapsed && setIsCollapsed(false)}
         >
           {isCollapsed ? (
-            <div className="relative group flex items-center justify-center">
+            <div className="relative flex items-center justify-center w-full h-full">
+              <img
+                src="/logodefault.png"
+                alt="TrackAsap Logo"
+                className="absolute h-auto w-12 max-w-[48px] object-contain brightness-[1.4] contrast-110 drop-shadow-[0_0_10px_rgba(57,255,20,0.45)] transition-all duration-300 opacity-100 group-hover/logo:opacity-0"
+              />
               <button
-                onClick={toggleCollapse}
-                className="w-10 h-10 rounded-xl bg-dark-800 border border-dark-600 flex items-center justify-center text-dark-300 hover:text-white hover:bg-dark-700 transition-all shadow-sm"
+                className="w-10 h-10 rounded-xl bg-dark-800 border border-dark-600 flex items-center justify-center text-dark-300 hover:text-white hover:bg-dark-700 transition-all shadow-sm opacity-0 group-hover/logo:opacity-100 z-10"
               >
                 <PanelLeftOpen size={20} />
               </button>
               {/* Tooltip */}
-              <div className="absolute left-14 px-3 py-1.5 bg-[#e5e5e5] text-black text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50 font-medium shadow-md">
+              <div className="absolute left-14 px-3 py-1.5 bg-[#e5e5e5] text-black text-sm rounded-lg opacity-0 group-hover/logo:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50 font-medium shadow-md">
                 Open sidebar
               </div>
             </div>
