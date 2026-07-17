@@ -71,7 +71,7 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
           {isCollapsed ? (
             <div className="relative flex items-center justify-center w-full h-full">
               <img
-                src="/logodefault.png"
+                src="/logoSmall.png"
                 alt="TrackAsap Logo"
                 className="absolute h-auto w-12 max-w-[48px] object-contain brightness-[1.4] contrast-110 drop-shadow-[0_0_10px_rgba(57,255,20,0.45)] transition-all duration-300 opacity-100 group-hover/logo:opacity-0"
               />
