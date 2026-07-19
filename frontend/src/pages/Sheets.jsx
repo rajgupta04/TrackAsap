@@ -95,14 +95,15 @@ const Sheets = () => {
   }, []);
 
   const handleCreateSheet = async () => {
-    if (!newSheetData.category) {
-      toast.error('Please select a category');
+    if (!newSheetData.category && !newSheetData.name) {
+      toast.error('Please select a category or enter a name');
       return;
     }
 
     try {
       await createSheet({
         ...newSheetData,
+        category: newSheetData.category || 'custom',
         name: newSheetData.name || templates.find(t => t.category === newSheetData.category)?.name || 'New Sheet',
       });
       toast.success('Sheet created successfully!');
@@ -673,7 +674,7 @@ const Sheets = () => {
                   </button>
                   <button
                     onClick={handleCreateSheet}
-                    disabled={loading || !newSheetData.category}
+                    disabled={loading || (!newSheetData.category && !newSheetData.name)}
                     className="px-6 py-2.5 bg-neon-green text-black font-semibold rounded-lg hover:bg-neon-green/90 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {loading ? 'Creating...' : 'Create Sheet'}

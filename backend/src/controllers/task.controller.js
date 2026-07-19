@@ -1,5 +1,6 @@
 import CustomTask from '../models/CustomTask.model.js';
 import TaskLog from '../models/TaskLog.model.js';
+import SheetProblem from '../models/SheetProblem.model.js';
 
 // Create a new custom task
 export const createTask = async (req, res) => {
@@ -110,65 +111,110 @@ export const deleteTask = async (req, res) => {
   }
 };
 
-// Get the current streak based on task completions
+// Get the current streak based on task completions and solved problems
 export const getTaskStreak = async (req, res) => {
   try {
-    // Get all completed task logs for this user
-    const completedLogs = await TaskLog.find({
-      user: req.user._id,
+    const userId = req.user._id;
+
+    // 1. Get all completed task logs for this user
+    const taskLogs = await TaskLog.find({
+      user: userId,
       completed: true,
-    }).sort({ date: -1 }).select('date');
+    }).select('date createdAt');
 
-    // Get unique dates in YYYY-MM-DD format
-    const uniqueDates = [...new Set(completedLogs.map(log => {
-      const d = new Date(log.date);
-      return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`;
-    }))];
+    // 2. Group task logs by YYYY-MM-DD and count them
+    // Only count tasks that were logged within 36 hours of their target date (retroactive logging prevention)
+    const taskCountByDate = {};
+    taskLogs.forEach(log => {
+      const targetDate = new Date(log.date);
+      const createdDate = new Date(log.createdAt);
+      const diffHours = (createdDate - targetDate) / (1000 * 60 * 60);
 
-    if (uniqueDates.length === 0) {
+      // Only count if logged within 36 hours of the target date (midnight UTC)
+      if (diffHours <= 36) {
+        const dateStr = targetDate.toISOString().split('T')[0];
+        taskCountByDate[dateStr] = (taskCountByDate[dateStr] || 0) + 1;
+      }
+    });
+
+    // 3. Get all SheetProblems solved with code and notes by this user
+    const sheetProblems = await SheetProblem.find({ 
+      user: userId, 
+      status: 'solved',
+      code: { $exists: true, $ne: '' },
+      notes: { $exists: true, $ne: '' }
+    }).select('lastAttemptedAt updatedAt');
+
+    const problemDates = new Set();
+    sheetProblems.forEach(p => {
+      // Use lastAttemptedAt if available, otherwise fallback to updatedAt
+      const d = new Date(p.lastAttemptedAt || p.updatedAt);
+      const dateStr = d.toISOString().split('T')[0];
+      problemDates.add(dateStr);
+    });
+
+    // 4. Find all valid dates (>= 2 tasks OR >= 1 problem with code+notes)
+    const validDates = new Set();
+    
+    Object.keys(taskCountByDate).forEach(dateStr => {
+      if (taskCountByDate[dateStr] >= 2) {
+        validDates.add(dateStr);
+      }
+    });
+
+    problemDates.forEach(dateStr => {
+      validDates.add(dateStr);
+    });
+
+    const sortedDates = Array.from(validDates).sort((a, b) => new Date(b) - new Date(a));
+
+    if (sortedDates.length === 0) {
       return res.json({ currentStreak: 0, longestStreak: 0 });
     }
 
-    // Sort unique dates descending
-    uniqueDates.sort((a, b) => new Date(b) - new Date(a));
-
+    // 5. Calculate streak looking backwards from today or yesterday
     const today = new Date();
-    const todayStr = `${today.getUTCFullYear()}-${String(today.getUTCMonth() + 1).padStart(2, '0')}-${String(today.getUTCDate()).padStart(2, '0')}`;
+    const todayStr = today.toISOString().split('T')[0];
     
     const yesterday = new Date(today);
-    yesterday.setUTCDate(yesterday.getUTCDate() - 1);
-    const yesterdayStr = `${yesterday.getUTCFullYear()}-${String(yesterday.getUTCMonth() + 1).padStart(2, '0')}-${String(yesterday.getUTCDate()).padStart(2, '0')}`;
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = yesterday.toISOString().split('T')[0];
+
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const tomorrowStr = tomorrow.toISOString().split('T')[0];
 
     let currentStreak = 0;
-    
-    // Streak only counts if active today or yesterday
-    if (uniqueDates[0] === todayStr || uniqueDates[0] === yesterdayStr) {
-      let currentDate = new Date(uniqueDates[0]);
-      let consecutiveDays = [uniqueDates[0]];
 
-      for (let i = 1; i < uniqueDates.length; i++) {
-        const expectedPrev = new Date(currentDate);
-        expectedPrev.setUTCDate(expectedPrev.getUTCDate() - 1);
-        const expectedPrevStr = `${expectedPrev.getUTCFullYear()}-${String(expectedPrev.getUTCMonth() + 1).padStart(2, '0')}-${String(expectedPrev.getUTCDate()).padStart(2, '0')}`;
+    // Find the first date that is not in the distant future (<= tomorrow)
+    let startIndex = sortedDates.findIndex(date => date <= tomorrowStr);
 
-        if (uniqueDates[i] === expectedPrevStr) {
-          consecutiveDays.push(uniqueDates[i]);
-          currentDate = expectedPrev;
-        } else {
-          break;
+    if (startIndex !== -1) {
+      const latestValidDate = sortedDates[startIndex];
+      
+      // Streak is alive if they were active today, yesterday, or tomorrow (timezone offset)
+      if (latestValidDate === tomorrowStr || latestValidDate === todayStr || latestValidDate === yesterdayStr) {
+        currentStreak = 1;
+        let currentDateStr = latestValidDate;
+
+        for (let i = startIndex + 1; i < sortedDates.length; i++) {
+          const expectedPrev = new Date(currentDateStr);
+          expectedPrev.setDate(expectedPrev.getDate() - 1);
+          const expectedPrevStr = expectedPrev.toISOString().split('T')[0];
+
+          if (sortedDates[i] === expectedPrevStr) {
+            currentStreak++;
+            currentDateStr = expectedPrevStr;
+          } else {
+            break; // Streak broken
+          }
         }
       }
-
-      // Sum all tasks completed during these consecutive days for a "reward" streak
-      currentStreak = completedLogs.filter(log => {
-        const d = new Date(log.date);
-        const logDateStr = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`;
-        return consecutiveDays.includes(logDateStr);
-      }).length;
     }
 
-    res.json({ currentStreak, longestStreak: 0 }); 
+    res.json({ currentStreak, longestStreak: currentStreak }); // Assuming longest streak could be tracked better later
   } catch (error) {
+    console.error('Error calculating streak:', error);
     res.status(500).json({ message: 'Error calculating streak', error: error.message });
   }
 };

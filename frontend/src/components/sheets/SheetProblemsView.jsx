@@ -32,6 +32,7 @@ import GlassCard from '../ui/GlassCard';
 import sheetProblemService from '../../services/sheetProblemService';
 import githubService from '../../services/githubService';
 import aiService from '../../services/aiService';
+import api from '../../lib/api';
 import { useAuthStore } from '../../store/authStore';
 import localforage from 'localforage';
 
@@ -1197,6 +1198,8 @@ const AddProblemModal = ({ sheet, onClose, onSuccess }) => {
     tags: '',
   });
   const [loading, setLoading] = useState(false);
+  const [searchResults, setSearchResults] = useState([]);
+  const [isSearchingLocal, setIsSearchingLocal] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -1218,6 +1221,45 @@ const AddProblemModal = ({ sheet, onClose, onSuccess }) => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleLocalSearch = async () => {
+    if (!formData.title && !formData.problemLink) {
+      toast.error('Please enter a title or link to search');
+      return;
+    }
+    
+    try {
+      setIsSearchingLocal(true);
+      const query = formData.title || formData.problemLink;
+      const res = await api.get(`/problems?search=${encodeURIComponent(query)}&limit=5`);
+      
+      if (res.data.problems && res.data.problems.length > 0) {
+        setSearchResults(res.data.problems);
+        toast.success(`Found ${res.data.problems.length} matches!`);
+      } else {
+        setSearchResults([]);
+        toast.error('No matching problems found in your database.');
+      }
+    } catch (error) {
+      console.error('Search error:', error);
+      toast.error('Failed to search local problems');
+    } finally {
+      setIsSearchingLocal(false);
+    }
+  };
+  
+  const applyLocalResult = (problem) => {
+    setFormData(prev => ({
+      ...prev,
+      title: problem.title || prev.title,
+      difficulty: problem.difficulty || prev.difficulty,
+      platform: problem.platform || prev.platform,
+      problemLink: problem.link || prev.problemLink,
+      tags: (problem.tags || []).join(', ') || prev.tags,
+    }));
+    setSearchResults([]);
+    toast.success('Fields auto-filled from database!');
   };
 
   const handleAIAutofill = async () => {
@@ -1296,14 +1338,76 @@ const AddProblemModal = ({ sheet, onClose, onSuccess }) => {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-1.5">Title *</label>
-              <input
-                type="text"
-                value={formData.title}
-                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                placeholder="e.g., Two Sum"
-                className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white placeholder-gray-500 focus:border-neon-green outline-none"
-              />
+              <div className="relative">
+                <input
+                  type="text"
+                  value={formData.title}
+                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                  placeholder="e.g., Two Sum"
+                  className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 pr-12 text-white placeholder-gray-500 focus:border-neon-green outline-none"
+                />
+                <button
+                  type="button"
+                  onClick={handleLocalSearch}
+                  disabled={isSearchingLocal || (!formData.title && !formData.problemLink)}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-gray-400 hover:text-neon-green hover:bg-white/5 rounded-md transition-colors disabled:opacity-50"
+                  title="Search local database"
+                >
+                  <Search className="w-4 h-4" />
+                </button>
+              </div>
             </div>
+
+            <AnimatePresence>
+              {searchResults.length > 0 && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="overflow-hidden"
+                >
+                  <div className="bg-white/5 border border-white/10 rounded-xl p-3 space-y-2">
+                    <div className="text-xs font-bold text-gray-400 flex items-center justify-between mb-2">
+                      <span>Found Local Matches</span>
+                      <button 
+                        type="button" 
+                        onClick={() => setSearchResults([])}
+                        className="hover:text-white"
+                      >
+                        Clear
+                      </button>
+                    </div>
+                    <div className="max-h-40 overflow-y-auto custom-scrollbar space-y-2 pr-1">
+                      {searchResults.map((result) => (
+                        <div 
+                          key={result._id}
+                          onClick={() => applyLocalResult(result)}
+                          className="bg-black/20 hover:bg-white/10 border border-white/5 hover:border-neon-green/30 rounded-lg p-2.5 cursor-pointer transition-all group flex items-center justify-between"
+                        >
+                          <div className="min-w-0 flex-1 pr-3">
+                            <h4 className="text-sm font-bold text-white truncate group-hover:text-neon-green transition-colors">{result.title}</h4>
+                            <div className="flex items-center gap-2 mt-1 text-[10px] uppercase font-bold tracking-wider">
+                              <span className={
+                                result.difficulty === 'easy' ? 'text-green-400' :
+                                result.difficulty === 'medium' ? 'text-yellow-400' :
+                                'text-red-400'
+                              }>
+                                {result.difficulty}
+                              </span>
+                              <span className="text-gray-500">•</span>
+                              <span className="text-gray-400 truncate">{result.platform}</span>
+                            </div>
+                          </div>
+                          <div className="shrink-0 text-neon-green bg-neon-green/10 p-1.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
+                            <Check className="w-3.5 h-3.5" />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-1.5">Topic/Day *</label>
