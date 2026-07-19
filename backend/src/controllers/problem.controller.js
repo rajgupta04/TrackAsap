@@ -1,5 +1,6 @@
 import Problem from '../models/Problem.model.js';
-
+import SheetProblem from '../models/SheetProblem.model.js';
+import SheetBucket from '../models/SheetBucket.model.js';
 import Sheet from '../models/Sheet.model.js';
 
 // @desc    Create a new problem
@@ -255,6 +256,95 @@ export const getProblemStats = async (req, res) => {
       ...stats[0],
       tagDistribution: tagStats,
     });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+
+// @desc    Search all problems (Problem, SheetProblem, SheetBucket) globally
+// @route   GET /api/problems/search-global
+// @access  Private
+export const searchGlobalProblems = async (req, res) => {
+  try {
+    const { q, limit = 10 } = req.query;
+    if (!q) return res.json({ problems: [] });
+
+    // Handle spaces/hyphens (e.g. "3 sum" vs "3sum")
+    const chars = q.replace(/[\s\W]+/g, '').split('');
+    const regexPattern = chars.join('[\\s\\W]*');
+    const regex = new RegExp(regexPattern, 'i');
+
+    const [problems, sheetProblems, bucketProblems] = await Promise.all([
+      Problem.find({ user: req.user._id, $or: [{ title: regex }, { link: regex }] })
+        .limit(parseInt(limit))
+        .lean(),
+      SheetProblem.find({ user: req.user._id, $or: [{ title: regex }, { problemLink: regex }] })
+        .limit(parseInt(limit))
+        .lean(),
+      SheetBucket.aggregate([
+        { $unwind: "$problems" },
+        { 
+          $match: { 
+            $or: [
+              { "problems.title": regex },
+              { "problems.problemLink": regex }
+            ]
+          } 
+        },
+        { $limit: parseInt(limit) }
+      ])
+    ]);
+
+    // Normalize and merge unique problems by link OR title (case insensitive, ignoring spaces/hyphens)
+    const uniqueMap = new Map();
+    const uniqueTitleMap = new Set();
+    
+    const addProblem = (p) => {
+      const link = p.link || p.problemLink;
+      const titleLower = p.title?.replace(/[\s\W]+/g, '').toLowerCase() || '';
+
+      if ((link && uniqueMap.has(link)) || (titleLower && uniqueTitleMap.has(titleLower))) {
+        return null; // Skip duplicate
+      }
+      
+      const normalizedProblem = {
+        _id: p._id || p.title,
+        title: p.title,
+        link: link || '',
+        difficulty: p.difficulty,
+        platform: p.platform,
+        tags: p.tags,
+        sourceModel: p.sourceModel
+      };
+
+      if (link) uniqueMap.set(link, normalizedProblem);
+      if (titleLower) uniqueTitleMap.add(titleLower);
+
+      return normalizedProblem;
+    };
+
+    const finalProblems = [];
+
+    problems.forEach(p => {
+      p.sourceModel = 'Problem';
+      const added = addProblem(p);
+      if (added) finalProblems.push(added);
+    });
+
+    sheetProblems.forEach(sp => {
+      sp.sourceModel = 'SheetProblem';
+      const added = addProblem(sp);
+      if (added) finalProblems.push(added);
+    });
+
+    bucketProblems.forEach(bp => {
+      bp.problems.sourceModel = 'SheetBucket';
+      const added = addProblem(bp.problems);
+      if (added) finalProblems.push(added);
+    });
+
+    res.json({ problems: finalProblems.slice(0, parseInt(limit)) });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

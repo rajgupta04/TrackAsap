@@ -1232,7 +1232,7 @@ const AddProblemModal = ({ sheet, onClose, onSuccess }) => {
     try {
       setIsSearchingLocal(true);
       const query = formData.title || formData.problemLink;
-      const res = await api.get(`/problems?search=${encodeURIComponent(query)}&limit=5`);
+      const res = await api.get(`/problems/search-global?q=${encodeURIComponent(query)}&limit=5`);
       
       if (res.data.problems && res.data.problems.length > 0) {
         setSearchResults(res.data.problems);
