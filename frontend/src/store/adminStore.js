@@ -7,6 +7,15 @@ export const useAdminStore = create((set) => ({
   pagination: null,
   isLoading: false,
   error: null,
+  
+  systemAnalytics: null,
+  systemPerformance: null,
+  systemFeatures: null,
+  activityLogs: [],
+  systemAnalyticsError: null,
+  
+  userDetails: null,
+  isUserDetailsLoading: false,
 
   fetchStats: async () => {
     try {
@@ -14,6 +23,38 @@ export const useAdminStore = create((set) => ({
       set({ stats });
     } catch (error) {
       console.error('Failed to fetch admin stats:', error);
+    }
+  },
+
+  fetchSystemAnalytics: async () => {
+    try {
+      const [overview, perf, features, activity] = await Promise.all([
+        adminService.getSystemAnalyticsOverview(),
+        adminService.getSystemPerformance(),
+        adminService.getSystemFeatures(),
+        adminService.getSystemActivityLogs()
+      ]);
+      set({
+        systemAnalytics: overview.data || overview,
+        systemPerformance: perf.data || perf,
+        systemFeatures: features.data || features,
+        activityLogs: activity.data || activity,
+        systemAnalyticsError: null,
+      });
+    } catch (error) {
+      console.error('Failed to fetch system analytics:', error);
+      set({ systemAnalyticsError: error.message || 'Unknown error fetching analytics' });
+    }
+  },
+
+  fetchUserDetails: async (userId) => {
+    set({ isUserDetailsLoading: true, userDetails: null });
+    try {
+      const data = await adminService.getUserDetails(userId);
+      set({ userDetails: data, isUserDetailsLoading: false });
+    } catch (error) {
+      console.error('Failed to fetch user details:', error);
+      set({ isUserDetailsLoading: false });
     }
   },
 

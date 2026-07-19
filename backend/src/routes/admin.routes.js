@@ -5,6 +5,7 @@ import {
   toggleBanUser,
   adminDeletePost,
   getAdminStats,
+  getUserDetails,
 } from '../controllers/admin.controller.js';
 
 const router = express.Router();
@@ -14,6 +15,7 @@ router.use(protect);
 router.use(requireAdmin);
 
 router.get('/stats', getAdminStats);
+router.get('/users/:id/details', getUserDetails);
 router.get('/users', getUsers);
 router.put('/users/:id/ban', toggleBanUser);
 router.delete('/posts/:id', adminDeletePost);

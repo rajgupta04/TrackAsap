@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   Shield,
   Users,
@@ -14,13 +14,19 @@ import {
   BarChart3,
   UserX,
   UserCheck,
-  X,
   FileUp,
   Download,
+  Activity,
+  Clock,
+  X,
+  StickyNote,
+  Code,
+  Zap,
 } from 'lucide-react';
 import { useAdminStore } from '../store/adminStore';
 import { useAuthStore } from '../store/authStore';
 import toast from 'react-hot-toast';
+import CodeViewer from '../components/CodeViewer';
 
 const CSV_TEMPLATE_HEADER = 'Topic,Title,Difficulty,Platform,Problem Link,Article Link,YouTube,Tags';
 const CSV_TEMPLATE_ROWS = [
@@ -86,11 +92,19 @@ const BUCKET_CATEGORIES = [
 
 const Admin = () => {
   const { user } = useAuthStore();
-  const { users, stats, pagination, isLoading, fetchStats, fetchUsers, toggleBanUser, upsertBucket } = useAdminStore();
+  const { 
+    users, stats, pagination, isLoading, 
+    fetchStats, fetchUsers, toggleBanUser, upsertBucket, 
+    fetchSystemAnalytics, systemAnalytics, systemPerformance, systemFeatures, activityLogs, systemAnalyticsError,
+    userDetails, fetchUserDetails, isUserDetailsLoading
+  } = useAdminStore();
   const [activeTab, setActiveTab] = useState('users');
   const [searchQuery, setSearchQuery] = useState('');
   const [banReasonModal, setBanReasonModal] = useState(null);
   const [banReason, setBanReason] = useState('');
+  const [showUserDetailsModal, setShowUserDetailsModal] = useState(false);
+  const [selectedCodeProblem, setSelectedCodeProblem] = useState(null);
+  const [selectedNotesProblem, setSelectedNotesProblem] = useState(null);
 
   // Bucket form state
   const [bucketMode, setBucketMode] = useState('form'); // 'form' | 'json' | 'csv'
@@ -118,6 +132,7 @@ const Admin = () => {
   useEffect(() => {
     fetchStats();
     fetchUsers();
+    fetchSystemAnalytics();
   }, []);
 
   const handleSearch = () => {
@@ -321,6 +336,7 @@ const Admin = () => {
       {/* Tab Buttons */}
       <div className="flex gap-2">
         {[
+          { id: 'analytics', label: 'System Analytics', icon: Activity },
           { id: 'users', label: 'User Management', icon: Users },
           { id: 'buckets', label: 'Bucket Manager', icon: Package },
         ].map((tab) => (
@@ -338,6 +354,168 @@ const Admin = () => {
           </button>
         ))}
       </div>
+
+      {/* Analytics Tab */}
+      {activeTab === 'analytics' && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="space-y-6"
+        >
+          {systemAnalyticsError && (
+            <div className="bg-red-500/20 border border-red-500/50 text-red-400 p-4 rounded-xl font-mono text-sm">
+              Error loading analytics: {systemAnalyticsError}
+            </div>
+          )}
+
+          {/* Daily Analytics Overview */}
+          {systemAnalytics && (
+            <div className="bg-dark-800/50 backdrop-blur-xl border border-dark-700/50 rounded-2xl p-5">
+              <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                <Activity className="text-neon-green" size={20} />
+                Daily Overview (Last 7 Days)
+              </h3>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left">
+                  <thead>
+                    <tr className="border-b border-dark-700/50">
+                      <th className="px-4 py-3 text-xs font-semibold text-dark-400">Date</th>
+                      <th className="px-4 py-3 text-xs font-semibold text-dark-400">Active Users</th>
+                      <th className="px-4 py-3 text-xs font-semibold text-dark-400">Problems Solved</th>
+                      <th className="px-4 py-3 text-xs font-semibold text-dark-400">Total Errors</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {!Array.isArray(systemAnalytics) || systemAnalytics.length === 0 ? (
+                      <tr>
+                        <td colSpan={4} className="text-center py-6 text-dark-500 text-sm">No analytics data for this period</td>
+                      </tr>
+                    ) : (
+                      systemAnalytics.map((day) => (
+                        <tr key={day.date} className="border-b border-dark-700/20 hover:bg-dark-700/20">
+                          <td className="px-4 py-3 text-sm text-white">{day.date}</td>
+                          <td className="px-4 py-3 text-sm font-medium text-emerald-400">{day.activeUsers}</td>
+                          <td className="px-4 py-3 text-sm font-medium text-amber-400">{day.problemsCompleted}</td>
+                          <td className="px-4 py-3 text-sm font-medium text-red-400">{day.totalErrors}</td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Performance Metrics */}
+            {systemPerformance && (
+              <div className="bg-dark-800/50 backdrop-blur-xl border border-dark-700/50 rounded-2xl p-5">
+                <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                  <Clock className="text-cyan-400" size={20} />
+                  Performance Metrics
+                </h3>
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center p-3 rounded-lg bg-dark-900/50">
+                    <span className="text-sm text-dark-300">Avg Response Time</span>
+                    <span className="text-lg font-bold text-white">{Math.round(systemPerformance.averageResponseTime)}ms</span>
+                  </div>
+                  <div className="flex justify-between items-center p-3 rounded-lg bg-dark-900/50">
+                    <span className="text-sm text-dark-300">Total Requests</span>
+                    <span className="text-lg font-bold text-white">{systemPerformance.totalRequests}</span>
+                  </div>
+                  <div>
+                    <p className="text-xs text-dark-400 mb-2 font-semibold">Slowest Endpoints</p>
+                    {(systemPerformance.slowestEndpoints || []).slice(0, 3).map((ep, i) => (
+                      <div key={i} className="flex justify-between items-center mb-1">
+                        <span className="text-xs text-dark-300 font-mono truncate mr-2">{ep.endpoint}</span>
+                        <span className="text-xs text-red-400 font-semibold">{Math.round(ep.avgTime)}ms</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Popular Features */}
+            {systemFeatures && (
+              <div className="bg-dark-800/50 backdrop-blur-xl border border-dark-700/50 rounded-2xl p-5">
+                <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                  <Zap className="text-amber-400" size={20} />
+                  Feature Usage
+                </h3>
+                <div className="space-y-3">
+                  {!Array.isArray(systemFeatures) || systemFeatures.length === 0 ? (
+                    <p className="text-sm text-dark-500 text-center py-4">No feature usage recorded yet</p>
+                  ) : (
+                    systemFeatures.map((feat) => (
+                      <div key={feat._id} className="flex justify-between items-center p-3 rounded-lg bg-dark-900/50">
+                        <span className="text-sm font-medium text-white">{feat._id}</span>
+                        <span className="text-sm font-bold text-neon-green">{feat.count} uses</span>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Live Activity Logs */}
+          <div className="bg-dark-800/50 backdrop-blur-xl border border-dark-700/50 rounded-2xl p-5 mt-6">
+            <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+              <Activity className="text-neon-green" size={20} />
+              Live Activity Logs (Latest 50)
+            </h3>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left">
+                <thead>
+                  <tr className="border-b border-dark-700/50">
+                    <th className="px-4 py-3 text-xs font-semibold text-dark-400">Timestamp</th>
+                    <th className="px-4 py-3 text-xs font-semibold text-dark-400">User</th>
+                    <th className="px-4 py-3 text-xs font-semibold text-dark-400">Action</th>
+                    <th className="px-4 py-3 text-xs font-semibold text-dark-400">Details</th>
+                    <th className="px-4 py-3 text-xs font-semibold text-dark-400">Environment</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {!Array.isArray(activityLogs) || activityLogs.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="text-center py-6 text-dark-500 text-sm">No activity logs yet</td>
+                    </tr>
+                  ) : (
+                    activityLogs.map((log) => (
+                      <tr key={log._id} className="border-b border-dark-700/20 hover:bg-dark-700/20">
+                        <td className="px-4 py-3 text-xs text-dark-300">
+                          {new Date(log.createdAt).toLocaleString()}
+                        </td>
+                        <td className="px-4 py-3 text-xs">
+                          {log.user ? (
+                            <div>
+                              <div className="text-white font-medium">{log.user.name}</div>
+                              <div className="text-dark-400">{log.user.email}</div>
+                            </div>
+                          ) : (
+                            <span className="text-dark-500">Anonymous</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-xs font-medium text-emerald-400">
+                          {log.eventName}
+                        </td>
+                        <td className="px-4 py-3 text-xs text-dark-300 font-mono max-w-[200px] truncate">
+                          {JSON.stringify(log.metadata)}
+                        </td>
+                        <td className="px-4 py-3 text-xs text-dark-400">
+                          <div>IP: {log.ip || 'Unknown'}</div>
+                          <div>{log.os} • {log.browser}</div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </motion.div>
+      )}
 
       {/* User Management Tab */}
       {activeTab === 'users' && (
@@ -441,18 +619,29 @@ const Admin = () => {
                         )}
                       </td>
                       <td className="px-4 py-3 text-right">
-                        {u.role !== 'admin' && u._id !== user?._id && (
+                        <div className="flex justify-end gap-2">
                           <button
-                            onClick={() => handleToggleBan(u._id)}
-                            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                              u.isBanned
-                                ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20'
-                                : 'bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20'
-                            }`}
+                            onClick={() => {
+                              setShowUserDetailsModal(true);
+                              fetchUserDetails(u._id);
+                            }}
+                            className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-dark-700 text-cyan-400 border border-cyan-500/20 hover:bg-cyan-500/10 transition-all flex items-center gap-1"
                           >
-                            {u.isBanned ? 'Unban' : 'Ban'}
+                            <Activity size={12} /> Details
                           </button>
-                        )}
+                          {u.role !== 'admin' && u._id !== user?._id && (
+                            <button
+                              onClick={() => handleToggleBan(u._id)}
+                              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                                u.isBanned
+                                  ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20'
+                                  : 'bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20'
+                              }`}
+                            >
+                              {u.isBanned ? 'Unban' : 'Ban'}
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))
@@ -883,6 +1072,178 @@ const Admin = () => {
           </motion.div>
         </div>
       )}
+
+      {/* User Details Modal */}
+      {showUserDetailsModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setShowUserDetailsModal(false)} />
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="relative w-full max-w-4xl max-h-[90vh] flex flex-col bg-dark-900 border border-dark-700/50 rounded-2xl shadow-2xl overflow-hidden"
+          >
+            <div className="flex items-center justify-between p-6 border-b border-dark-700/50 bg-dark-800/50">
+              <div className="flex items-center gap-3">
+                <UserCheck className="text-cyan-400" size={24} />
+                <h3 className="text-xl font-bold text-white">User Activity Details</h3>
+              </div>
+              <button onClick={() => setShowUserDetailsModal(false)} className="text-dark-400 hover:text-white transition-colors">
+                <X size={20} />
+              </button>
+            </div>
+            
+            <div className="flex-1 overflow-y-auto p-6 space-y-6">
+              {isUserDetailsLoading ? (
+                <div className="flex justify-center items-center py-12">
+                  <div className="w-8 h-8 border-2 border-cyan-500/30 border-t-cyan-400 rounded-full animate-spin" />
+                </div>
+              ) : userDetails ? (
+                <>
+                  {/* User Meta */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="bg-dark-800/50 border border-dark-700/50 rounded-xl p-4">
+                      <h4 className="text-xs font-semibold text-dark-400 uppercase tracking-wider mb-3">Profile Info</h4>
+                      <div className="space-y-2">
+                        <div className="flex justify-between"><span className="text-sm text-dark-300">Name</span><span className="text-sm text-white font-medium">{userDetails?.user?.name}</span></div>
+                        <div className="flex justify-between"><span className="text-sm text-dark-300">Email</span><span className="text-sm text-white font-medium">{userDetails?.user?.email}</span></div>
+                        <div className="flex justify-between"><span className="text-sm text-dark-300">Role</span><span className="text-sm text-white font-medium uppercase">{userDetails?.user?.role}</span></div>
+                      </div>
+                    </div>
+                    <div className="bg-dark-800/50 border border-dark-700/50 rounded-xl p-4">
+                      <h4 className="text-xs font-semibold text-dark-400 uppercase tracking-wider mb-3">Sheet Progress</h4>
+                      <div className="space-y-2">
+                        {!userDetails?.sheets || userDetails.sheets.length === 0 ? (
+                          <div className="text-sm text-dark-500">No active sheets</div>
+                        ) : (
+                          userDetails.sheets.map(sheet => (
+                            <div key={sheet._id} className="flex justify-between items-center">
+                              <span className="text-sm text-dark-300">{sheet.name}</span>
+                              <span className="text-sm font-bold text-neon-green">
+                                {sheet.solvedProblems || 0} / {sheet.totalProblems || 0}
+                              </span>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Solved Problems */}
+                  <div>
+                    <h4 className="text-sm font-bold text-white flex items-center gap-2 mb-4">
+                      <CheckCircle2 className="text-emerald-400" size={16} />
+                      Solved Problems History
+                    </h4>
+                    {!userDetails?.solvedProblems || userDetails.solvedProblems.length === 0 ? (
+                      <div className="p-8 text-center border border-dark-700/50 border-dashed rounded-xl text-dark-500 text-sm">
+                        No solved problems yet
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        {userDetails.solvedProblems.map(prob => (
+                          <div key={prob._id} className="bg-dark-800/30 border border-dark-700/50 rounded-xl overflow-hidden">
+                            <div className="p-4 border-b border-dark-700/30 flex justify-between items-center bg-dark-800/50">
+                              <div>
+                                <h5 className="font-semibold text-white">{prob.title}</h5>
+                                <div className="flex items-center gap-2 mt-1">
+                                  <span className="px-2 py-0.5 rounded bg-dark-700 text-[10px] text-dark-300">
+                                    {prob.sheet?.name || 'Unknown Sheet'}
+                                  </span>
+                                  <span className="px-2 py-0.5 rounded bg-dark-700 text-[10px] text-dark-300">
+                                    {prob.topic}
+                                  </span>
+                                  <span className={`px-2 py-0.5 rounded text-[10px] font-medium ${
+                                    prob.difficulty === 'easy' ? 'bg-emerald-500/10 text-emerald-400' :
+                                    prob.difficulty === 'medium' ? 'bg-amber-500/10 text-amber-400' :
+                                    'bg-red-500/10 text-red-400'
+                                  }`}>
+                                    {prob.difficulty}
+                                  </span>
+                                </div>
+                              </div>
+                              <div className="flex gap-2 text-xs">
+                                {prob.notes && (
+                                  <button
+                                    onClick={() => setSelectedNotesProblem(prob)}
+                                    className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-dark-700/50 hover:bg-dark-600 text-purple-400 border border-purple-500/20 transition-all"
+                                  >
+                                    <StickyNote size={12} /> Notes
+                                  </button>
+                                )}
+                                {prob.code && (
+                                  <button
+                                    onClick={() => setSelectedCodeProblem(prob)}
+                                    className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-dark-700/50 hover:bg-dark-600 text-neon-green border border-neon-green/20 transition-all"
+                                  >
+                                    <Code size={12} /> Code
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </>
+              ) : (
+                <div className="text-center py-12 text-dark-500">Failed to load user details</div>
+              )}
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Code Viewer Modal */}
+      <CodeViewer
+        isOpen={!!selectedCodeProblem}
+        onClose={() => setSelectedCodeProblem(null)}
+        problem={selectedCodeProblem}
+      />
+
+      {/* Notes Modal */}
+      <AnimatePresence>
+        {selectedNotesProblem && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[110] flex items-center justify-center p-4"
+            onClick={() => setSelectedNotesProblem(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="w-full max-w-lg bg-dark-800 border border-dark-700/50 rounded-xl overflow-hidden shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="p-6">
+                <div className="flex items-center justify-between mb-4 border-b border-dark-700/50 pb-4">
+                  <div>
+                    <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                      <StickyNote className="w-5 h-5 text-purple-400" />
+                      User Notes
+                    </h2>
+                    <p className="text-sm text-dark-400 mt-1 truncate max-w-[350px]">{selectedNotesProblem.title}</p>
+                  </div>
+                  <button
+                    onClick={() => setSelectedNotesProblem(null)}
+                    className="p-2 text-dark-400 hover:text-white hover:bg-dark-700 rounded-lg transition-colors"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+                <div className="bg-dark-900/50 border border-dark-700/50 rounded-lg p-4 max-h-80 overflow-y-auto">
+                  <p className="text-dark-300 text-sm whitespace-pre-wrap font-mono">
+                    {selectedNotesProblem.notes}
+                  </p>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

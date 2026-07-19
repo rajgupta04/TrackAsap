@@ -1,5 +1,6 @@
 import jwt from 'jsonwebtoken';
 import User from '../models/User.model.js';
+import { AnalyticsTracker } from '../analytics/services/eventTracker.js';
 
 export const protect = async (req, res, next) => {
   let token;
@@ -19,15 +20,24 @@ export const protect = async (req, res, next) => {
       }
 
       if (req.user.isBanned) {
+        AnalyticsTracker.trackSecurity('ACCOUNT_LOCK', {
+          user: req.user._id,
+          req,
+          details: { reason: 'User tried to access while banned' }
+        });
         return res.status(403).json({
           message: 'Your account has been banned due to violation of community terms',
           banned: true,
         });
       }
 
+      // Track active session (non-blocking)
+      AnalyticsTracker.trackSession({ user: req.user, req });
+
       next();
     } catch (error) {
       console.error('Auth error:', error);
+      AnalyticsTracker.trackSecurity('JWT_INVALID', { req, details: { error: error.message } });
       return res.status(401).json({ message: 'Not authorized, token failed' });
     }
   }

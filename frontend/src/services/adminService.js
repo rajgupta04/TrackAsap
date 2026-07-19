@@ -30,6 +30,35 @@ const adminService = {
     const response = await api.post('/buckets/upsert', bucketData);
     return response.data;
   },
+  // Get system analytics overview
+  getSystemAnalyticsOverview: async () => {
+    const response = await api.get('/system-analytics/overview');
+    return response.data;
+  },
+
+  // Get system performance
+  getSystemPerformance: async () => {
+    const response = await api.get('/system-analytics/performance');
+    return response.data;
+  },
+
+  // Get popular features
+  getSystemFeatures: async () => {
+    const response = await api.get('/system-analytics/features');
+    return response.data;
+  },
+
+  // Get system activity logs
+  getSystemActivityLogs: async () => {
+    const response = await api.get('/system-analytics/activity-logs');
+    return response.data;
+  },
+
+  // Get detailed user info
+  getUserDetails: async (userId) => {
+    const response = await api.get(`/admin/users/${userId}/details`);
+    return response.data;
+  },
 };
 
 export default adminService;
