@@ -1,6 +1,7 @@
 import User from '../models/User.model.js';
 import Problem from '../models/Problem.model.js';
 import TaskLog from '../models/TaskLog.model.js';
+import SheetProblem from '../models/SheetProblem.model.js';
 import LeaderboardProfile from '../models/LeaderboardProfile.model.js';
 
 /**
@@ -51,50 +52,78 @@ export const leaderboardService = {
       });
 
       // 3. Calculate Current Streak
-      // We will reuse the same logic we implemented for the frontend streak
-      // For performance in a cron, it's better to fetch and compute locally
-      const completedLogs = await TaskLog.find({
-        user: user._id,
-        completed: true,
-      }).sort({ date: -1 }).select('date');
-
+      // (>= 2 tasks OR >= 1 solved problem with code+notes)
+      const completedLogs = await TaskLog.find({ user: user._id });
       let currentStreak = 0;
-      if (completedLogs.length > 0) {
-        const uniqueDates = [...new Set(completedLogs.map(log => {
-          const d = new Date(log.date);
-          return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`;
-        }))];
+      
+      const taskCountByDate = {};
+      completedLogs.forEach(log => {
+        const targetDate = new Date(log.date);
+        const createdDate = new Date(log.createdAt);
+        const diffHours = (createdDate - targetDate) / (1000 * 60 * 60);
 
-        uniqueDates.sort((a, b) => new Date(b) - new Date(a));
+        if (diffHours <= 36) {
+          const dateStr = targetDate.toISOString().split('T')[0];
+          taskCountByDate[dateStr] = (taskCountByDate[dateStr] || 0) + 1;
+        }
+      });
+
+      const sheetProblems = await SheetProblem.find({ 
+        user: user._id, 
+        status: 'solved',
+        code: { $exists: true, $ne: '' },
+        notes: { $exists: true, $ne: '' }
+      }).select('lastAttemptedAt updatedAt');
+
+      const problemDates = new Set();
+      sheetProblems.forEach(p => {
+        const d = new Date(p.lastAttemptedAt || p.updatedAt);
+        const dateStr = d.toISOString().split('T')[0];
+        problemDates.add(dateStr);
+      });
+
+      const validDates = new Set();
+      
+      Object.keys(taskCountByDate).forEach(dateStr => {
+        if (taskCountByDate[dateStr] >= 2) validDates.add(dateStr);
+      });
+
+      problemDates.forEach(dateStr => validDates.add(dateStr));
+
+      const sortedDates = Array.from(validDates).sort((a, b) => new Date(b) - new Date(a));
+
+      if (sortedDates.length > 0) {
         const today = new Date();
-        const todayStr = `${today.getUTCFullYear()}-${String(today.getUTCMonth() + 1).padStart(2, '0')}-${String(today.getUTCDate()).padStart(2, '0')}`;
+        const todayStr = today.toISOString().split('T')[0];
         const yesterday = new Date(today);
-        yesterday.setUTCDate(yesterday.getUTCDate() - 1);
-        const yesterdayStr = `${yesterday.getUTCFullYear()}-${String(yesterday.getUTCMonth() + 1).padStart(2, '0')}-${String(yesterday.getUTCDate()).padStart(2, '0')}`;
+        yesterday.setDate(yesterday.getDate() - 1);
+        const yesterdayStr = yesterday.toISOString().split('T')[0];
+        const tomorrow = new Date(today);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        const tomorrowStr = tomorrow.toISOString().split('T')[0];
 
-        if (uniqueDates[0] === todayStr || uniqueDates[0] === yesterdayStr) {
-          let currentDate = new Date(uniqueDates[0]);
-          let consecutiveDays = [uniqueDates[0]];
+        let startIndex = sortedDates.findIndex(date => date <= tomorrowStr);
 
-          for (let i = 1; i < uniqueDates.length; i++) {
-            const expectedPrev = new Date(currentDate);
-            expectedPrev.setUTCDate(expectedPrev.getUTCDate() - 1);
-            const expectedPrevStr = `${expectedPrev.getUTCFullYear()}-${String(expectedPrev.getUTCMonth() + 1).padStart(2, '0')}-${String(expectedPrev.getUTCDate()).padStart(2, '0')}`;
+        if (startIndex !== -1) {
+          const latestValidDate = sortedDates[startIndex];
 
-            if (uniqueDates[i] === expectedPrevStr) {
-              consecutiveDays.push(uniqueDates[i]);
-              currentDate = expectedPrev;
-            } else {
-              break;
+          if (latestValidDate === tomorrowStr || latestValidDate === todayStr || latestValidDate === yesterdayStr) {
+            currentStreak = 1;
+            let currentDateStr = latestValidDate;
+
+            for (let i = startIndex + 1; i < sortedDates.length; i++) {
+              const expectedPrev = new Date(currentDateStr);
+              expectedPrev.setDate(expectedPrev.getDate() - 1);
+              const expectedPrevStr = expectedPrev.toISOString().split('T')[0];
+
+              if (sortedDates[i] === expectedPrevStr) {
+                currentStreak++;
+                currentDateStr = expectedPrevStr;
+              } else {
+                break;
+              }
             }
           }
-
-          // Streak multiplier reward
-          currentStreak = completedLogs.filter(log => {
-            const d = new Date(log.date);
-            const logDateStr = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`;
-            return consecutiveDays.includes(logDateStr);
-          }).length;
         }
       }
 

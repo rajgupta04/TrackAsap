@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Flame, Trophy, Target, RefreshCw } from 'lucide-react';
-import { useDailyLogStore } from '../../store/dailyLogStore';
+import { Flame, Trophy, Target, RefreshCw, X, Info, Sparkles } from 'lucide-react';
+import { useTaskStore } from '../../store/taskStore';
 import { useAuthStore } from '../../store/authStore';
+import StreakModal from './StreakModal';
 
 const pageTitles = {
   '/dashboard': 'Dashboard',
@@ -18,9 +19,20 @@ const pageTitles = {
 const Header = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { streak, fetchStreak } = useDailyLogStore();
+  const { streak, fetchStreak } = useTaskStore();
   const { user } = useAuthStore();
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [showStreakModal, setShowStreakModal] = useState(false);
+
+  const quotes = [
+    "Consistency is key, boss! Roz 2 task or 1 solid problem solve karo!",
+    "Streak todna paap hai! Keep grinding!",
+    "Aag laga denge! Maintain the streak!",
+    "Rukna nahi hai! Keep rocking!",
+    "Roz thoda thoda! Drop by drop makes an ocean!",
+  ];
+
+  const randomQuote = quotes[Math.floor(Math.random() * quotes.length)];
 
   // Fetch streak on mount and when location changes (user might have saved a log)
   useEffect(() => {
@@ -87,14 +99,13 @@ const Header = () => {
 
           {/* Current Streak - clickable to refresh */}
           <button
-            onClick={handleRefreshStats}
+            onClick={() => setShowStreakModal(true)}
             className="flex items-center gap-3 px-4 py-2 rounded-xl bg-dark-800/50 border border-dark-700/50 hover:bg-dark-700/50 hover:border-dark-600/50 transition-all cursor-pointer group"
           >
             <Flame size={18} className={`text-orange-500 ${isRefreshing ? 'animate-pulse' : ''}`} />
             <div className="text-left">
               <p className="text-xs text-dark-400 flex items-center gap-1">
                 Streak
-                <RefreshCw size={10} className={`opacity-0 group-hover:opacity-100 transition-opacity ${isRefreshing ? 'animate-spin opacity-100' : ''}`} />
               </p>
               <p className="text-sm font-semibold text-white">
                 {streak?.currentStreak || 0} days
@@ -128,8 +139,8 @@ const Header = () => {
             <span className="text-xs sm:text-sm font-semibold text-white">{progress}%</span>
           </button>
           <button
-            onClick={handleRefreshStats}
-            title="Refresh Streak"
+            onClick={() => setShowStreakModal(true)}
+            title="View Streak Info"
             className="flex items-center gap-1 px-2 py-1 sm:px-3 sm:py-1.5 rounded-lg bg-dark-800/80 border border-dark-700/50 hover:bg-dark-700/50 transition-all"
           >
             <Flame size={14} className={`text-orange-500 ${isRefreshing ? 'animate-pulse' : ''}`} />
@@ -137,6 +148,14 @@ const Header = () => {
           </button>
         </div>
       </div>
+
+      <StreakModal
+        isOpen={showStreakModal}
+        onClose={() => setShowStreakModal(false)}
+        streak={streak}
+        onRefresh={handleRefreshStats}
+        isRefreshing={isRefreshing}
+      />
     </header>
   );
 };
