@@ -270,7 +270,10 @@ export const searchGlobalProblems = async (req, res) => {
     const { q, limit = 10 } = req.query;
     if (!q) return res.json({ problems: [] });
 
-    const regex = new RegExp(q, 'i');
+    // Handle spaces/hyphens (e.g. "3 sum" vs "3sum")
+    const chars = q.replace(/[\s\W]+/g, '').split('');
+    const regexPattern = chars.join('[\\s\\W]*');
+    const regex = new RegExp(regexPattern, 'i');
 
     const [problems, sheetProblems, bucketProblems] = await Promise.all([
       Problem.find({ user: req.user._id, $or: [{ title: regex }, { link: regex }] })
@@ -293,15 +296,15 @@ export const searchGlobalProblems = async (req, res) => {
       ])
     ]);
 
-    // Normalize and merge unique problems by link OR title (case insensitive)
+    // Normalize and merge unique problems by link OR title (case insensitive, ignoring spaces/hyphens)
     const uniqueMap = new Map();
     const uniqueTitleMap = new Set();
     
     const addProblem = (p) => {
       const link = p.link || p.problemLink;
-      const titleLower = p.title?.toLowerCase() || '';
+      const titleLower = p.title?.replace(/[\s\W]+/g, '').toLowerCase() || '';
 
-      if ((link && uniqueMap.has(link)) || uniqueTitleMap.has(titleLower)) {
+      if ((link && uniqueMap.has(link)) || (titleLower && uniqueTitleMap.has(titleLower))) {
         return null; // Skip duplicate
       }
       
