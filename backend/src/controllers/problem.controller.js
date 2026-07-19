@@ -263,63 +263,8 @@ export const getProblemStats = async (req, res) => {
   }
 };
 
-// @desc    Search all problems (Problem and SheetProblem) globally
-// @route   GET /api/problems/search-global
-// @access  Private
-export const searchGlobalProblems = async (req, res) => {
-  try {
-    const { q, limit = 10 } = req.query;
-    if (!q) return res.json({ problems: [] });
 
-    const regex = new RegExp(q, 'i');
-
-    const [problems, sheetProblems] = await Promise.all([
-      Problem.find({ user: req.user._id, $or: [{ title: regex }, { link: regex }] })
-        .limit(parseInt(limit))
-        .lean(),
-      SheetProblem.find({ user: req.user._id, $or: [{ title: regex }, { problemLink: regex }] })
-        .limit(parseInt(limit))
-        .lean()
-    ]);
-
-    // Normalize and merge unique problems by link
-    const uniqueMap = new Map();
-    
-    problems.forEach(p => {
-      if (p.link) {
-        uniqueMap.set(p.link, {
-          _id: p._id,
-          title: p.title,
-          link: p.link,
-          difficulty: p.difficulty,
-          platform: p.platform,
-          tags: p.tags,
-          sourceModel: 'Problem'
-        });
-      }
-    });
-
-    sheetProblems.forEach(sp => {
-      if (sp.problemLink && !uniqueMap.has(sp.problemLink)) {
-        uniqueMap.set(sp.problemLink, {
-          _id: sp._id,
-          title: sp.title,
-          link: sp.problemLink,
-          difficulty: sp.difficulty,
-          platform: sp.platform,
-          tags: sp.tags,
-          sourceModel: 'SheetProblem'
-        });
-      }
-    });
-
-    res.json({ problems: Array.from(uniqueMap.values()).slice(0, parseInt(limit)) });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
-
-// @desc    Search all problems (Problem and SheetProblem) globally
+// @desc    Search all problems (Problem, SheetProblem, SheetBucket) globally
 // @route   GET /api/problems/search-global
 // @access  Private
 export const searchGlobalProblems = async (req, res) => {
@@ -350,53 +295,55 @@ export const searchGlobalProblems = async (req, res) => {
       ])
     ]);
 
-    // Normalize and merge unique problems by link
+    // Normalize and merge unique problems by link OR title (case insensitive)
     const uniqueMap = new Map();
+    const uniqueTitleMap = new Set();
     
-    problems.forEach(p => {
-      if (p.link) {
-        uniqueMap.set(p.link, {
-          _id: p._id,
-          title: p.title,
-          link: p.link,
-          difficulty: p.difficulty,
-          platform: p.platform,
-          tags: p.tags,
-          sourceModel: 'Problem'
-        });
+    const addProblem = (p) => {
+      const link = p.link || p.problemLink;
+      const titleLower = p.title?.toLowerCase() || '';
+
+      if ((link && uniqueMap.has(link)) || uniqueTitleMap.has(titleLower)) {
+        return null; // Skip duplicate
       }
+      
+      const normalizedProblem = {
+        _id: p._id || p.title,
+        title: p.title,
+        link: link || '',
+        difficulty: p.difficulty,
+        platform: p.platform,
+        tags: p.tags,
+        sourceModel: p.sourceModel
+      };
+
+      if (link) uniqueMap.set(link, normalizedProblem);
+      if (titleLower) uniqueTitleMap.add(titleLower);
+
+      return normalizedProblem;
+    };
+
+    const finalProblems = [];
+
+    problems.forEach(p => {
+      p.sourceModel = 'Problem';
+      const added = addProblem(p);
+      if (added) finalProblems.push(added);
     });
 
     sheetProblems.forEach(sp => {
-      if (sp.problemLink && !uniqueMap.has(sp.problemLink)) {
-        uniqueMap.set(sp.problemLink, {
-          _id: sp._id,
-          title: sp.title,
-          link: sp.problemLink,
-          difficulty: sp.difficulty,
-          platform: sp.platform,
-          tags: sp.tags,
-          sourceModel: 'SheetProblem'
-        });
-      }
+      sp.sourceModel = 'SheetProblem';
+      const added = addProblem(sp);
+      if (added) finalProblems.push(added);
     });
 
     bucketProblems.forEach(bp => {
-      const p = bp.problems;
-      if (p.problemLink && !uniqueMap.has(p.problemLink)) {
-        uniqueMap.set(p.problemLink, {
-          _id: p._id || p.title,
-          title: p.title,
-          link: p.problemLink,
-          difficulty: p.difficulty,
-          platform: p.platform,
-          tags: p.tags,
-          sourceModel: 'SheetBucket'
-        });
-      }
+      bp.problems.sourceModel = 'SheetBucket';
+      const added = addProblem(bp.problems);
+      if (added) finalProblems.push(added);
     });
 
-    res.json({ problems: Array.from(uniqueMap.values()).slice(0, parseInt(limit)) });
+    res.json({ problems: finalProblems.slice(0, parseInt(limit)) });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
