@@ -1,5 +1,6 @@
 import Problem from '../models/Problem.model.js';
-
+import SheetProblem from '../models/SheetProblem.model.js';
+import SheetProblem from '../models/SheetProblem.model.js';
 import Sheet from '../models/Sheet.model.js';
 
 // @desc    Create a new problem
@@ -255,6 +256,62 @@ export const getProblemStats = async (req, res) => {
       ...stats[0],
       tagDistribution: tagStats,
     });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Search all problems (Problem and SheetProblem) globally
+// @route   GET /api/problems/search-global
+// @access  Private
+export const searchGlobalProblems = async (req, res) => {
+  try {
+    const { q, limit = 10 } = req.query;
+    if (!q) return res.json({ problems: [] });
+
+    const regex = new RegExp(q, 'i');
+
+    const [problems, sheetProblems] = await Promise.all([
+      Problem.find({ user: req.user._id, $or: [{ title: regex }, { link: regex }] })
+        .limit(parseInt(limit))
+        .lean(),
+      SheetProblem.find({ user: req.user._id, $or: [{ title: regex }, { problemLink: regex }] })
+        .limit(parseInt(limit))
+        .lean()
+    ]);
+
+    // Normalize and merge unique problems by link
+    const uniqueMap = new Map();
+    
+    problems.forEach(p => {
+      if (p.link) {
+        uniqueMap.set(p.link, {
+          _id: p._id,
+          title: p.title,
+          link: p.link,
+          difficulty: p.difficulty,
+          platform: p.platform,
+          tags: p.tags,
+          sourceModel: 'Problem'
+        });
+      }
+    });
+
+    sheetProblems.forEach(sp => {
+      if (sp.problemLink && !uniqueMap.has(sp.problemLink)) {
+        uniqueMap.set(sp.problemLink, {
+          _id: sp._id,
+          title: sp.title,
+          link: sp.problemLink,
+          difficulty: sp.difficulty,
+          platform: sp.platform,
+          tags: sp.tags,
+          sourceModel: 'SheetProblem'
+        });
+      }
+    });
+
+    res.json({ problems: Array.from(uniqueMap.values()).slice(0, parseInt(limit)) });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

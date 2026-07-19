@@ -8,6 +8,7 @@ import {
   deleteProblem,
   getProblemsByDate,
   getProblemStats,
+  searchGlobalProblems,
 } from '../controllers/problem.controller.js';
 
 const router = express.Router();
@@ -19,6 +20,7 @@ router.route('/')
   .post(createProblem);
 
 router.get('/stats', getProblemStats);
+router.get('/search-global', searchGlobalProblems);
 router.get('/by-date/:date', getProblemsByDate);
 
 router.route('/:id')
