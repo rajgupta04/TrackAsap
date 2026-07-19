@@ -1,5 +1,7 @@
 import User from '../models/User.model.js';
 import DiscussionPost from '../models/DiscussionPost.model.js';
+import Sheet from '../models/Sheet.model.js';
+import SheetProblem from '../models/SheetProblem.model.js';
 
 // @desc    Get all users (admin only)
 // @route   GET /api/admin/users
@@ -125,6 +127,35 @@ export const getAdminStats = async (req, res) => {
     });
   } catch (error) {
     console.error('Admin stats error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// @desc    Get detailed user info including progress and code
+// @route   GET /api/admin/users/:id/details
+// @access  Private/Admin
+export const getUserDetails = async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id).select('-password');
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Fetch user's sheets
+    const sheets = await Sheet.find({ user: user._id });
+
+    // Fetch all problems solved by user
+    const solvedProblems = await SheetProblem.find({ user: user._id, status: 'solved' })
+      .populate('sheet', 'name')
+      .sort({ updatedAt: -1 });
+
+    res.json({
+      user,
+      sheets,
+      solvedProblems,
+    });
+  } catch (error) {
+    console.error('Admin get user details error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 };

@@ -18,6 +18,9 @@ import adminRoutes from './routes/admin.routes.js';
 import extensionRoutes from './routes/extension.routes.js';
 import aiRoutes from './routes/ai.routes.js';
 import { initLeaderboardCron } from './cron/leaderboard.cron.js';
+import { requestLogger } from './analytics/middlewares/requestLogger.js';
+import { startAnalyticsCronJobs } from './analytics/cron/aggregateDaily.js';
+import systemAnalyticsRoutes from './analytics/admin/analytics.routes.js';
 import { errorHandler, notFound } from './middleware/error.middleware.js';
 
 dotenv.config();
@@ -30,6 +33,7 @@ connectDB();
 
 // Initialize Cron Jobs
 initLeaderboardCron();
+startAnalyticsCronJobs();
 
 // Middleware
 app.use(cors({
@@ -44,6 +48,9 @@ app.use(cors({
   credentials: true,
 }));
 app.use(express.json());
+
+// System Request Logging Middleware
+app.use(requestLogger);
 
 // Routes
 app.use('/api/auth', authRoutes);
@@ -61,6 +68,9 @@ app.use('/api/discussions', discussionRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/extension', extensionRoutes);
 app.use('/api/ai', aiRoutes);
+
+// System Analytics (Admin only)
+app.use('/api/system-analytics', systemAnalyticsRoutes);
 
 // Root route
 app.get('/', (req, res) => {

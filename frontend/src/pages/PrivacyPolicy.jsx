@@ -43,8 +43,9 @@ export default function PrivacyPolicy() {
             <ul className="list-disc list-inside space-y-2 text-gray-400">
               <li><strong className="text-gray-200">Account Information:</strong> Name, email address, and profile photo collected via Google Sign-In.</li>
               <li><strong className="text-gray-200">Usage Data:</strong> Daily tasks, DSA sheet progress, physique metrics, and discussion posts you create within the app.</li>
+              <li><strong className="text-gray-200">Behavioral & Analytics Data:</strong> Session duration, pages visited, feature usage, and specific actions (e.g., completing a problem) to help us understand user behavior.</li>
               <li><strong className="text-gray-200">Platform Handles:</strong> Competitive programming usernames (LeetCode, Codeforces, etc.) that you optionally provide for stats tracking.</li>
-              <li><strong className="text-gray-200">Device Information:</strong> Basic device data for crash reporting and performance monitoring.</li>
+              <li><strong className="text-gray-200">Technical & Device Information:</strong> Basic device data, browser type, operating system, approximate location (city/country), and masked IP addresses for crash reporting, performance monitoring, and security.</li>
             </ul>
           </section>
 
@@ -52,9 +53,11 @@ export default function PrivacyPolicy() {
             <h2 className="text-xl font-semibold text-white mb-3">3. How We Use Your Information</h2>
             <ul className="list-disc list-inside space-y-2 text-gray-400">
               <li>To provide and improve TrackAsap's core features (task tracking, analytics, sheets).</li>
-              <li>To authenticate your identity securely via Google OAuth.</li>
+              <li>To authenticate your identity securely via Google OAuth and protect against unauthorized access.</li>
               <li>To display your progress statistics and personalized dashboard.</li>
-              <li>To send important account-related notifications (no marketing spam).</li>
+              <li>To provide personalized AI coaching, smart recommendations, and weekly reports based on your study habits.</li>
+              <li>To send important account-related notifications, revision reminders, and milestone alerts (you can opt out of non-essential emails).</li>
+              <li>To monitor system performance, fix bugs, and optimize the platform.</li>
             </ul>
           </section>
 
@@ -71,18 +74,22 @@ export default function PrivacyPolicy() {
           </section>
 
           <section>
-            <h2 className="text-xl font-semibold text-white mb-3">5. Data Storage & Security</h2>
+            <h2 className="text-xl font-semibold text-white mb-3">5. Data Storage, Retention & Security</h2>
             <p className="text-gray-400">
               Your data is stored securely on our servers. We implement industry-standard security measures
               including encrypted connections (HTTPS), secure authentication tokens, and access controls.
-              However, no method of transmission over the internet is 100% secure.
             </p>
+            <ul className="list-disc list-inside space-y-2 text-gray-400 mt-3">
+              <li><strong className="text-gray-200">Temporary Request Logs:</strong> Standard API request logs (for debugging and performance monitoring) are strictly temporary and are automatically permanently deleted after 7 days using automated database rules.</li>
+              <li><strong className="text-gray-200">Permanent Event Logs:</strong> High-value business events (like completing a goal or problem) and critical security logs (like failed login attempts) are kept permanently to power your analytics.</li>
+            </ul>
           </section>
 
           <section>
             <h2 className="text-xl font-semibold text-white mb-3">6. Your Rights</h2>
             <ul className="list-disc list-inside space-y-2 text-gray-400">
               <li><strong className="text-gray-200">Access:</strong> You can view all your data within the app at any time.</li>
+              <li><strong className="text-gray-200">Opt-Out:</strong> You can explicitly opt out of behavioral analytics, marketing emails, weekly reports, and AI recommendations at any time via your Profile Settings.</li>
               <li><strong className="text-gray-200">Delete:</strong> You can request deletion of your account and all associated data by contacting us.</li>
               <li><strong className="text-gray-200">Correction:</strong> You can update your profile information from the app settings.</li>
             </ul>
