@@ -71,7 +71,7 @@ export const createProblem = async (req, res) => {
 // @access  Private
 export const getProblems = async (req, res) => {
   try {
-    const { platform, difficulty, status, sheet, tag, limit = 50, page = 1 } = req.query;
+    const { platform, difficulty, status, sheet, tag, search, limit = 50, page = 1 } = req.query;
 
     const query = { user: req.user._id };
 
@@ -80,6 +80,13 @@ export const getProblems = async (req, res) => {
     if (status) query.status = status;
     if (sheet) query.sheet = sheet;
     if (tag) query.tags = { $in: [tag] };
+
+    if (search) {
+      query.$or = [
+        { title: { $regex: search, $options: 'i' } },
+        { link: { $regex: search, $options: 'i' } }
+      ];
+    }
 
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
