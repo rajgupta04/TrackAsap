@@ -70,7 +70,11 @@ const StreakModal = ({ isOpen, onClose, streak, onRefresh, isRefreshing }) => {
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 sm:p-6" style={{ perspective: 1200 }}>
+        <motion.div 
+          key="streak-modal-container"
+          className="fixed inset-0 z-[110] flex items-center justify-center p-4 sm:p-6" 
+          style={{ perspective: 1200 }}
+        >
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -275,7 +279,7 @@ const StreakModal = ({ isOpen, onClose, streak, onRefresh, isRefreshing }) => {
             </div>
           </div>
           </motion.div>
-        </div>
+        </motion.div>
       )}
     </AnimatePresence>
   );

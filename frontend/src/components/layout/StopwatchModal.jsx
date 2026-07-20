@@ -4,7 +4,8 @@ import { Minus, Maximize2, X, Play, Pause, RotateCcw, Clock, Timer, Settings2 } 
 import { useTimerStore } from '../../store/timerStore';
 
 const AnalogClock = ({ timeMs, mode }) => {
-  const totalSeconds = Math.floor(timeMs / 1000);
+  const safeTimeMs = Number.isNaN(timeMs) || timeMs === undefined ? 0 : timeMs;
+  const totalSeconds = Math.floor(safeTimeMs / 1000);
   const minutes = Math.floor(totalSeconds / 60);
   const seconds = totalSeconds % 60;
   
@@ -157,7 +158,11 @@ const StopwatchModal = ({ isOpen, onClose }) => {
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 sm:p-6" style={{ perspective: 1200 }}>
+        <motion.div 
+          key="stopwatch-modal-container"
+          className="fixed inset-0 z-[110] flex items-center justify-center p-4 sm:p-6" 
+          style={{ perspective: 1200 }}
+        >
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -406,7 +411,7 @@ const StopwatchModal = ({ isOpen, onClose }) => {
               </div>
             </div>
           </motion.div>
-        </div>
+        </motion.div>
       )}
     </AnimatePresence>
   );

@@ -52,15 +52,15 @@ export const useTimerStore = create(
       // Helper to calculate current active time in ms
       getCurrentTimeMs: () => {
         const state = get();
-        let total = state.accumulatedTime;
+        let total = state.accumulatedTime || 0;
         if (state.isRunning && state.startTime) {
           total += (Date.now() - state.startTime);
         }
         
         if (state.mode === 'timer') {
-          return Math.max(0, state.duration - total);
+          return Math.max(0, (state.duration || 25 * 60 * 1000) - total);
         }
-        return total;
+        return total || 0;
       }
     }),
     {
