@@ -128,8 +128,13 @@ const Profile = () => {
     (codeforcesStats?.contestsParticipated || 0) + 
     (leetcodeStats?.contestsParticipated || 0); 
     
-  const lcRating = leetcodeStats?.ratingHistory?.[leetcodeStats.ratingHistory.length - 1]?.rating || 0;
-  const cfRating = codeforcesStats?.ratingHistory?.[codeforcesStats.ratingHistory.length - 1]?.rating || 0;
+  const lcRating = leetcodeStats?.ratingHistory?.length > 0 
+    ? Math.max(...leetcodeStats.ratingHistory.map(r => r.rating || 0)) 
+    : 0;
+    
+  const cfRating = codeforcesStats?.ratingHistory?.length > 0
+    ? Math.max(...codeforcesStats.ratingHistory.map(r => r.rating || 0))
+    : 0;
   let highestRating = 0;
   let highestPlatform = 'N/A';
   if (cfRating >= lcRating && cfRating > 0) {
