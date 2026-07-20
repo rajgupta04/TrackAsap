@@ -14,73 +14,26 @@ import {
 } from 'lucide-react';
 import GlassCard from './ui/GlassCard';
 import LeetCodeHeatmap from './LeetCodeHeatmap';
-import { getLeetCodeStats, getCodeforcesStats } from '../services/platformStatsService';
 import { useAuthStore } from '../store/authStore';
+import { useAnalyticsStore } from '../store/analyticsStore';
 
 const PlatformStats = () => {
   const { user } = useAuthStore();
   const navigate = useNavigate();
-  const [leetcodeStats, setLeetcodeStats] = useState(null);
-  const [codeforcesStats, setCodeforcesStats] = useState(null);
-  const [loading, setLoading] = useState({
-    leetcode: false,
-    codeforces: false,
-  });
-  const [errors, setErrors] = useState({
-    leetcode: null,
-    codeforces: null,
-  });
-
-  const fetchLeetCodeStats = async () => {
-    if (!user?.leetcodeHandle) return;
-
-    setLoading((prev) => ({ ...prev, leetcode: true }));
-    setErrors((prev) => ({ ...prev, leetcode: null }));
-
-    try {
-      const data = await getLeetCodeStats(user.leetcodeHandle);
-      if (data.success) {
-        setLeetcodeStats(data.data);
-      } else {
-        setErrors((prev) => ({ ...prev, leetcode: data.error }));
-      }
-    } catch (error) {
-      setErrors((prev) => ({
-        ...prev,
-        leetcode: 'Failed to fetch LeetCode stats',
-      }));
-    } finally {
-      setLoading((prev) => ({ ...prev, leetcode: false }));
-    }
-  };
-
-  const fetchCodeforcesStats = async () => {
-    if (!user?.codeforcesHandle) return;
-
-    setLoading((prev) => ({ ...prev, codeforces: true }));
-    setErrors((prev) => ({ ...prev, codeforces: null }));
-
-    try {
-      const data = await getCodeforcesStats(user.codeforcesHandle);
-      if (data.success) {
-        setCodeforcesStats(data.data);
-      } else {
-        setErrors((prev) => ({ ...prev, codeforces: data.error }));
-      }
-    } catch (error) {
-      setErrors((prev) => ({
-        ...prev,
-        codeforces: 'Failed to fetch Codeforces stats',
-      }));
-    } finally {
-      setLoading((prev) => ({ ...prev, codeforces: false }));
-    }
-  };
+  
+  const {
+    leetcodeStats,
+    codeforcesStats,
+    isPlatformLoading,
+    platformErrors,
+    fetchLeetCodeStats,
+    fetchCodeforcesStats,
+  } = useAnalyticsStore();
 
   useEffect(() => {
-    fetchLeetCodeStats();
-    fetchCodeforcesStats();
-  }, [user?.leetcodeHandle, user?.codeforcesHandle]);
+    fetchLeetCodeStats(user?.leetcodeHandle);
+    fetchCodeforcesStats(user?.codeforcesHandle);
+  }, [user?.leetcodeHandle, user?.codeforcesHandle, fetchLeetCodeStats, fetchCodeforcesStats]);
 
   const hasAnyHandle = user?.leetcodeHandle || user?.codeforcesHandle || user?.codechefHandle;
 
@@ -145,13 +98,13 @@ const PlatformStats = () => {
                 </div>
                 <div className="flex items-center gap-2">
                   <button
-                    onClick={fetchLeetCodeStats}
-                    disabled={loading.leetcode}
+                    onClick={() => fetchLeetCodeStats(user?.leetcodeHandle)}
+                    disabled={isPlatformLoading.leetcode}
                     className="p-2 hover:bg-dark-700/50 rounded-lg transition-colors"
                   >
                     <RefreshCw
                       className={`w-4 h-4 text-dark-400 ${
-                        loading.leetcode ? 'animate-spin' : ''
+                        isPlatformLoading.leetcode ? 'animate-spin' : ''
                       }`}
                     />
                   </button>
@@ -166,14 +119,14 @@ const PlatformStats = () => {
                 </div>
               </div>
 
-              {loading.leetcode && !leetcodeStats ? (
+              {isPlatformLoading.leetcode && !leetcodeStats ? (
                 <div className="flex items-center justify-center py-8">
                   <RefreshCw className="w-6 h-6 text-[#FFA116] animate-spin" />
                 </div>
-              ) : errors.leetcode ? (
+              ) : platformErrors.leetcode ? (
                 <div className="flex items-center gap-2 text-red-400 text-sm py-4">
                   <AlertCircle className="w-4 h-4" />
-                  {errors.leetcode}
+                  {platformErrors.leetcode}
                 </div>
               ) : leetcodeStats ? (
                 <div className="space-y-4">
@@ -276,13 +229,13 @@ const PlatformStats = () => {
                 </div>
                 <div className="flex items-center gap-2">
                   <button
-                    onClick={fetchCodeforcesStats}
-                    disabled={loading.codeforces}
+                    onClick={() => fetchCodeforcesStats(user?.codeforcesHandle)}
+                    disabled={isPlatformLoading.codeforces}
                     className="p-2 hover:bg-dark-700/50 rounded-lg transition-colors"
                   >
                     <RefreshCw
                       className={`w-4 h-4 text-dark-400 ${
-                        loading.codeforces ? 'animate-spin' : ''
+                        isPlatformLoading.codeforces ? 'animate-spin' : ''
                       }`}
                     />
                   </button>
@@ -297,14 +250,14 @@ const PlatformStats = () => {
                 </div>
               </div>
 
-              {loading.codeforces && !codeforcesStats ? (
+              {isPlatformLoading.codeforces && !codeforcesStats ? (
                 <div className="flex items-center justify-center py-8">
-                  <RefreshCw className="w-6 h-6 text-[#1F8ACB] animate-spin" />
+                  <RefreshCw className="w-6 h-6 text-blue-500 animate-spin" />
                 </div>
-              ) : errors.codeforces ? (
+              ) : platformErrors.codeforces ? (
                 <div className="flex items-center gap-2 text-red-400 text-sm py-4">
                   <AlertCircle className="w-4 h-4" />
-                  {errors.codeforces}
+                  {platformErrors.codeforces}
                 </div>
               ) : codeforcesStats ? (
                 <div className="space-y-4">

@@ -32,6 +32,9 @@ const Dashboard = () => {
     dashboard,
     problemsTrend,
     weightProgress,
+    leetcodeStats,
+    codeforcesStats,
+    codechefStats,
     isLoading,
     fetchDashboard,
     fetchProblemsTrend,
@@ -55,10 +58,23 @@ const Dashboard = () => {
   }
 
   const { totals, weeklyCompletion, dietCompliance, gymCompliance } = dashboard;
+  
+  // Dynamically calculate aggregate platform totals
+  const aggregateTotalProblems = 
+    (totals?.totalProblems || 0) + 
+    (leetcodeStats?.totalSolved || 0) + 
+    (codeforcesStats?.problemsSolved || 0) + 
+    (codechefStats?.totalSolved || 0);
+
+  const aggregateContests = 
+    (totals?.contestsParticipated || 0) + 
+    (codeforcesStats?.contestsParticipated || 0) + 
+    (leetcodeStats?.contestsParticipated || 0); // Leetcode API doesn't currently return contests but added for future proofing
+
   const hasProblemsTrend = (problemsTrend || []).length > 0;
   const hasWeightHistory = (weightProgress || []).length > 0;
   const hasPlatformHistory =
-    (totals?.totalProblems || 0) > 0 ||
+    aggregateTotalProblems > 0 ||
     (totals?.leetcodeProblems || 0) > 0 ||
     (totals?.codechefProblems || 0) > 0 ||
     (totals?.codeforcesProblems || 0) > 0;
@@ -75,7 +91,7 @@ const Dashboard = () => {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
           title="Total Problems"
-          value={totals?.totalProblems || 0}
+          value={aggregateTotalProblems}
           subtitle="Across all platforms"
           icon={Code2}
           iconColor="text-neon-green"
@@ -83,7 +99,7 @@ const Dashboard = () => {
         />
         <StatCard
           title="Contests"
-          value={totals?.contestsParticipated || 0}
+          value={aggregateContests}
           subtitle="Participated"
           icon={Trophy}
           iconColor="text-yellow-500"

@@ -1,5 +1,8 @@
 import User from '../models/User.model.js';
 import PhysiqueLog from '../models/PhysiqueLog.model.js';
+import Problem from '../models/Problem.model.js';
+import SheetProblem from '../models/SheetProblem.model.js';
+import TaskLog from '../models/TaskLog.model.js';
 // DailyLog was removed for the Custom Task tracker update
 
 export const getDashboardData = async (req, res) => {
@@ -7,15 +10,32 @@ export const getDashboardData = async (req, res) => {
     const user = await User.findById(req.user._id);
     const physiqueLogs = await PhysiqueLog.find({ user: req.user._id }).sort({ date: 1 });
 
+    // Calculate local problems solved
+    const localProblemsCount = await Problem.countDocuments({ user: req.user._id });
+    const sheetProblemsCount = await SheetProblem.countDocuments({ user: req.user._id, status: 'Solved' });
+    const totalLocalProblems = localProblemsCount + sheetProblemsCount;
+
+    // Calculate weekly completion (active days out of last 7 days)
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    
+    // Find distinct dates in the last 7 days where the user completed at least one task
+    const activeDays = await TaskLog.distinct('date', {
+      user: req.user._id,
+      completed: true,
+      date: { $gte: sevenDaysAgo }
+    });
+    const weeklyCompletion = Math.round((activeDays.length / 7) * 100);
+
     const totals = {
       leetcodeProblems: 0,
       codechefProblems: 0,
       codeforcesProblems: 0,
-      totalProblems: 0,
+      totalProblems: totalLocalProblems,
       contestsParticipated: 0,
       gymDays: 0,
       cleanDietDays: 0,
-      daysLogged: 0,
+      daysLogged: activeDays.length,
     };
 
     const startDate = new Date(user.startDate);
@@ -39,7 +59,7 @@ export const getDashboardData = async (req, res) => {
         daysRemaining: Math.max(0, 75 - currentDay),
       },
       totals,
-      weeklyCompletion: 0,
+      weeklyCompletion,
       dietCompliance: 0,
       gymCompliance: 0,
       weightProgress,
