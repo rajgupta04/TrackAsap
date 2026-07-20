@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import html2canvas from 'html2canvas';
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -26,11 +27,20 @@ import {
   Copy,
   Check,
   Camera,
+  Share2,
+  Star,
+  Trophy,
 } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
+import { useAnalyticsStore } from '../store/analyticsStore';
+import { useTaskStore } from '../store/taskStore';
+import useSheetStore from '../store/sheetStore';
+import { useLeaderboardStore } from '../store/leaderboardStore';
 import githubService from '../services/githubService';
 import GlassCard from '../components/ui/GlassCard';
 import NumberInput from '../components/ui/NumberInput';
+import ElectricBorder from '../components/ui/ElectricBorder';
+import ProfileShareCard from '../components/ui/ProfileShareCard';
 
 const TRACKEX_DOWNLOAD_URL = '/track-ex.zip';
 
@@ -64,6 +74,11 @@ const SETUP_STEPS = [
 
 const Profile = () => {
   const { user, updateUser, isLoading, githubStatus, fetchGitHubStatus, setGitHubStatus, uploadProfilePicture } = useAuthStore();
+  const { leetcodeStats, codeforcesStats, codechefStats, dashboard } = useAnalyticsStore();
+  const { streak } = useTaskStore();
+  const { sheets, fetchSheets } = useSheetStore();
+  const { currentUserRanks, fetchCurrentUserRank } = useLeaderboardStore();
+
   const [syncing, setSyncing] = useState(false);
   const [connectingGithub, setConnectingGithub] = useState(false);
   const [showTrackExGuide, setShowTrackExGuide] = useState(false);
@@ -95,6 +110,8 @@ const Profile = () => {
 
   // Handle hash scrolling
   useEffect(() => {
+    fetchSheets(true);
+    fetchCurrentUserRank();
     if (window.location.hash) {
       const id = window.location.hash.replace('#', '');
       const element = document.getElementById(id);
@@ -106,7 +123,35 @@ const Profile = () => {
         }, 100);
       }
     }
-  }, []);
+  }, [fetchSheets, fetchCurrentUserRank]);
+
+  // Compute stats for the ElectricBorder card
+  const totalSolved = (dashboard?.totalProblems || 0) + (leetcodeStats?.totalSolved || 0) + (codeforcesStats?.problemsSolved || 0) + (codechefStats?.totalSolved || 0);
+  
+  const aggregateContests = 
+    (dashboard?.contestsParticipated || 0) + 
+    (codeforcesStats?.contestsParticipated || 0) + 
+    (leetcodeStats?.contestsParticipated || 0); 
+    
+  const lcRating = leetcodeStats?.ratingHistory?.length > 0 
+    ? Math.max(...leetcodeStats.ratingHistory.map(r => r.newRating || r.rating || 0)) 
+    : 0;
+    
+  const cfRating = codeforcesStats?.ratingHistory?.length > 0
+    ? Math.max(...codeforcesStats.ratingHistory.map(r => r.newRating || r.rating || 0))
+    : 0;
+
+  const ccRating = codechefStats?.ratingHistory?.length > 0
+    ? Math.max(...codechefStats.ratingHistory.map(r => r.newRating || r.rating || 0))
+    : (codechefStats?.highestRating || codechefStats?.rating || 0);
+
+  const platformRatings = [
+    lcRating > 0 ? { name: 'LeetCode', rating: Math.round(lcRating), color: '#FFA116' } : null,
+    cfRating > 0 ? { name: 'Codeforces', rating: Math.round(cfRating), color: '#3b82f6' } : null,
+    ccRating > 0 ? { name: 'CodeChef', rating: Math.round(ccRating), color: '#a78bfa' } : null,
+  ].filter(Boolean);
+
+  const topSheets = sheets?.length > 0 ? [...sheets].sort((a, b) => (b.completionPercentage || 0) - (a.completionPercentage || 0)).slice(0, 3) : [];
 
   // GitHub integration
   useEffect(() => {
@@ -228,8 +273,9 @@ const Profile = () => {
   );
 
   return (
-    <div className="max-w-2xl mx-auto space-y-4 md:space-y-6 px-4 py-4 md:px-6 md:py-6">
-      {/* Profile Header */}
+    <div className="max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6 px-4 py-4 md:px-6 md:py-6">
+      <div className="lg:col-span-2 space-y-4 md:space-y-6">
+        {/* Profile Header */}
       <GlassCard>
         <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6 p-2 md:p-0">
           <div className="relative group w-20 h-20 sm:w-24 sm:h-24 rounded-2xl bg-gradient-to-br from-neon-green/20 to-cyan-500/20 flex items-center justify-center border border-dark-600/50 flex-shrink-0 overflow-hidden">
@@ -606,7 +652,18 @@ const Profile = () => {
           </a>
         </div>
       </form>
+      </div>
 
+      <ProfileShareCard
+        user={user}
+        avatarSrc={avatarSrc}
+        currentUserRanks={currentUserRanks}
+        totalSolved={totalSolved}
+        streak={streak}
+        aggregateContests={aggregateContests}
+        platformRatings={platformRatings}
+        topSheets={topSheets}
+      />
 
       {/* TrackEx Setup Guide Modal */}
       <AnimatePresence>

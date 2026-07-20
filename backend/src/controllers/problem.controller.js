@@ -75,33 +75,90 @@ export const getProblems = async (req, res) => {
     const { platform, difficulty, status, sheet, tag, search, limit = 50, page = 1 } = req.query;
 
     const query = { user: req.user._id };
+    const sheetQuery = { user: req.user._id, status: 'solved' }; // only sheets solved as per requirements
 
-    if (platform) query.platform = platform;
-    if (difficulty) query.difficulty = difficulty;
-    if (status) query.status = status;
-    if (sheet) query.sheet = sheet;
-    if (tag) query.tags = { $in: [tag] };
+    if (platform) { query.platform = platform; sheetQuery.platform = platform; }
+    if (difficulty) { query.difficulty = difficulty; sheetQuery.difficulty = difficulty; }
+    if (status) { query.status = status; } // Only apply to Problem collection
+    if (sheet) { query.sheet = sheet; sheetQuery.sheet = sheet; }
+    if (tag) { query.tags = { $in: [tag] }; sheetQuery.tags = { $in: [tag] }; }
 
     if (search) {
       query.$or = [
         { title: { $regex: search, $options: 'i' } },
         { link: { $regex: search, $options: 'i' } }
       ];
+      sheetQuery.$or = [
+        { title: { $regex: search, $options: 'i' } },
+        { problemLink: { $regex: search, $options: 'i' } }
+      ];
     }
 
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
-    const [problems, total] = await Promise.all([
-      Problem.find(query)
-        .sort({ solvedAt: -1 })
-        .skip(skip)
-        .limit(parseInt(limit))
-        .populate('sheet', 'name category'),
-      Problem.countDocuments(query),
+    // Fetch both collections without pagination first to deduplicate globally
+    const [problems, sheetProblems] = await Promise.all([
+      Problem.find(query).populate('sheet', 'name category').lean(),
+      SheetProblem.find(sheetQuery).populate('sheet', 'name category').lean()
     ]);
 
+    // Normalize SheetProblems to match Problem schema shape for the frontend
+    const normalizedSheetProblems = sheetProblems.map(sp => ({
+      _id: sp._id,
+      user: sp.user,
+      title: sp.title,
+      link: sp.problemLink || sp.articleLink || '',
+      platform: sp.platform,
+      difficulty: sp.difficulty,
+      status: sp.status,
+      tags: sp.tags || [],
+      solvedAt: sp.lastAttemptedAt || sp.updatedAt,
+      sheet: sp.sheet,
+      notes: '',
+      isSheetProblem: true,
+      code: '',
+      language: '',
+    }));
+
+    const combined = [...problems, ...normalizedSheetProblems];
+
+    // Deduplicate by URL (or title if no URL)
+    const uniqueMap = new Map();
+    for (const p of combined) {
+      const key = (p.link && p.link.trim()) 
+        ? p.link.trim().toLowerCase() 
+        : p.title.trim().toLowerCase();
+      
+      if (uniqueMap.has(key)) {
+        const existing = uniqueMap.get(key);
+        const existingDate = new Date(existing.solvedAt).getTime();
+        const newDate = new Date(p.solvedAt).getTime();
+        
+        // Prefer the version that has code (TrackEx manual entry)
+        if (existing.code && !p.code) {
+          continue; // Keep existing
+        } else if (!existing.code && p.code) {
+          uniqueMap.set(key, p); // Overwrite with TrackEx entry
+        } else {
+          // If neither or both have code, keep the most recently solved one
+          if (newDate > existingDate) {
+            uniqueMap.set(key, p);
+          }
+        }
+      } else {
+        uniqueMap.set(key, p);
+      }
+    }
+
+    // Convert map back to array and sort chronologically (most recent first)
+    const uniqueProblems = Array.from(uniqueMap.values());
+    uniqueProblems.sort((a, b) => new Date(b.solvedAt) - new Date(a.solvedAt));
+
+    const total = uniqueProblems.length;
+    const paginatedProblems = uniqueProblems.slice(skip, skip + parseInt(limit));
+
     res.json({
-      problems,
+      problems: paginatedProblems,
       pagination: {
         total,
         page: parseInt(page),

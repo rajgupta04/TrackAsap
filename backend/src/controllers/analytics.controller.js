@@ -12,7 +12,7 @@ export const getDashboardData = async (req, res) => {
 
     // Calculate local problems solved
     const localProblemsCount = await Problem.countDocuments({ user: req.user._id });
-    const sheetProblemsCount = await SheetProblem.countDocuments({ user: req.user._id, status: 'Solved' });
+    const sheetProblemsCount = await SheetProblem.countDocuments({ user: req.user._id, status: 'solved' });
     const totalLocalProblems = localProblemsCount + sheetProblemsCount;
 
     // Calculate weekly completion (active days out of last 7 days)
