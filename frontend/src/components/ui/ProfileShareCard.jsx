@@ -89,7 +89,7 @@ const ShareCardContent = ({ user, avatarSrc, currentUserRanks, totalSolved, stre
     {/* Footer watermark */}
     <div className="flex items-center justify-center gap-2 pt-1 relative z-10">
       <div className="h-px flex-1 bg-white/10" />
-      <span className="text-[10px] text-gray-600 font-semibold tracking-widest uppercase">trackasap.in</span>
+      <span className="text-[10px] text-gray-600 font-semibold tracking-widest uppercase">track-asap.vercel.app</span>
       <div className="h-px flex-1 bg-white/10" />
     </div>
   </div>
@@ -124,7 +124,7 @@ const ShareModal = ({ onClose, cardRef }) => {
   };
 
   const handleCopyLink = () => {
-    navigator.clipboard.writeText('https://trackasap.in');
+    navigator.clipboard.writeText('https://track-asap.vercel.app');
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
     toast.success('Link copied!');
@@ -146,7 +146,7 @@ const ShareModal = ({ onClose, cardRef }) => {
         if (navigator.canShare?.({ files: [file] })) {
           await navigator.share({
             title: 'My TrackAsap Profile',
-            text: '🚀 Check out my coding stats on TrackAsap – your all-in-one competitive programming tracker!\n\nhttps://trackasap.in',
+            text: '🚀 Check out my coding stats on TrackAsap – your all-in-one competitive programming tracker!\n\nhttps://track-asap.vercel.app',
             files: [file],
           });
         } else {
@@ -203,12 +203,12 @@ const ShareModal = ({ onClose, cardRef }) => {
                 Track LeetCode, Codeforces & CodeChef all in one place. Contests, streaks, ratings, sheets — everything on one dashboard.
               </p>
               <a
-                href="https://trackasap.in"
+                href="https://track-asap.vercel.app"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1.5 text-xs text-[#FFA116] font-semibold hover:underline"
               >
-                🔗 trackasap.in
+                🔗 track-asap.vercel.app
               </a>
             </div>
 
