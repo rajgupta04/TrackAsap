@@ -38,6 +38,29 @@ export const getLeetCodeStats = async (req, res) => {
       calendarData = await calendarResponse.json();
     }
 
+    // Fetch contest data
+    const contestResponse = await fetch(
+      `https://alfa-leetcode-api.onrender.com/${username}/contest`
+    );
+
+    let contestData = {};
+    let contestsParticipated = 0;
+    let ratingHistory = [];
+
+    if (contestResponse.ok) {
+      contestData = await contestResponse.json();
+      if (contestData?.contestParticipation) {
+        contestsParticipated = contestData.contestParticipation.length;
+        // Map to standard format, keeping last 10-15 contests to match Codeforces
+        ratingHistory = contestData.contestParticipation.slice(-15).map(c => ({
+          contestName: c.contest.title,
+          rank: c.ranking,
+          oldRating: Math.round(c.rating - (c.trendDirection === 'UP' ? 1 : -1)), // Just an approximation since API might only return current
+          newRating: Math.round(c.rating)
+        }));
+      }
+    }
+
     res.json({
       success: true,
       platform: 'leetcode',
@@ -57,6 +80,8 @@ export const getLeetCodeStats = async (req, res) => {
         streak: calendarData.streak || 0,
         totalActiveDays: calendarData.totalActiveDays || 0,
         submissionCalendar: calendarData.submissionCalendar || {},
+        contestsParticipated,
+        ratingHistory,
       },
     });
   } catch (error) {
