@@ -12,75 +12,37 @@ import {
   CheckCircle2,
   Flame,
 } from 'lucide-react';
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+} from 'recharts';
 import GlassCard from './ui/GlassCard';
 import LeetCodeHeatmap from './LeetCodeHeatmap';
-import { getLeetCodeStats, getCodeforcesStats } from '../services/platformStatsService';
 import { useAuthStore } from '../store/authStore';
+import { useAnalyticsStore } from '../store/analyticsStore';
 
 const PlatformStats = () => {
   const { user } = useAuthStore();
   const navigate = useNavigate();
-  const [leetcodeStats, setLeetcodeStats] = useState(null);
-  const [codeforcesStats, setCodeforcesStats] = useState(null);
-  const [loading, setLoading] = useState({
-    leetcode: false,
-    codeforces: false,
-  });
-  const [errors, setErrors] = useState({
-    leetcode: null,
-    codeforces: null,
-  });
-
-  const fetchLeetCodeStats = async () => {
-    if (!user?.leetcodeHandle) return;
-
-    setLoading((prev) => ({ ...prev, leetcode: true }));
-    setErrors((prev) => ({ ...prev, leetcode: null }));
-
-    try {
-      const data = await getLeetCodeStats(user.leetcodeHandle);
-      if (data.success) {
-        setLeetcodeStats(data.data);
-      } else {
-        setErrors((prev) => ({ ...prev, leetcode: data.error }));
-      }
-    } catch (error) {
-      setErrors((prev) => ({
-        ...prev,
-        leetcode: 'Failed to fetch LeetCode stats',
-      }));
-    } finally {
-      setLoading((prev) => ({ ...prev, leetcode: false }));
-    }
-  };
-
-  const fetchCodeforcesStats = async () => {
-    if (!user?.codeforcesHandle) return;
-
-    setLoading((prev) => ({ ...prev, codeforces: true }));
-    setErrors((prev) => ({ ...prev, codeforces: null }));
-
-    try {
-      const data = await getCodeforcesStats(user.codeforcesHandle);
-      if (data.success) {
-        setCodeforcesStats(data.data);
-      } else {
-        setErrors((prev) => ({ ...prev, codeforces: data.error }));
-      }
-    } catch (error) {
-      setErrors((prev) => ({
-        ...prev,
-        codeforces: 'Failed to fetch Codeforces stats',
-      }));
-    } finally {
-      setLoading((prev) => ({ ...prev, codeforces: false }));
-    }
-  };
+  
+  const {
+    leetcodeStats,
+    codeforcesStats,
+    isPlatformLoading,
+    platformErrors,
+    fetchLeetCodeStats,
+    fetchCodeforcesStats,
+  } = useAnalyticsStore();
 
   useEffect(() => {
-    fetchLeetCodeStats();
-    fetchCodeforcesStats();
-  }, [user?.leetcodeHandle, user?.codeforcesHandle]);
+    fetchLeetCodeStats(user?.leetcodeHandle);
+    fetchCodeforcesStats(user?.codeforcesHandle);
+  }, [user?.leetcodeHandle, user?.codeforcesHandle, fetchLeetCodeStats, fetchCodeforcesStats]);
 
   const hasAnyHandle = user?.leetcodeHandle || user?.codeforcesHandle || user?.codechefHandle;
 
@@ -145,13 +107,13 @@ const PlatformStats = () => {
                 </div>
                 <div className="flex items-center gap-2">
                   <button
-                    onClick={fetchLeetCodeStats}
-                    disabled={loading.leetcode}
+                    onClick={() => fetchLeetCodeStats(user?.leetcodeHandle)}
+                    disabled={isPlatformLoading.leetcode}
                     className="p-2 hover:bg-dark-700/50 rounded-lg transition-colors"
                   >
                     <RefreshCw
                       className={`w-4 h-4 text-dark-400 ${
-                        loading.leetcode ? 'animate-spin' : ''
+                        isPlatformLoading.leetcode ? 'animate-spin' : ''
                       }`}
                     />
                   </button>
@@ -166,14 +128,14 @@ const PlatformStats = () => {
                 </div>
               </div>
 
-              {loading.leetcode && !leetcodeStats ? (
+              {isPlatformLoading.leetcode && !leetcodeStats ? (
                 <div className="flex items-center justify-center py-8">
                   <RefreshCw className="w-6 h-6 text-[#FFA116] animate-spin" />
                 </div>
-              ) : errors.leetcode ? (
+              ) : platformErrors.leetcode ? (
                 <div className="flex items-center gap-2 text-red-400 text-sm py-4">
                   <AlertCircle className="w-4 h-4" />
-                  {errors.leetcode}
+                  {platformErrors.leetcode}
                 </div>
               ) : leetcodeStats ? (
                 <div className="space-y-4">
@@ -276,13 +238,13 @@ const PlatformStats = () => {
                 </div>
                 <div className="flex items-center gap-2">
                   <button
-                    onClick={fetchCodeforcesStats}
-                    disabled={loading.codeforces}
+                    onClick={() => fetchCodeforcesStats(user?.codeforcesHandle)}
+                    disabled={isPlatformLoading.codeforces}
                     className="p-2 hover:bg-dark-700/50 rounded-lg transition-colors"
                   >
                     <RefreshCw
                       className={`w-4 h-4 text-dark-400 ${
-                        loading.codeforces ? 'animate-spin' : ''
+                        isPlatformLoading.codeforces ? 'animate-spin' : ''
                       }`}
                     />
                   </button>
@@ -297,14 +259,14 @@ const PlatformStats = () => {
                 </div>
               </div>
 
-              {loading.codeforces && !codeforcesStats ? (
+              {isPlatformLoading.codeforces && !codeforcesStats ? (
                 <div className="flex items-center justify-center py-8">
-                  <RefreshCw className="w-6 h-6 text-[#1F8ACB] animate-spin" />
+                  <RefreshCw className="w-6 h-6 text-blue-500 animate-spin" />
                 </div>
-              ) : errors.codeforces ? (
+              ) : platformErrors.codeforces ? (
                 <div className="flex items-center gap-2 text-red-400 text-sm py-4">
                   <AlertCircle className="w-4 h-4" />
-                  {errors.codeforces}
+                  {platformErrors.codeforces}
                 </div>
               ) : codeforcesStats ? (
                 <div className="space-y-4">
@@ -412,24 +374,89 @@ const PlatformStats = () => {
         )}
       </div>
 
-      {/* Full-width LeetCode Heatmap */}
-      {user?.leetcodeHandle && leetcodeStats?.submissionCalendar && (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4 }}
-        >
-          <GlassCard>
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-8 h-8 rounded-lg bg-[#FFA116]/20 flex items-center justify-center">
-                <Code2 className="w-4 h-4 text-[#FFA116]" />
+      {/* Activity and Rating History Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* LeetCode Heatmap */}
+        {user?.leetcodeHandle && leetcodeStats?.submissionCalendar && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4 }}
+          >
+            <GlassCard className="h-full">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-8 h-8 rounded-lg bg-[#FFA116]/20 flex items-center justify-center">
+                  <Code2 className="w-4 h-4 text-[#FFA116]" />
+                </div>
+                <h3 className="font-semibold text-white">LeetCode Activity</h3>
               </div>
-              <h3 className="font-semibold text-white">LeetCode Activity</h3>
-            </div>
-            <LeetCodeHeatmap submissionCalendar={leetcodeStats.submissionCalendar} />
-          </GlassCard>
-        </motion.div>
-      )}
+              <LeetCodeHeatmap submissionCalendar={leetcodeStats.submissionCalendar} />
+            </GlassCard>
+          </motion.div>
+        )}
+
+        {/* Rating History */}
+        {(leetcodeStats?.ratingHistory?.length > 1 || codeforcesStats?.ratingHistory?.length > 1) && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.5 }}
+            className="space-y-4"
+          >
+            {/* LeetCode Rating History */}
+            {leetcodeStats?.ratingHistory?.length > 1 && (
+              <GlassCard>
+                <div className="flex items-center gap-3 mb-4">
+                   <div className="w-8 h-8 rounded-lg bg-[#FFA116]/20 flex items-center justify-center">
+                    <TrendingUp className="w-4 h-4 text-[#FFA116]" />
+                  </div>
+                  <h3 className="font-semibold text-white">LeetCode Rating</h3>
+                </div>
+                <div className="h-40">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={leetcodeStats.ratingHistory}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                      <XAxis dataKey="contestName" hide />
+                      <YAxis stroke="#64748b" tick={{ fill: '#94a3b8', fontSize: 12 }} domain={['dataMin - 100', 'dataMax + 100']} />
+                      <Tooltip
+                        contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #334155', borderRadius: '12px' }}
+                        itemStyle={{ color: '#FFA116' }}
+                      />
+                      <Line type="monotone" dataKey="newRating" stroke="#FFA116" strokeWidth={3} dot={{ fill: '#FFA116', r: 4 }} activeDot={{ r: 6 }} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              </GlassCard>
+            )}
+
+            {/* Codeforces Rating History */}
+            {codeforcesStats?.ratingHistory?.length > 1 && (
+              <GlassCard>
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-8 h-8 rounded-lg bg-blue-500/20 flex items-center justify-center">
+                    <TrendingUp className="w-4 h-4 text-blue-500" />
+                  </div>
+                  <h3 className="font-semibold text-white">Codeforces Rating</h3>
+                </div>
+                <div className="h-40">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={codeforcesStats.ratingHistory}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                      <XAxis dataKey="contestName" hide />
+                      <YAxis stroke="#64748b" tick={{ fill: '#94a3b8', fontSize: 12 }} domain={['dataMin - 100', 'dataMax + 100']} />
+                      <Tooltip
+                        contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #334155', borderRadius: '12px' }}
+                        itemStyle={{ color: '#3b82f6' }}
+                      />
+                      <Line type="monotone" dataKey="newRating" stroke="#3b82f6" strokeWidth={3} dot={{ fill: '#3b82f6', r: 4 }} activeDot={{ r: 6 }} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              </GlassCard>
+            )}
+          </motion.div>
+        )}
+      </div>
     </div>
   );
 };

@@ -22,16 +22,21 @@ import {
 } from 'recharts';
 import { useAnalyticsStore } from '../store/analyticsStore';
 import { useDailyLogStore } from '../store/dailyLogStore';
+import { useAuthStore } from '../store/authStore';
 import GlassCard from '../components/ui/GlassCard';
 import StatCard from '../components/ui/StatCard';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
 import PlatformStats from '../components/PlatformStats';
 
 const Dashboard = () => {
+  const { user } = useAuthStore();
   const {
     dashboard,
     problemsTrend,
     weightProgress,
+    leetcodeStats,
+    codeforcesStats,
+    codechefStats,
     isLoading,
     fetchDashboard,
     fetchProblemsTrend,
@@ -55,18 +60,39 @@ const Dashboard = () => {
   }
 
   const { totals, weeklyCompletion, dietCompliance, gymCompliance } = dashboard;
+  
+  // Dynamically calculate aggregate platform totals
+  const aggregateTotalProblems = 
+    (totals?.totalProblems || 0) + 
+    (leetcodeStats?.totalSolved || 0) + 
+    (codeforcesStats?.problemsSolved || 0) + 
+    (codechefStats?.totalSolved || 0);
+
+  const aggregateContests = 
+    (totals?.contestsParticipated || 0) + 
+    (codeforcesStats?.contestsParticipated || 0) + 
+    (leetcodeStats?.contestsParticipated || 0); // Leetcode API doesn't currently return contests but added for future proofing
+
   const hasProblemsTrend = (problemsTrend || []).length > 0;
   const hasWeightHistory = (weightProgress || []).length > 0;
+  
+  // Use external API stats for Platform Breakdown if available, fallback to local trackex totals
+  const lcCount = leetcodeStats?.totalSolved || totals?.leetcodeProblems || 0;
+  const cfCount = codeforcesStats?.problemsSolved || totals?.codeforcesProblems || 0;
+  const ccCount = codechefStats?.totalSolved || totals?.codechefProblems || 0;
+
   const hasPlatformHistory =
-    (totals?.totalProblems || 0) > 0 ||
-    (totals?.leetcodeProblems || 0) > 0 ||
-    (totals?.codechefProblems || 0) > 0 ||
-    (totals?.codeforcesProblems || 0) > 0;
-  const hasComplianceHistory =
+    aggregateTotalProblems > 0 ||
+    lcCount > 0 ||
+    ccCount > 0 ||
+    cfCount > 0;
+    
+  const hasComplianceHistory = user?.enablePhysique && (
     (totals?.daysLogged || 0) > 0 ||
     (weeklyCompletion || 0) > 0 ||
     (dietCompliance || 0) > 0 ||
-    (gymCompliance || 0) > 0;
+    (gymCompliance || 0) > 0
+  );
   const chartGridCols = 'lg:grid-cols-2';
   const statsGridCols = 'lg:grid-cols-2';
 
@@ -75,7 +101,7 @@ const Dashboard = () => {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
           title="Total Problems"
-          value={totals?.totalProblems || 0}
+          value={aggregateTotalProblems}
           subtitle="Across all platforms"
           icon={Code2}
           iconColor="text-neon-green"
@@ -83,7 +109,7 @@ const Dashboard = () => {
         />
         <StatCard
           title="Contests"
-          value={totals?.contestsParticipated || 0}
+          value={aggregateContests}
           subtitle="Participated"
           icon={Trophy}
           iconColor="text-yellow-500"
@@ -220,21 +246,21 @@ const Dashboard = () => {
                   <div className="w-8 h-8 md:w-12 md:h-12 mx-auto mb-2 md:mb-3 rounded-lg md:rounded-xl bg-[#FFA116]/10 flex items-center justify-center">
                     <Code2 className="w-4 h-4 md:w-6 md:h-6 text-[#FFA116]" />
                   </div>
-                  <p className="text-lg md:text-2xl font-bold text-white">{totals?.leetcodeProblems || 0}</p>
+                  <p className="text-lg md:text-2xl font-bold text-white">{lcCount}</p>
                   <p className="text-xs md:text-sm text-dark-400">LeetCode</p>
                 </div>
                 <div className="text-center p-2 md:p-4 rounded-xl bg-dark-800/30 border border-dark-700/30">
                   <div className="w-8 h-8 md:w-12 md:h-12 mx-auto mb-2 md:mb-3 rounded-lg md:rounded-xl bg-[#5B4638]/20 flex items-center justify-center">
                     <Code2 className="w-4 h-4 md:w-6 md:h-6 text-[#5B4638]" />
                   </div>
-                  <p className="text-lg md:text-2xl font-bold text-white">{totals?.codechefProblems || 0}</p>
+                  <p className="text-lg md:text-2xl font-bold text-white">{ccCount}</p>
                   <p className="text-xs md:text-sm text-dark-400">CodeChef</p>
                 </div>
                 <div className="text-center p-2 md:p-4 rounded-xl bg-dark-800/30 border border-dark-700/30">
                   <div className="w-8 h-8 md:w-12 md:h-12 mx-auto mb-2 md:mb-3 rounded-lg md:rounded-xl bg-[#1F8ACB]/10 flex items-center justify-center">
                     <Code2 className="w-4 h-4 md:w-6 md:h-6 text-[#1F8ACB]" />
                   </div>
-                  <p className="text-lg md:text-2xl font-bold text-white">{totals?.codeforcesProblems || 0}</p>
+                  <p className="text-lg md:text-2xl font-bold text-white">{cfCount}</p>
                   <p className="text-xs md:text-sm text-dark-400">Codeforces</p>
                 </div>
               </div>

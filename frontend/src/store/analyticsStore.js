@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { analyticsService } from '../services/analyticsService';
+import { getLeetCodeStats, getCodeforcesStats, getCodeChefStats } from '../services/platformStatsService';
 
 export const useAnalyticsStore = create((set) => ({
   dashboard: null,
@@ -9,8 +10,13 @@ export const useAnalyticsStore = create((set) => ({
   heatmapData: [],
   codeforcesRating: [],
   weightProgress: [],
+  leetcodeStats: null,
+  codeforcesStats: null,
+  codechefStats: null,
   isLoading: false,
+  isPlatformLoading: { leetcode: false, codeforces: false, codechef: false },
   error: null,
+  platformErrors: { leetcode: null, codeforces: null, codechef: null },
 
   fetchDashboard: async () => {
     set({ isLoading: true });
@@ -81,6 +87,66 @@ export const useAnalyticsStore = create((set) => ({
       return data;
     } catch (error) {
       return [];
+    }
+  },
+
+  fetchLeetCodeStats: async (handle) => {
+    if (!handle) return;
+    set((state) => ({
+      isPlatformLoading: { ...state.isPlatformLoading, leetcode: true },
+      platformErrors: { ...state.platformErrors, leetcode: null }
+    }));
+    try {
+      const data = await getLeetCodeStats(handle);
+      if (data.success) {
+        set({ leetcodeStats: data.data });
+      } else {
+        set((state) => ({ platformErrors: { ...state.platformErrors, leetcode: data.error } }));
+      }
+    } catch (error) {
+      set((state) => ({ platformErrors: { ...state.platformErrors, leetcode: 'Failed to fetch LeetCode stats' } }));
+    } finally {
+      set((state) => ({ isPlatformLoading: { ...state.isPlatformLoading, leetcode: false } }));
+    }
+  },
+
+  fetchCodeforcesStats: async (handle) => {
+    if (!handle) return;
+    set((state) => ({
+      isPlatformLoading: { ...state.isPlatformLoading, codeforces: true },
+      platformErrors: { ...state.platformErrors, codeforces: null }
+    }));
+    try {
+      const data = await getCodeforcesStats(handle);
+      if (data.success) {
+        set({ codeforcesStats: data.data });
+      } else {
+        set((state) => ({ platformErrors: { ...state.platformErrors, codeforces: data.error } }));
+      }
+    } catch (error) {
+      set((state) => ({ platformErrors: { ...state.platformErrors, codeforces: 'Failed to fetch Codeforces stats' } }));
+    } finally {
+      set((state) => ({ isPlatformLoading: { ...state.isPlatformLoading, codeforces: false } }));
+    }
+  },
+
+  fetchCodechefStats: async (handle) => {
+    if (!handle) return;
+    set((state) => ({
+      isPlatformLoading: { ...state.isPlatformLoading, codechef: true },
+      platformErrors: { ...state.platformErrors, codechef: null }
+    }));
+    try {
+      const data = await getCodeChefStats(handle);
+      if (data.success) {
+        set({ codechefStats: data.data });
+      } else {
+        set((state) => ({ platformErrors: { ...state.platformErrors, codechef: data.error } }));
+      }
+    } catch (error) {
+      set((state) => ({ platformErrors: { ...state.platformErrors, codechef: 'Failed to fetch CodeChef stats' } }));
+    } finally {
+      set((state) => ({ isPlatformLoading: { ...state.isPlatformLoading, codechef: false } }));
     }
   },
 
