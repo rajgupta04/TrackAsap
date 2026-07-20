@@ -31,6 +31,7 @@ import { useAuthStore } from '../store/authStore';
 import { useAnalyticsStore } from '../store/analyticsStore';
 import { useTaskStore } from '../store/taskStore';
 import useSheetStore from '../store/sheetStore';
+import { useLeaderboardStore } from '../store/leaderboardStore';
 import githubService from '../services/githubService';
 import GlassCard from '../components/ui/GlassCard';
 import NumberInput from '../components/ui/NumberInput';
@@ -71,6 +72,7 @@ const Profile = () => {
   const { leetcodeStats, codeforcesStats, codechefStats, dashboard } = useAnalyticsStore();
   const { streak } = useTaskStore();
   const { sheets, fetchSheets } = useSheetStore();
+  const { currentUserRanks, fetchCurrentUserRank } = useLeaderboardStore();
 
   const [syncing, setSyncing] = useState(false);
   const [connectingGithub, setConnectingGithub] = useState(false);
@@ -104,6 +106,7 @@ const Profile = () => {
   // Handle hash scrolling
   useEffect(() => {
     fetchSheets(true);
+    fetchCurrentUserRank();
     if (window.location.hash) {
       const id = window.location.hash.replace('#', '');
       const element = document.getElementById(id);
@@ -115,10 +118,16 @@ const Profile = () => {
         }, 100);
       }
     }
-  }, [fetchSheets]);
+  }, [fetchSheets, fetchCurrentUserRank]);
 
   // Compute stats for the ElectricBorder card
   const totalSolved = (dashboard?.totalProblems || 0) + (leetcodeStats?.totalSolved || 0) + (codeforcesStats?.problemsSolved || 0) + (codechefStats?.totalSolved || 0);
+  
+  const aggregateContests = 
+    (dashboard?.contestsParticipated || 0) + 
+    (codeforcesStats?.contestsParticipated || 0) + 
+    (leetcodeStats?.contestsParticipated || 0); 
+    
   const lcRating = leetcodeStats?.ratingHistory?.[leetcodeStats.ratingHistory.length - 1]?.rating || 0;
   const cfRating = codeforcesStats?.ratingHistory?.[codeforcesStats.ratingHistory.length - 1]?.rating || 0;
   let highestRating = 0;
@@ -130,7 +139,7 @@ const Profile = () => {
     highestRating = Math.round(lcRating);
     highestPlatform = 'LeetCode';
   }
-  const topSheet = sheets?.length > 0 ? [...sheets].sort((a, b) => (b.completionPercentage || 0) - (a.completionPercentage || 0))[0] : null;
+  const topSheets = sheets?.length > 0 ? [...sheets].sort((a, b) => (b.completionPercentage || 0) - (a.completionPercentage || 0)).slice(0, 3) : [];
 
   // GitHub integration
   useEffect(() => {
@@ -641,9 +650,11 @@ const Profile = () => {
           thickness={2}
           style={{ borderRadius: 16 }}
         >
-          <div className="bg-[#1a1f2e] p-6 rounded-2xl border border-white/5 space-y-6 w-full">
+          <div className="bg-[#1a1f2e] p-6 rounded-2xl border border-white/5 space-y-6 w-full relative overflow-hidden">
+            <img src="/logoSmall.png" alt="TrackAsap" className="absolute top-4 right-4 w-8 h-8 opacity-50" />
+            
             <div className="flex items-center gap-4 border-b border-white/10 pb-4">
-              <div className="w-12 h-12 rounded-full overflow-hidden border border-[#FFA116]/50 shrink-0">
+              <div className="w-12 h-12 rounded-full overflow-hidden border border-[#FFA116]/50 shrink-0 relative z-10">
                 {avatarSrc ? (
                   <img src={avatarSrc} alt="Profile" className="w-full h-full object-cover" />
                 ) : (
@@ -652,27 +663,33 @@ const Profile = () => {
                   </div>
                 )}
               </div>
-              <div className="min-w-0">
+              <div className="min-w-0 pr-8 relative z-10">
                 <h3 className="text-lg font-bold text-white truncate">{user?.name || 'User'}</h3>
-                <p className="text-sm text-dark-400 truncate">TrackAsap Profile</p>
+                <p className="text-sm text-dark-400 truncate flex items-center gap-1.5 mt-0.5">
+                  TrackAsap Rank: <span className="text-neon-green font-bold">#{currentUserRanks?.global || '--'}</span>
+                </p>
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="bg-dark-700/50 p-4 rounded-xl text-center">
-                <div className="text-2xl font-bold text-[#FFA116]">{totalSolved}</div>
-                <div className="text-[10px] text-dark-400 uppercase tracking-wider font-semibold mt-1">Total Solved</div>
+            <div className="grid grid-cols-3 gap-3 relative z-10">
+              <div className="bg-dark-700/50 p-3 rounded-xl text-center">
+                <div className="text-xl font-bold text-[#FFA116]">{totalSolved}</div>
+                <div className="text-[9px] text-dark-400 uppercase tracking-wider font-semibold mt-1">Solved</div>
               </div>
-              <div className="bg-dark-700/50 p-4 rounded-xl text-center">
-                <div className="text-2xl font-bold text-orange-500">{streak?.longestStreak || 0}</div>
-                <div className="text-[10px] text-dark-400 uppercase tracking-wider font-semibold mt-1">Best Streak</div>
+              <div className="bg-dark-700/50 p-3 rounded-xl text-center">
+                <div className="text-xl font-bold text-orange-500">{streak?.longestStreak || 0}</div>
+                <div className="text-[9px] text-dark-400 uppercase tracking-wider font-semibold mt-1">Streak</div>
+              </div>
+              <div className="bg-dark-700/50 p-3 rounded-xl text-center">
+                <div className="text-xl font-bold text-purple-400">{aggregateContests}</div>
+                <div className="text-[9px] text-dark-400 uppercase tracking-wider font-semibold mt-1">Contests</div>
               </div>
             </div>
 
             {highestRating > 0 && (
-              <div className="bg-dark-700/50 p-4 rounded-xl flex items-center justify-between">
+              <div className="bg-dark-700/50 p-4 rounded-xl flex items-center justify-between relative z-10">
                 <div>
-                  <div className="text-xs text-dark-400">Highest Rating</div>
+                  <div className="text-xs text-dark-400">Best Contest Rating</div>
                   <div className="text-lg font-bold text-cyan-400 flex items-center gap-2">
                     {highestRating}
                     <span className="text-[10px] bg-dark-600 px-2 py-0.5 rounded-full text-dark-300 border border-white/5">
@@ -684,18 +701,22 @@ const Profile = () => {
               </div>
             )}
 
-            {topSheet && (
-              <div className="bg-dark-700/50 p-4 rounded-xl">
-                <div className="text-xs text-dark-400 mb-1.5 flex items-center gap-1.5">
-                  <Target className="w-3.5 h-3.5" /> Top Sheet
+            {topSheets.length > 0 && (
+              <div className="bg-dark-700/50 p-4 rounded-xl space-y-3 relative z-10">
+                <div className="text-xs text-dark-400 flex items-center gap-1.5 border-b border-white/5 pb-2">
+                  <Target className="w-3.5 h-3.5" /> Top Sheets
                 </div>
-                <div className="flex justify-between items-center">
-                  <div className="font-bold text-white truncate pr-2 text-sm">{topSheet.name}</div>
-                  <div className="text-neon-green text-sm font-bold shrink-0">{topSheet.completionPercentage || 0}%</div>
-                </div>
-                <div className="w-full h-1.5 bg-dark-600 rounded-full mt-2.5 overflow-hidden">
-                  <div className="h-full bg-neon-green transition-all" style={{ width: `${topSheet.completionPercentage || 0}%` }} />
-                </div>
+                {topSheets.map((sheet, idx) => (
+                  <div key={idx} className="space-y-1">
+                    <div className="flex justify-between items-center">
+                      <div className="font-bold text-white truncate pr-2 text-xs">{sheet.name}</div>
+                      <div className="text-neon-green text-xs font-bold shrink-0">{sheet.completionPercentage || 0}%</div>
+                    </div>
+                    <div className="w-full h-1 bg-dark-600 rounded-full overflow-hidden">
+                      <div className="h-full bg-neon-green transition-all" style={{ width: `${sheet.completionPercentage || 0}%` }} />
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
           </div>
