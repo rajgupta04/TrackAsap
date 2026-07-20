@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Code2, Trophy, Target, TrendingUp, ExternalLink, RefreshCw, AlertCircle, CheckCircle2, Flame, Dumbbell, Apple, Zap } from 'lucide-react';
+import { Code2, Trophy, Target, TrendingUp, TrendingDown, ExternalLink, RefreshCw, AlertCircle, CheckCircle2, Flame, Dumbbell, Apple, Zap, Star } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
 import GlassCard from '../ui/GlassCard';
 import LeetCodeHeatmap from '../LeetCodeHeatmap';
@@ -182,24 +182,78 @@ export const LeetCodeHeatmapWidget = ({ user, leetcodeStats }) => {
   );
 };
 
+const RatingDot = (props) => {
+  const { cx, cy, payload, index, data } = props;
+  if (cx == null || cy == null) return null;
+  const prev = index > 0 ? data[index - 1]?.newRating : null;
+  const curr = payload?.newRating;
+  const maxRating = Math.max(...data.map(d => d.newRating || 0));
+  const isMax = curr === maxRating;
+  const isUp = prev != null ? curr > prev : true;
+
+  if (isMax) {
+    return (
+      <g>
+        <circle cx={cx} cy={cy} r={7} fill="#facc15" stroke="#fde68a" strokeWidth={2} />
+        <text x={cx} y={cy - 14} textAnchor="middle" fill="#facc15" fontSize={10} fontWeight="bold">{curr}</text>
+        <text x={cx} y={cy + 1} textAnchor="middle" fill="#1e293b" fontSize={8} fontWeight="bold">★</text>
+      </g>
+    );
+  }
+  return <circle cx={cx} cy={cy} r={4} fill={isUp ? '#22c55e' : '#ef4444'} stroke={isUp ? '#16a34a' : '#dc2626'} strokeWidth={1.5} />;
+};
+
 export const LeetCodeRatingWidget = ({ leetcodeStats }) => {
   if (!leetcodeStats?.ratingHistory || leetcodeStats.ratingHistory.length <= 1) return null;
+  const history = leetcodeStats.ratingHistory;
+  const maxRating = Math.max(...history.map(d => d.newRating || 0));
+  const currentRating = Math.round(history[history.length - 1]?.newRating || 0);
+  const prevRating = history.length > 1 ? history[history.length - 2]?.newRating : currentRating;
+  const isUp = currentRating >= prevRating;
+
   return (
     <GlassCard className="h-full flex flex-col">
-      <div className="flex items-center gap-3 mb-4 cursor-move drag-handle">
-        <div className="w-8 h-8 rounded-lg bg-[#FFA116]/20 flex items-center justify-center">
-          <TrendingUp className="w-4 h-4 text-[#FFA116]" />
+      <div className="flex items-center justify-between mb-4 cursor-move drag-handle">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-lg bg-[#FFA116]/20 flex items-center justify-center">
+            <TrendingUp className="w-4 h-4 text-[#FFA116]" />
+          </div>
+          <div>
+            <h3 className="font-semibold text-white leading-tight">LeetCode Rating</h3>
+            <p className="text-xs text-dark-400 leading-tight">
+              Current: <span className={`font-bold ${isUp ? 'text-green-400' : 'text-red-400'}`}>{currentRating}</span>
+              <span className="mx-1.5 text-dark-600">·</span>
+              Best: <span className="font-bold text-yellow-400">★ {maxRating}</span>
+            </p>
+          </div>
         </div>
-        <h3 className="font-semibold text-white">LeetCode Rating</h3>
+        {isUp
+          ? <TrendingUp className="w-4 h-4 text-green-400 shrink-0" />
+          : <TrendingDown className="w-4 h-4 text-red-400 shrink-0" />}
       </div>
       <div className="flex-1 min-h-[160px]">
         <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={leetcodeStats.ratingHistory}>
+          <LineChart data={history}>
             <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
             <XAxis dataKey="contestName" hide />
-            <YAxis stroke="#64748b" tick={{ fill: '#94a3b8', fontSize: 12 }} domain={['dataMin - 100', 'dataMax + 100']} />
-            <Tooltip contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #334155', borderRadius: '12px' }} itemStyle={{ color: '#FFA116' }} />
-            <Line type="monotone" dataKey="newRating" stroke="#FFA116" strokeWidth={3} dot={{ fill: '#FFA116', r: 4 }} activeDot={{ r: 6 }} />
+            <YAxis stroke="#64748b" tick={{ fill: '#94a3b8', fontSize: 12 }} domain={['dataMin - 50', 'dataMax + 50']} />
+            <Tooltip
+              contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #334155', borderRadius: '12px' }}
+              itemStyle={{ color: '#FFA116' }}
+              formatter={(value, name, props) => {
+                const prev = props.payload?.rankChange;
+                return [Math.round(value), 'Rating'];
+              }}
+              labelFormatter={(label) => label || 'Contest'}
+            />
+            <Line
+              type="monotone"
+              dataKey="newRating"
+              stroke="#FFA116"
+              strokeWidth={3}
+              dot={<RatingDot data={history} />}
+              activeDot={{ r: 7, fill: '#FFA116', stroke: '#fff', strokeWidth: 2 }}
+            />
           </LineChart>
         </ResponsiveContainer>
       </div>
