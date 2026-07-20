@@ -66,6 +66,14 @@ export const LeetCodeStatsWidget = ({ user, leetcodeStats, isPlatformLoading, fe
               <div className="text-xs text-dark-400">Streak</div>
             </div>
           </div>
+          {leetcodeStats.submissionCalendar && (
+            <div className="pt-4 border-t border-dark-700/50">
+              <h4 className="text-sm font-medium text-dark-400 mb-2">Activity Heatmap</h4>
+              <div className="overflow-x-auto">
+                <LeetCodeHeatmap submissionCalendar={leetcodeStats.submissionCalendar} />
+              </div>
+            </div>
+          )}
         </div>
       )}
     </GlassCard>
