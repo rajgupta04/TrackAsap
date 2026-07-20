@@ -62,7 +62,7 @@ const Dashboard = () => {
 
   // Retrieve layout from localStorage or fallback to default
   const [layouts, setLayouts] = useState(() => {
-    const saved = localStorage.getItem('dashboard-layouts-v5');
+    const saved = localStorage.getItem('dashboard-layouts-v12');
     if (saved) return JSON.parse(saved);
     const defaultLayout = [
       { i: 'problemsTrend', x: 0, y: 0, w: 6, h: 12 },
@@ -80,7 +80,7 @@ const Dashboard = () => {
 
   const onLayoutChange = (currentLayout, allLayouts) => {
     setLayouts(allLayouts);
-    localStorage.setItem('dashboard-layouts-v5', JSON.stringify(allLayouts));
+    localStorage.setItem('dashboard-layouts-v12', JSON.stringify(allLayouts));
   };
 
   if (isLoading || !dashboard) {
