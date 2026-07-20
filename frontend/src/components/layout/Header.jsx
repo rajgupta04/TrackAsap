@@ -23,29 +23,36 @@ const Header = () => {
   const navigate = useNavigate();
   const { streak, fetchStreak } = useTaskStore();
   const { user } = useAuthStore();
+  const { isRunning, getCurrentTimeMs } = useTimerStore();
+  
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [showStreakModal, setShowStreakModal] = useState(false);
   const [showStopwatchModal, setShowStopwatchModal] = useState(false);
-  
-  const { isRunning, getCurrentTimeMs } = useTimerStore();
-  const [headerTimeStr, setHeaderTimeStr] = useState('');
+  const [headerTimeMs, setHeaderTimeMs] = useState(0);
 
-  // Live timer updates for the header
+  // Sync timer for header display
   useEffect(() => {
-    let interval;
+    let intervalId;
     if (isRunning) {
-      interval = setInterval(() => {
-        const ms = getCurrentTimeMs();
-        const totalSeconds = Math.max(0, Math.floor(ms / 1000));
-        const m = Math.floor(totalSeconds / 60);
-        const s = totalSeconds % 60;
-        setHeaderTimeStr(`${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`);
-      }, 500);
+      setHeaderTimeMs(getCurrentTimeMs());
+      intervalId = setInterval(() => {
+        setHeaderTimeMs(getCurrentTimeMs());
+      }, 1000); // 1-second tick is enough for header
     } else {
-      setHeaderTimeStr('');
+      setHeaderTimeMs(getCurrentTimeMs());
     }
-    return () => clearInterval(interval);
+    return () => clearInterval(intervalId);
   }, [isRunning, getCurrentTimeMs]);
+
+  const formatHeaderTime = (ms) => {
+    const totalSeconds = Math.max(0, Math.floor(ms / 1000));
+    const h = Math.floor(totalSeconds / 3600);
+    const m = Math.floor((totalSeconds % 3600) / 60);
+    const s = totalSeconds % 60;
+    
+    if (h > 0) return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+  };
 
   const quotes = [
     "Consistency is key, boss! Roz 2 task or 1 solid problem solve karo!",
@@ -101,12 +108,16 @@ const Header = () => {
         <div className="hidden lg:flex items-center gap-3 relative">
           <button
             onClick={() => setShowStopwatchModal(true)}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-dark-800/50 border border-dark-700/50 hover:bg-dark-700/50 hover:border-dark-600/50 transition-all cursor-pointer group"
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl border transition-all cursor-pointer group ${
+              isRunning 
+                ? 'bg-purple-500/20 border-purple-500/50 shadow-[0_0_15px_rgba(168,85,247,0.15)]' 
+                : 'bg-dark-800/50 border-dark-700/50 hover:bg-dark-700/50 hover:border-dark-600/50'
+            }`}
           >
             <Timer size={18} className={`text-purple-400 ${isRunning ? 'animate-pulse' : 'group-hover:animate-pulse'}`} />
-            {isRunning && headerTimeStr && (
-              <span className="text-sm font-digital text-purple-400 font-bold tracking-widest tabular-nums">
-                {headerTimeStr}
+            {isRunning && (
+              <span className="text-sm font-bold text-purple-300 font-mono tracking-wider tabular-nums">
+                {formatHeaderTime(headerTimeMs)}
               </span>
             )}
           </button>
@@ -167,12 +178,16 @@ const Header = () => {
         <div className="flex lg:hidden items-center gap-1.5 sm:gap-2 pr-12 md:pr-0">
           <button
             onClick={() => setShowStopwatchModal(true)}
-            className="flex items-center gap-1.5 justify-center p-1.5 sm:p-2 rounded-lg bg-dark-800/80 border border-dark-700/50 hover:bg-dark-700/50 transition-all"
+            className={`flex items-center justify-center p-1.5 sm:p-2 rounded-lg border transition-all gap-1.5 ${
+              isRunning 
+                ? 'bg-purple-500/20 border-purple-500/50' 
+                : 'bg-dark-800/80 border-dark-700/50 hover:bg-dark-700/50'
+            }`}
           >
             <Timer size={16} className={`text-purple-400 ${isRunning ? 'animate-pulse' : ''}`} />
-            {isRunning && headerTimeStr && (
-              <span className="text-xs font-digital text-purple-400 font-bold tracking-widest tabular-nums">
-                {headerTimeStr}
+            {isRunning && (
+              <span className="text-xs font-bold text-purple-300 font-mono tracking-wider tabular-nums">
+                {formatHeaderTime(headerTimeMs)}
               </span>
             )}
           </button>
