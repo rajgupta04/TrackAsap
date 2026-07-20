@@ -8,7 +8,7 @@ import LeetCodeHeatmap from '../LeetCodeHeatmap';
 export const LeetCodeStatsWidget = ({ user, leetcodeStats, isPlatformLoading, fetchLeetCodeStats }) => {
   if (!user?.leetcodeHandle) return null;
   return (
-    <GlassCard className="h-full">
+    <GlassCard className="h-full overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-thumb-dark-600 scrollbar-track-transparent">
       <div className="flex items-center justify-between mb-4 cursor-move drag-handle">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-[#FFA116]/20 flex items-center justify-center">
@@ -68,7 +68,6 @@ export const LeetCodeStatsWidget = ({ user, leetcodeStats, isPlatformLoading, fe
           </div>
           {leetcodeStats.submissionCalendar && (
             <div className="pt-4 border-t border-dark-700/50">
-              <h4 className="text-sm font-medium text-dark-400 mb-2">Activity Heatmap</h4>
               <div className="overflow-x-auto">
                 <LeetCodeHeatmap submissionCalendar={leetcodeStats.submissionCalendar} />
               </div>
