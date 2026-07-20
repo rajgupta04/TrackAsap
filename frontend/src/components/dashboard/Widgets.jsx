@@ -20,7 +20,7 @@ export const LeetCodeStatsWidget = ({ user, leetcodeStats, isPlatformLoading, fe
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={fetchLeetCodeStats} disabled={isPlatformLoading.leetcode} className="p-2 hover:bg-dark-700/50 rounded-lg transition-colors">
+          <button onClick={() => fetchLeetCodeStats(user.leetcodeHandle)} disabled={isPlatformLoading.leetcode} className="p-2 hover:bg-dark-700/50 rounded-lg transition-colors">
             <RefreshCw className={`w-4 h-4 text-dark-400 ${isPlatformLoading.leetcode ? 'animate-spin' : ''}`} />
           </button>
           <a href={`https://leetcode.com/${user.leetcodeHandle}`} target="_blank" rel="noopener noreferrer" className="p-2 hover:bg-dark-700/50 rounded-lg transition-colors">
@@ -87,7 +87,7 @@ export const CodeforcesStatsWidget = ({ user, codeforcesStats, isPlatformLoading
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={fetchCodeforcesStats} disabled={isPlatformLoading.codeforces} className="p-2 hover:bg-dark-700/50 rounded-lg transition-colors">
+          <button onClick={() => fetchCodeforcesStats(user.codeforcesHandle)} disabled={isPlatformLoading.codeforces} className="p-2 hover:bg-dark-700/50 rounded-lg transition-colors">
             <RefreshCw className={`w-4 h-4 text-dark-400 ${isPlatformLoading.codeforces ? 'animate-spin' : ''}`} />
           </button>
           <a href={`https://codeforces.com/profile/${user.codeforcesHandle}`} target="_blank" rel="noopener noreferrer" className="p-2 hover:bg-dark-700/50 rounded-lg transition-colors">

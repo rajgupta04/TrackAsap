@@ -55,8 +55,8 @@ const Dashboard = () => {
     fetchStreak();
     
     // Attempt fetching platform stats if handles exist
-    if (user?.leetcodeHandle && !leetcodeStats) fetchLeetCodeStats();
-    if (user?.codeforcesHandle && !codeforcesStats) fetchCodeforcesStats();
+    if (user?.leetcodeHandle && !leetcodeStats) fetchLeetCodeStats(user.leetcodeHandle);
+    if (user?.codeforcesHandle && !codeforcesStats) fetchCodeforcesStats(user.codeforcesHandle);
     // codechefStats fetched if supported
   }, []);
 
