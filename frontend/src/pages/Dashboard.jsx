@@ -9,7 +9,7 @@ import {
   Zap,
 } from 'lucide-react';
 import { useAnalyticsStore } from '../store/analyticsStore';
-import { useDailyLogStore } from '../store/dailyLogStore';
+import { useTaskStore } from '../store/taskStore';
 import { useAuthStore } from '../store/authStore';
 import StatCard from '../components/ui/StatCard';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
@@ -46,7 +46,7 @@ const Dashboard = () => {
     fetchCodeforcesStats
   } = useAnalyticsStore();
   
-  const { streak, fetchStreak } = useDailyLogStore();
+  const { streak, fetchStreak } = useTaskStore();
 
   useEffect(() => {
     fetchDashboard();
@@ -62,26 +62,26 @@ const Dashboard = () => {
 
   // Retrieve layout from localStorage or fallback to default
   const [layouts, setLayouts] = useState(() => {
-    const saved = localStorage.getItem('dashboard-layouts-v2');
+    const saved = localStorage.getItem('dashboard-layouts-v5');
     if (saved) return JSON.parse(saved);
     const defaultLayout = [
-      { i: 'problemsTrend', x: 0, y: 0, w: 6, h: 10 },
-      { i: 'weightProgress', x: 6, y: 0, w: 6, h: 10 },
-      { i: 'leetcodeStats', x: 0, y: 10, w: 6, h: 8 },
-      { i: 'codeforcesStats', x: 6, y: 10, w: 6, h: 8 },
-      { i: 'codechefStats', x: 0, y: 18, w: 6, h: 8 },
-      { i: 'leetcodeHeatmap', x: 0, y: 26, w: 12, h: 8 },
-      { i: 'leetcodeRating', x: 0, y: 34, w: 6, h: 8 },
-      { i: 'codeforcesRating', x: 6, y: 34, w: 6, h: 8 },
-      { i: 'platformBreakdown', x: 0, y: 42, w: 6, h: 6 },
-      { i: 'compliance', x: 6, y: 42, w: 6, h: 6 }
+      { i: 'problemsTrend', x: 0, y: 0, w: 6, h: 12 },
+      { i: 'weightProgress', x: 6, y: 0, w: 6, h: 12 },
+      { i: 'leetcodeStats', x: 0, y: 12, w: 6, h: 11 },
+      { i: 'leetcodeRating', x: 6, y: 12, w: 6, h: 10 },
+      { i: 'codeforcesStats', x: 0, y: 23, w: 6, h: 11 },
+      { i: 'codechefStats', x: 6, y: 23, w: 6, h: 11 },
+      { i: 'leetcodeHeatmap', x: 0, y: 34, w: 6, h: 12 },
+      { i: 'codeforcesRating', x: 6, y: 34, w: 6, h: 10 },
+      { i: 'platformBreakdown', x: 0, y: 46, w: 6, h: 8 },
+      { i: 'compliance', x: 6, y: 46, w: 6, h: 9 }
     ];
     return { lg: defaultLayout, md: defaultLayout };
   });
 
   const onLayoutChange = (currentLayout, allLayouts) => {
     setLayouts(allLayouts);
-    localStorage.setItem('dashboard-layouts-v2', JSON.stringify(allLayouts));
+    localStorage.setItem('dashboard-layouts-v5', JSON.stringify(allLayouts));
   };
 
   if (isLoading || !dashboard) {
@@ -142,48 +142,48 @@ const Dashboard = () => {
         margin={[16, 16]}
       >
         {hasProblemsTrend && (
-          <div key="problemsTrend"><ProblemsTrendWidget problemsTrend={problemsTrend} /></div>
+          <div key="problemsTrend" data-grid={{ w: 6, h: 12, x: 0, y: 0, minW: 4, minH: 10 }}><ProblemsTrendWidget problemsTrend={problemsTrend} /></div>
         )}
         {hasWeightHistory && (
-          <div key="weightProgress"><WeightProgressWidget weightProgress={weightProgress} /></div>
+          <div key="weightProgress" data-grid={{ w: 6, h: 12, x: 6, y: 0, minW: 4, minH: 10 }}><WeightProgressWidget weightProgress={weightProgress} /></div>
         )}
         {user?.leetcodeHandle && (
-          <div key="leetcodeStats">
+          <div key="leetcodeStats" data-grid={{ w: 6, h: 11, x: 0, y: 12, minW: 4, minH: 9 }}>
             <LeetCodeStatsWidget user={user} leetcodeStats={leetcodeStats} isPlatformLoading={isPlatformLoading} fetchLeetCodeStats={fetchLeetCodeStats} />
           </div>
         )}
         {user?.codeforcesHandle && (
-          <div key="codeforcesStats">
+          <div key="codeforcesStats" data-grid={{ w: 6, h: 11, x: 0, y: 23, minW: 4, minH: 9 }}>
             <CodeforcesStatsWidget user={user} codeforcesStats={codeforcesStats} isPlatformLoading={isPlatformLoading} fetchCodeforcesStats={fetchCodeforcesStats} />
           </div>
         )}
         {user?.codechefHandle && (
-          <div key="codechefStats">
+          <div key="codechefStats" data-grid={{ w: 6, h: 11, x: 6, y: 23, minW: 4, minH: 9 }}>
             <CodeChefStatsWidget user={user} />
           </div>
         )}
         {user?.leetcodeHandle && leetcodeStats?.submissionCalendar && (
-          <div key="leetcodeHeatmap">
+          <div key="leetcodeHeatmap" data-grid={{ w: 6, h: 12, x: 0, y: 34, minW: 4, minH: 10 }}>
             <LeetCodeHeatmapWidget user={user} leetcodeStats={leetcodeStats} />
           </div>
         )}
         {leetcodeStats?.ratingHistory?.length > 1 && (
-          <div key="leetcodeRating">
+          <div key="leetcodeRating" data-grid={{ w: 6, h: 10, x: 6, y: 12, minW: 4, minH: 8 }}>
             <LeetCodeRatingWidget leetcodeStats={leetcodeStats} />
           </div>
         )}
         {codeforcesStats?.ratingHistory?.length > 1 && (
-          <div key="codeforcesRating">
+          <div key="codeforcesRating" data-grid={{ w: 6, h: 10, x: 6, y: 34, minW: 4, minH: 8 }}>
             <CodeforcesRatingWidget codeforcesStats={codeforcesStats} />
           </div>
         )}
         {hasPlatformHistory && (
-          <div key="platformBreakdown">
+          <div key="platformBreakdown" data-grid={{ w: 6, h: 8, x: 0, y: 46, minW: 4, minH: 6 }}>
             <PlatformBreakdownWidget lcCount={lcCount} ccCount={ccCount} cfCount={cfCount} />
           </div>
         )}
         {hasComplianceHistory && (
-          <div key="compliance">
+          <div key="compliance" data-grid={{ w: 6, h: 9, x: 6, y: 46, minW: 4, minH: 7 }}>
             <ComplianceWidget gymCompliance={gymCompliance} dietCompliance={dietCompliance} weeklyCompletion={weeklyCompletion} />
           </div>
         )}
