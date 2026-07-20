@@ -62,25 +62,25 @@ const Dashboard = () => {
 
   // Retrieve layout from localStorage or fallback to default
   const [layouts, setLayouts] = useState(() => {
-    const saved = localStorage.getItem('dashboard-layouts-v13');
+    const saved = localStorage.getItem('dashboard-layouts-v14');
     if (saved) return JSON.parse(saved);
     const defaultLayout = [
       { i: 'problemsTrend', x: 0, y: 0, w: 6, h: 12 },
       { i: 'weightProgress', x: 6, y: 0, w: 6, h: 12 },
-      { i: 'leetcodeStats', x: 0, y: 12, w: 6, h: 15 },
+      { i: 'leetcodeStats', x: 0, y: 12, w: 6, h: 13 },
       { i: 'leetcodeRating', x: 6, y: 12, w: 6, h: 10 },
-      { i: 'codeforcesStats', x: 0, y: 27, w: 6, h: 11 },
-      { i: 'codechefStats', x: 6, y: 27, w: 6, h: 11 },
-      { i: 'codeforcesRating', x: 6, y: 38, w: 6, h: 10 },
-      { i: 'platformBreakdown', x: 0, y: 48, w: 6, h: 8 },
-      { i: 'compliance', x: 6, y: 48, w: 6, h: 9 }
+      { i: 'codeforcesStats', x: 0, y: 25, w: 6, h: 11 },
+      { i: 'codechefStats', x: 6, y: 25, w: 6, h: 11 },
+      { i: 'codeforcesRating', x: 6, y: 36, w: 6, h: 10 },
+      { i: 'platformBreakdown', x: 0, y: 46, w: 6, h: 8 },
+      { i: 'compliance', x: 6, y: 46, w: 6, h: 9 }
     ];
     return { lg: defaultLayout, md: defaultLayout };
   });
 
   const onLayoutChange = (currentLayout, allLayouts) => {
     setLayouts(allLayouts);
-    localStorage.setItem('dashboard-layouts-v13', JSON.stringify(allLayouts));
+    localStorage.setItem('dashboard-layouts-v14', JSON.stringify(allLayouts));
   };
 
   if (isLoading || !dashboard) {
@@ -147,17 +147,17 @@ const Dashboard = () => {
           <div key="weightProgress" data-grid={{ w: 6, h: 12, x: 6, y: 0, minW: 4, minH: 10 }}><WeightProgressWidget weightProgress={weightProgress} /></div>
         )}
         {user?.leetcodeHandle && (
-          <div key="leetcodeStats" data-grid={{ w: 6, h: 15, x: 0, y: 12, minW: 4, minH: 15 }}>
+          <div key="leetcodeStats" data-grid={{ w: 6, h: 13, x: 0, y: 12, minW: 4, minH: 15 }}>
             <LeetCodeStatsWidget user={user} leetcodeStats={leetcodeStats} isPlatformLoading={isPlatformLoading} fetchLeetCodeStats={fetchLeetCodeStats} />
           </div>
         )}
         {user?.codeforcesHandle && (
-          <div key="codeforcesStats" data-grid={{ w: 6, h: 11, x: 0, y: 27, minW: 4, minH: 9 }}>
+          <div key="codeforcesStats" data-grid={{ w: 6, h: 11, x: 0, y: 25, minW: 4, minH: 9 }}>
             <CodeforcesStatsWidget user={user} codeforcesStats={codeforcesStats} isPlatformLoading={isPlatformLoading} fetchCodeforcesStats={fetchCodeforcesStats} />
           </div>
         )}
         {user?.codechefHandle && (
-          <div key="codechefStats" data-grid={{ w: 6, h: 11, x: 6, y: 27, minW: 4, minH: 9 }}>
+          <div key="codechefStats" data-grid={{ w: 6, h: 11, x: 6, y: 25, minW: 4, minH: 9 }}>
             <CodeChefStatsWidget user={user} />
           </div>
         )}
@@ -167,17 +167,17 @@ const Dashboard = () => {
           </div>
         )}
         {codeforcesStats?.ratingHistory?.length > 1 && (
-          <div key="codeforcesRating" data-grid={{ w: 6, h: 10, x: 6, y: 38, minW: 4, minH: 8 }}>
+          <div key="codeforcesRating" data-grid={{ w: 6, h: 10, x: 6, y: 36, minW: 4, minH: 8 }}>
             <CodeforcesRatingWidget codeforcesStats={codeforcesStats} />
           </div>
         )}
         {hasPlatformHistory && (
-          <div key="platformBreakdown" data-grid={{ w: 6, h: 8, x: 0, y: 48, minW: 4, minH: 6 }}>
+          <div key="platformBreakdown" data-grid={{ w: 6, h: 8, x: 0, y: 46, minW: 4, minH: 6 }}>
             <PlatformBreakdownWidget lcCount={lcCount} ccCount={ccCount} cfCount={cfCount} />
           </div>
         )}
         {hasComplianceHistory && (
-          <div key="compliance" data-grid={{ w: 6, h: 9, x: 6, y: 48, minW: 4, minH: 7 }}>
+          <div key="compliance" data-grid={{ w: 6, h: 9, x: 6, y: 46, minW: 4, minH: 7 }}>
             <ComplianceWidget gymCompliance={gymCompliance} dietCompliance={dietCompliance} weeklyCompletion={weeklyCompletion} />
           </div>
         )}
