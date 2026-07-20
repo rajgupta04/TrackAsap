@@ -213,20 +213,40 @@ const ShareCardContent = ({
 );
 
 // ─── PNG capture helper ───────────────────────────────────────────────────────
-const captureCard = async (element) => {
-  return html2canvas(element, {
-    backgroundColor: '#0b0f1a',
-    scale: 3,
-    useCORS: true,
-    allowTaint: true,
-    logging: false,
-    imageTimeout: 15000,
-    onclone: (doc, cloned) => {
-      // Make sure the cloned element has no transforms that would misplace it
-      cloned.style.transform = 'none';
-      cloned.style.position = 'static';
-    },
-  });
+// We render the card into a fresh off-screen div (no ElectricBorder canvas)
+// so the canvas is never tainted and toDataURL() always works.
+const captureCard = async (contentElement) => {
+  // Clone just the inner ShareCardContent node (no canvas)
+  const clone = contentElement.cloneNode(true);
+
+  // Give it static glow border that mimics the ElectricBorder
+  clone.style.boxShadow = [
+    '0 0 0 2px #39FF14',
+    '0 0 20px 4px rgba(57,255,20,0.5)',
+    '0 0 50px 8px rgba(57,255,20,0.25)',
+  ].join(', ');
+  clone.style.borderRadius = '16px';
+  clone.style.position = 'fixed';
+  clone.style.top = '-9999px';
+  clone.style.left = '-9999px';
+  clone.style.width = contentElement.offsetWidth + 'px';
+  clone.style.zIndex = '-1';
+
+  document.body.appendChild(clone);
+
+  try {
+    const canvas = await html2canvas(clone, {
+      backgroundColor: '#0b0f1a',
+      scale: 3,
+      useCORS: true,
+      allowTaint: false,
+      logging: false,
+      imageTimeout: 15000,
+    });
+    return canvas;
+  } finally {
+    document.body.removeChild(clone);
+  }
 };
 
 // ─── Share Modal ─────────────────────────────────────────────────────────────
@@ -380,9 +400,10 @@ const ProfileShareCard = ({
   return (
     <>
       <div className="space-y-3">
-        {/* cardRef wraps ElectricBorder so PNG includes the glowing border */}
-        <div ref={cardRef} className="rounded-2xl">
-          <ElectricBorder color="#39FF14" speed={1} chaos={0.12} thickness={2} style={{ borderRadius: 16 }}>
+        {/* ElectricBorder for on-screen display */}
+        <ElectricBorder color="#39FF14" speed={1} chaos={0.12} thickness={2} style={{ borderRadius: 16 }}>
+          {/* cardRef is on the inner content — no canvas element — safe for html2canvas */}
+          <div ref={cardRef}>
             <ShareCardContent
               user={user}
               avatarSrc={avatarSrc}
@@ -393,8 +414,8 @@ const ProfileShareCard = ({
               platformRatings={platformRatings}
               topSheets={topSheets}
             />
-          </ElectricBorder>
-        </div>
+          </div>
+        </ElectricBorder>
 
         <button
           onClick={() => setShowShareModal(true)}
