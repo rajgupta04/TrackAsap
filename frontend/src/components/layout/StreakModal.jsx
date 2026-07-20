@@ -70,15 +70,15 @@ const StreakModal = ({ isOpen, onClose, streak, onRefresh, isRefreshing }) => {
   return (
     <AnimatePresence>
       {isOpen && (
-        <motion.div
-          ref={constraintsRef}
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        className="fixed inset-0 bg-black/60 backdrop-blur-lg z-[110] flex items-center justify-center p-4 sm:p-6"
-        onClick={onClose}
-        style={{ perspective: 1200 }}
-      >
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 sm:p-6" style={{ perspective: 1200 }}>
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="absolute inset-0 bg-black/60 backdrop-blur-lg"
+            onClick={onClose}
+          />
+          <div ref={constraintsRef} className="absolute inset-0 pointer-events-none" />
         <style>{`
           .traffic-group:hover .dot-close,
           .traffic-group:hover .dot-minimize,
@@ -274,8 +274,8 @@ const StreakModal = ({ isOpen, onClose, streak, onRefresh, isRefreshing }) => {
               </div>
             </div>
           </div>
-        </motion.div>
-      </motion.div>
+          </motion.div>
+        </div>
       )}
     </AnimatePresence>
   );
