@@ -129,17 +129,18 @@ const Dashboard = () => {
       </div>
 
       <ResponsiveGridLayout
-        className="layout"
-        layouts={layouts}
-        breakpoints={{ lg: 1024, md: 768, sm: 640, xs: 480, xxs: 0 }}
-        cols={{ lg: 12, md: 10, sm: 6, xs: 4, xxs: 2 }}
-        rowHeight={30}
-        onLayoutChange={onLayoutChange}
-        isDraggable={true}
-        isResizable={true}
-        draggableCancel="button, a"
-        margin={[16, 16]}
-      >
+          className="layout"
+          layouts={layouts}
+          breakpoints={{ lg: 1024, md: 768, sm: 640, xs: 480, xxs: 0 }}
+          cols={{ lg: 12, md: 10, sm: 6, xs: 4, xxs: 2 }}
+          rowHeight={30}
+          onLayoutChange={onLayoutChange}
+          isDraggable={true}
+          isResizable={true}
+          draggableHandle=".drag-handle"
+          draggableCancel="button, a, input, textarea, select"
+          margin={[16, 16]}
+        >
         {hasProblemsTrend && (
           <div key="problemsTrend" data-grid={{ w: 6, h: 12, x: 0, y: 0, minW: 4, minH: 10 }}><ProblemsTrendWidget problemsTrend={problemsTrend} /></div>
         )}

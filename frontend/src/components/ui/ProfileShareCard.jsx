@@ -1,101 +1,235 @@
 import { useRef, useState } from 'react';
-import html2canvas from 'html2canvas';
-import { Share2, Download, X, Copy, Check, Star, Target, Zap, Trophy } from 'lucide-react';
+import { toPng } from 'html-to-image';
+import { Share2, Download, X, Copy, Check, Star, Target } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import ElectricBorder from './ElectricBorder';
 import toast from 'react-hot-toast';
 
-// ─── The actual card UI (rendered both on-screen & captured for PNG) ──────────
-const ShareCardContent = ({ user, avatarSrc, currentUserRanks, totalSolved, streak, aggregateContests, platformRatings, topSheets }) => (
+// ─── Card content (used both on-screen & captured for PNG) ───────────────────
+const ShareCardContent = ({
+  user, avatarSrc, currentUserRanks,
+  totalSolved, streak, aggregateContests,
+  platformRatings, topSheets,
+}) => (
   <div
-    id="profile-share-card-inner"
-    style={{ fontFamily: "'Inter', sans-serif", background: 'linear-gradient(135deg, #0d1117 0%, #161b2e 60%, #0d1117 100%)' }}
-    className="p-6 rounded-2xl space-y-5 w-full relative overflow-hidden"
+    style={{
+      fontFamily: "'Inter', 'Segoe UI', sans-serif",
+      background: 'linear-gradient(160deg, #0b0f1a 0%, #0d1421 50%, #0b0f1a 100%)',
+      width: '100%',
+      padding: '24px',
+      boxSizing: 'border-box',
+      position: 'relative',
+      overflow: 'hidden',
+      borderRadius: '16px',
+    }}
   >
-    {/* Background glow blobs */}
-    <div className="absolute top-0 left-0 w-40 h-40 rounded-full bg-[#FFA116]/5 blur-3xl pointer-events-none" />
-    <div className="absolute bottom-0 right-0 w-32 h-32 rounded-full bg-neon-green/5 blur-3xl pointer-events-none" />
+    {/* Subtle glow blobs */}
+    <div style={{
+      position: 'absolute', top: '-40px', left: '-40px',
+      width: '200px', height: '200px', borderRadius: '50%',
+      background: 'radial-gradient(circle, rgba(57,255,20,0.06) 0%, transparent 70%)',
+      pointerEvents: 'none',
+    }} />
+    <div style={{
+      position: 'absolute', bottom: '-40px', right: '-40px',
+      width: '180px', height: '180px', borderRadius: '50%',
+      background: 'radial-gradient(circle, rgba(57,255,20,0.04) 0%, transparent 70%)',
+      pointerEvents: 'none',
+    }} />
 
-    {/* Header: avatar + name + rank + logo */}
-    <div className="flex items-center gap-4 border-b border-white/10 pb-4 relative z-10">
-      <div className="w-14 h-14 rounded-full overflow-hidden border-2 border-[#FFA116]/60 shrink-0 shadow-lg shadow-[#FFA116]/20">
+    {/* ── HEADER ── */}
+    <div style={{
+      display: 'flex', alignItems: 'center', gap: '14px',
+      paddingBottom: '18px',
+      borderBottom: '1px solid rgba(255,255,255,0.08)',
+      marginBottom: '18px',
+      position: 'relative', zIndex: 1,
+    }}>
+      {/* Avatar */}
+      <div style={{
+        width: '52px', height: '52px', borderRadius: '50%',
+        overflow: 'hidden', flexShrink: 0,
+        border: '2px solid rgba(57,255,20,0.4)',
+        boxShadow: '0 0 16px rgba(57,255,20,0.15)',
+      }}>
         {avatarSrc ? (
-          <img src={avatarSrc} alt="Profile" className="w-full h-full object-cover" crossOrigin="anonymous" />
+          <img src={avatarSrc} alt="Avatar" crossOrigin="anonymous"
+            style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
         ) : (
-          <div className="w-full h-full bg-[#1a2540] flex items-center justify-center text-[#FFA116] font-bold text-xl">
+          <div style={{
+            width: '100%', height: '100%', background: '#1a2540',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            color: '#39FF14', fontWeight: 700, fontSize: '20px',
+          }}>
             {user?.name?.charAt(0).toUpperCase() || 'U'}
           </div>
         )}
       </div>
-      <div className="min-w-0 flex-1">
-        <h3 className="text-lg font-bold text-white truncate leading-tight">{user?.name || 'User'}</h3>
-        <p className="text-sm text-gray-400 mt-0.5 flex items-center gap-1">
-          🏆 TrackAsap Rank:
-          <span className="text-[#39FF14] font-bold ml-1">#{currentUserRanks?.global || '--'}</span>
-        </p>
+
+      {/* Name + rank */}
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{
+          color: '#ffffff', fontWeight: 700, fontSize: '17px',
+          lineHeight: 1.2, whiteSpace: 'nowrap',
+          overflow: 'hidden', textOverflow: 'ellipsis',
+          marginBottom: '4px',
+        }}>
+          {user?.name || 'User'}
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'nowrap' }}>
+          <span style={{ fontSize: '12px', color: '#6b7280' }}>TrackAsap Rank</span>
+          <span style={{
+            fontSize: '13px', fontWeight: 700, color: '#39FF14',
+            background: 'rgba(57,255,20,0.08)',
+            padding: '1px 8px', borderRadius: '20px',
+            border: '1px solid rgba(57,255,20,0.2)',
+          }}>
+            #{currentUserRanks?.global || '--'}
+          </span>
+        </div>
       </div>
-      <img src="/logoSmall.png" alt="TrackAsap" className="w-8 h-8 opacity-60 shrink-0" crossOrigin="anonymous" />
+
+      {/* Logo */}
+      <img
+        src="/logoSmall.png"
+        alt="TrackAsap"
+        crossOrigin="anonymous"
+        style={{ width: '32px', height: '32px', opacity: 0.7, flexShrink: 0, objectFit: 'contain' }}
+      />
     </div>
 
-    {/* Stats row */}
-    <div className="grid grid-cols-3 gap-3 relative z-10">
+    {/* ── STATS ROW ── */}
+    <div style={{
+      display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)',
+      gap: '10px', marginBottom: '14px', position: 'relative', zIndex: 1,
+    }}>
       {[
-        { val: totalSolved, label: 'SOLVED', color: '#FFA116' },
-        { val: streak?.longestStreak || 0, label: 'STREAK', color: '#f97316' },
-        { val: aggregateContests, label: 'CONTESTS', color: '#a78bfa' },
+        { val: totalSolved,               label: 'SOLVED',   color: '#39FF14' },
+        { val: streak?.longestStreak || 0, label: 'STREAK',   color: '#f97316' },
+        { val: aggregateContests,          label: 'CONTESTS', color: '#a78bfa' },
       ].map(({ val, label, color }) => (
-        <div key={label} className="bg-white/5 border border-white/8 p-3 rounded-xl text-center">
-          <div className="text-2xl font-black leading-none" style={{ color }}>{val}</div>
-          <div className="text-[9px] text-gray-500 uppercase tracking-widest font-semibold mt-1">{label}</div>
+        <div key={label} style={{
+          background: 'rgba(255,255,255,0.04)',
+          border: '1px solid rgba(255,255,255,0.08)',
+          borderRadius: '12px', padding: '12px 8px', textAlign: 'center',
+        }}>
+          <div style={{ color, fontSize: '24px', fontWeight: 900, lineHeight: 1 }}>{val}</div>
+          <div style={{
+            color: '#4b5563', fontSize: '8px', fontWeight: 600,
+            letterSpacing: '0.1em', textTransform: 'uppercase', marginTop: '4px',
+          }}>{label}</div>
         </div>
       ))}
     </div>
 
-    {/* Platform ratings */}
+    {/* ── PLATFORM RATINGS ── */}
     {platformRatings.length > 0 && (
-      <div className="bg-white/5 border border-white/8 rounded-xl p-4 space-y-2.5 relative z-10">
-        <div className="flex items-center gap-1.5 text-xs text-gray-500 uppercase tracking-wider font-semibold border-b border-white/5 pb-2">
-          <Star className="w-3.5 h-3.5" /> Best Contest Ratings
+      <div style={{
+        background: 'rgba(255,255,255,0.04)',
+        border: '1px solid rgba(255,255,255,0.08)',
+        borderRadius: '12px', padding: '14px',
+        marginBottom: '14px', position: 'relative', zIndex: 1,
+      }}>
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: '6px',
+          color: '#6b7280', fontSize: '10px', fontWeight: 600,
+          letterSpacing: '0.08em', textTransform: 'uppercase',
+          paddingBottom: '10px', marginBottom: '10px',
+          borderBottom: '1px solid rgba(255,255,255,0.06)',
+        }}>
+          ⭐ Best Contest Ratings
         </div>
         {platformRatings.map(({ name, rating, color }) => (
-          <div key={name} className="flex items-center justify-between">
-            <span className="text-xs text-gray-400">{name}</span>
-            <span className="text-sm font-bold" style={{ color }}>⭐ {rating}</span>
+          <div key={name} style={{
+            display: 'flex', justifyContent: 'space-between',
+            alignItems: 'center', marginBottom: '8px',
+          }}>
+            <span style={{ color: '#9ca3af', fontSize: '13px' }}>{name}</span>
+            <span style={{ color, fontSize: '14px', fontWeight: 700 }}>⭐ {rating}</span>
           </div>
         ))}
       </div>
     )}
 
-    {/* Top sheets */}
+    {/* ── TOP SHEETS ── */}
     {topSheets.length > 0 && (
-      <div className="bg-white/5 border border-white/8 rounded-xl p-4 space-y-2.5 relative z-10">
-        <div className="flex items-center gap-1.5 text-xs text-gray-500 uppercase tracking-wider font-semibold border-b border-white/5 pb-2">
-          <Target className="w-3.5 h-3.5" /> Top Sheets
+      <div style={{
+        background: 'rgba(255,255,255,0.04)',
+        border: '1px solid rgba(255,255,255,0.08)',
+        borderRadius: '12px', padding: '14px',
+        marginBottom: '16px', position: 'relative', zIndex: 1,
+      }}>
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: '6px',
+          color: '#6b7280', fontSize: '10px', fontWeight: 600,
+          letterSpacing: '0.08em', textTransform: 'uppercase',
+          paddingBottom: '10px', marginBottom: '10px',
+          borderBottom: '1px solid rgba(255,255,255,0.06)',
+        }}>
+          🎯 Top Sheets
         </div>
         {topSheets.map((sheet, idx) => (
-          <div key={idx} className="space-y-1">
-            <div className="flex justify-between items-center">
-              <span className="text-xs text-white truncate pr-2">{sheet.name}</span>
-              <span className="text-xs font-bold text-[#39FF14] shrink-0">{sheet.completionPercentage || 0}%</span>
+          <div key={idx} style={{ marginBottom: idx < topSheets.length - 1 ? '10px' : 0 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
+              <span style={{
+                color: '#e5e7eb', fontSize: '12px',
+                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                maxWidth: '75%',
+              }}>{sheet.name}</span>
+              <span style={{ color: '#39FF14', fontSize: '12px', fontWeight: 700 }}>
+                {sheet.completionPercentage || 0}%
+              </span>
             </div>
-            <div className="w-full h-1 bg-white/10 rounded-full overflow-hidden">
-              <div className="h-full bg-[#39FF14] rounded-full transition-all" style={{ width: `${sheet.completionPercentage || 0}%` }} />
+            <div style={{
+              width: '100%', height: '4px',
+              background: 'rgba(255,255,255,0.08)', borderRadius: '4px', overflow: 'hidden',
+            }}>
+              <div style={{
+                height: '100%', width: `${sheet.completionPercentage || 0}%`,
+                background: 'linear-gradient(90deg, #39FF14, #22c55e)',
+                borderRadius: '4px',
+              }} />
             </div>
           </div>
         ))}
       </div>
     )}
 
-    {/* Footer watermark */}
-    <div className="flex items-center justify-center gap-2 pt-1 relative z-10">
-      <div className="h-px flex-1 bg-white/10" />
-      <span className="text-[10px] text-gray-600 font-semibold tracking-widest uppercase">track-asap.vercel.app</span>
-      <div className="h-px flex-1 bg-white/10" />
+    {/* ── FOOTER ── */}
+    <div style={{
+      display: 'flex', alignItems: 'center', gap: '10px',
+      position: 'relative', zIndex: 1,
+    }}>
+      <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.08)' }} />
+      <span style={{
+        color: '#374151', fontSize: '9px', fontWeight: 600,
+        letterSpacing: '0.12em', textTransform: 'uppercase',
+      }}>
+        track-asap.vercel.app
+      </span>
+      <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.08)' }} />
     </div>
   </div>
 );
 
-// ─── Share Modal ─────────────────────────────────────────────────────────────
+// ─── PNG capture helper ───────────────────────────────────────────────────────
+const captureCard = (element) =>
+  toPng(element, {
+    pixelRatio: 3,
+    skipFonts: false,
+    filter: (node) => {
+      // Skip canvas elements (ElectricBorder animation) to avoid taint
+      if (node.tagName === 'CANVAS') return false;
+      return true;
+    },
+    style: {
+      // Ensure the electric border glow still shows as a static shadow
+      boxShadow: '0 0 0 2px #39FF14, 0 0 24px 6px rgba(57,255,20,0.45), 0 0 60px 12px rgba(57,255,20,0.2)',
+      borderRadius: '16px',
+    },
+  });
+
+// ─── Share Modal ─────────────────────────────────────────────────────
 const ShareModal = ({ onClose, cardRef }) => {
   const [downloading, setDownloading] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -104,19 +238,14 @@ const ShareModal = ({ onClose, cardRef }) => {
     if (!cardRef.current) return;
     setDownloading(true);
     try {
-      const canvas = await html2canvas(cardRef.current, {
-        backgroundColor: null,
-        scale: 3,
-        useCORS: true,
-        allowTaint: false,
-        logging: false,
-      });
+      const dataUrl = await captureCard(cardRef.current);
       const link = document.createElement('a');
       link.download = 'trackasap-profile.png';
-      link.href = canvas.toDataURL('image/png');
+      link.href = dataUrl;
       link.click();
       toast.success('Card downloaded!');
     } catch (e) {
+      console.error('Download error:', e);
       toast.error('Download failed, try again');
     } finally {
       setDownloading(false);
@@ -133,28 +262,21 @@ const ShareModal = ({ onClose, cardRef }) => {
   const handleNativeShare = async () => {
     if (!cardRef.current) return;
     try {
-      const canvas = await html2canvas(cardRef.current, {
-        backgroundColor: null,
-        scale: 3,
-        useCORS: true,
-        allowTaint: false,
-        logging: false,
-      });
-      canvas.toBlob(async (blob) => {
-        if (!blob) return;
-        const file = new File([blob], 'trackasap-profile.png', { type: 'image/png' });
-        if (navigator.canShare?.({ files: [file] })) {
-          await navigator.share({
-            title: 'My TrackAsap Profile',
-            text: '🚀 Check out my coding stats on TrackAsap – your all-in-one competitive programming tracker!\n\nhttps://track-asap.vercel.app',
-            files: [file],
-          });
-        } else {
-          handleDownload();
-        }
-      });
-    } catch (e) {
-      // user cancelled or error
+      const dataUrl = await captureCard(cardRef.current);
+      const res = await fetch(dataUrl);
+      const blob = await res.blob();
+      const file = new File([blob], 'trackasap-profile.png', { type: 'image/png' });
+      if (navigator.canShare?.({ files: [file] })) {
+        await navigator.share({
+          title: 'My TrackAsap Profile',
+          text: '🚀 Check out my coding stats on TrackAsap – your all-in-one competitive programming tracker!\n\nhttps://track-asap.vercel.app',
+          files: [file],
+        });
+      } else {
+        handleDownload();
+      }
+    } catch {
+      // user cancelled
     }
   };
 
@@ -174,12 +296,12 @@ const ShareModal = ({ onClose, cardRef }) => {
         className="w-full max-w-sm"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="bg-[#0d1117] border border-white/10 rounded-2xl overflow-hidden shadow-2xl">
-          {/* Modal header */}
+        <div className="bg-[#0b0f1a] border border-white/10 rounded-2xl overflow-hidden shadow-2xl">
+          {/* Header */}
           <div className="flex items-center justify-between p-5 border-b border-white/8">
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-[#FFA116]/15 border border-[#FFA116]/20 flex items-center justify-center">
-                <Share2 className="w-4 h-4 text-[#FFA116]" />
+              <div className="w-9 h-9 rounded-xl bg-[#39FF14]/10 border border-[#39FF14]/20 flex items-center justify-center">
+                <Share2 className="w-4 h-4 text-[#39FF14]" />
               </div>
               <div>
                 <h3 className="font-bold text-white text-sm">Share Your Profile</h3>
@@ -191,13 +313,13 @@ const ShareModal = ({ onClose, cardRef }) => {
             </button>
           </div>
 
-          {/* Ad / promo section */}
           <div className="p-5 space-y-4">
-            <div className="bg-gradient-to-br from-[#FFA116]/10 to-[#39FF14]/5 border border-[#FFA116]/20 rounded-xl p-4 space-y-2">
+            {/* Promo card */}
+            <div className="bg-gradient-to-br from-[#39FF14]/8 to-transparent border border-[#39FF14]/15 rounded-xl p-4 space-y-2">
               <div className="flex items-center gap-2">
                 <img src="/logoSmall.png" alt="TrackAsap" className="w-6 h-6" />
                 <span className="text-sm font-bold text-white">TrackAsap</span>
-                <span className="text-[10px] bg-[#39FF14]/15 text-[#39FF14] px-2 py-0.5 rounded-full font-semibold">FREE</span>
+                <span className="text-[10px] bg-[#39FF14]/15 text-[#39FF14] px-2 py-0.5 rounded-full font-semibold border border-[#39FF14]/20">FREE</span>
               </div>
               <p className="text-xs text-gray-400 leading-relaxed">
                 Track LeetCode, Codeforces & CodeChef all in one place. Contests, streaks, ratings, sheets — everything on one dashboard.
@@ -206,7 +328,7 @@ const ShareModal = ({ onClose, cardRef }) => {
                 href="https://track-asap.vercel.app"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 text-xs text-[#FFA116] font-semibold hover:underline"
+                className="inline-flex items-center gap-1.5 text-xs text-[#39FF14] font-semibold hover:underline"
               >
                 🔗 track-asap.vercel.app
               </a>
@@ -217,14 +339,14 @@ const ShareModal = ({ onClose, cardRef }) => {
               <button
                 onClick={handleDownload}
                 disabled={downloading}
-                className="flex items-center justify-center gap-2 px-4 py-3 bg-[#FFA116]/15 hover:bg-[#FFA116]/25 border border-[#FFA116]/30 text-[#FFA116] rounded-xl transition-all text-sm font-semibold disabled:opacity-50"
+                className="flex items-center justify-center gap-2 px-4 py-3 bg-[#39FF14]/10 hover:bg-[#39FF14]/20 border border-[#39FF14]/25 text-[#39FF14] rounded-xl transition-all text-sm font-semibold disabled:opacity-50"
               >
                 <Download className="w-4 h-4" />
                 {downloading ? 'Saving…' : 'Download'}
               </button>
               <button
                 onClick={handleNativeShare}
-                className="flex items-center justify-center gap-2 px-4 py-3 bg-[#39FF14]/10 hover:bg-[#39FF14]/20 border border-[#39FF14]/25 text-[#39FF14] rounded-xl transition-all text-sm font-semibold"
+                className="flex items-center justify-center gap-2 px-4 py-3 bg-white/5 hover:bg-white/10 border border-white/10 text-white rounded-xl transition-all text-sm font-semibold"
               >
                 <Share2 className="w-4 h-4" />
                 Share
@@ -246,38 +368,39 @@ const ShareModal = ({ onClose, cardRef }) => {
 };
 
 // ─── Main exported component ──────────────────────────────────────────────────
-const ProfileShareCard = ({ user, avatarSrc, currentUserRanks, totalSolved, streak, aggregateContests, platformRatings, topSheets }) => {
+const ProfileShareCard = ({
+  user, avatarSrc, currentUserRanks,
+  totalSolved, streak, aggregateContests,
+  platformRatings, topSheets,
+}) => {
   const [showShareModal, setShowShareModal] = useState(false);
+  // Ref on the OUTER wrapper — captures full card including electric border
   const cardRef = useRef(null);
 
   return (
     <>
       <div className="space-y-3">
-        <ElectricBorder
-          color="#FFA116"
-          speed={1}
-          chaos={0.15}
-          thickness={2}
-          style={{ borderRadius: 16 }}
-        >
-          <div ref={cardRef}>
-            <ShareCardContent
-              user={user}
-              avatarSrc={avatarSrc}
-              currentUserRanks={currentUserRanks}
-              totalSolved={totalSolved}
-              streak={streak}
-              aggregateContests={aggregateContests}
-              platformRatings={platformRatings}
-              topSheets={topSheets}
-            />
-          </div>
-        </ElectricBorder>
+        {/* cardRef on outer wrapper — html-to-image skips canvas nodes so ElectricBorder is safe */}
+        <div ref={cardRef} className="rounded-2xl">
+          <ElectricBorder color="#39FF14" speed={1} chaos={0.12} thickness={2} style={{ borderRadius: 16 }}>
+            <div>
+              <ShareCardContent
+                user={user}
+                avatarSrc={avatarSrc}
+                currentUserRanks={currentUserRanks}
+                totalSolved={totalSolved}
+                streak={streak}
+                aggregateContests={aggregateContests}
+                platformRatings={platformRatings}
+                topSheets={topSheets}
+              />
+            </div>
+          </ElectricBorder>
+        </div>
 
-        {/* Share button below the card */}
         <button
           onClick={() => setShowShareModal(true)}
-          className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-[#FFA116]/10 hover:bg-[#FFA116]/20 border border-[#FFA116]/25 text-[#FFA116] rounded-xl transition-all text-sm font-semibold group"
+          className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-[#39FF14]/8 hover:bg-[#39FF14]/15 border border-[#39FF14]/20 text-[#39FF14] rounded-xl transition-all text-sm font-semibold group"
         >
           <Share2 className="w-4 h-4 group-hover:scale-110 transition-transform" />
           Share / Download Card
@@ -294,3 +417,4 @@ const ProfileShareCard = ({ user, avatarSrc, currentUserRanks, totalSolved, stre
 };
 
 export default ProfileShareCard;
+
