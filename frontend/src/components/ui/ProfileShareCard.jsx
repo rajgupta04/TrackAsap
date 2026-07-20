@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import html2canvas from 'html2canvas';
+import { toPng } from 'html-to-image';
 import { Share2, Download, X, Copy, Check, Star, Target } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import ElectricBorder from './ElectricBorder';
@@ -213,43 +213,23 @@ const ShareCardContent = ({
 );
 
 // ─── PNG capture helper ───────────────────────────────────────────────────────
-// We render the card into a fresh off-screen div (no ElectricBorder canvas)
-// so the canvas is never tainted and toDataURL() always works.
-const captureCard = async (contentElement) => {
-  // Clone just the inner ShareCardContent node (no canvas)
-  const clone = contentElement.cloneNode(true);
+const captureCard = (element) =>
+  toPng(element, {
+    pixelRatio: 3,
+    skipFonts: false,
+    filter: (node) => {
+      // Skip canvas elements (ElectricBorder animation) to avoid taint
+      if (node.tagName === 'CANVAS') return false;
+      return true;
+    },
+    style: {
+      // Ensure the electric border glow still shows as a static shadow
+      boxShadow: '0 0 0 2px #39FF14, 0 0 24px 6px rgba(57,255,20,0.45), 0 0 60px 12px rgba(57,255,20,0.2)',
+      borderRadius: '16px',
+    },
+  });
 
-  // Give it static glow border that mimics the ElectricBorder
-  clone.style.boxShadow = [
-    '0 0 0 2px #39FF14',
-    '0 0 20px 4px rgba(57,255,20,0.5)',
-    '0 0 50px 8px rgba(57,255,20,0.25)',
-  ].join(', ');
-  clone.style.borderRadius = '16px';
-  clone.style.position = 'fixed';
-  clone.style.top = '-9999px';
-  clone.style.left = '-9999px';
-  clone.style.width = contentElement.offsetWidth + 'px';
-  clone.style.zIndex = '-1';
-
-  document.body.appendChild(clone);
-
-  try {
-    const canvas = await html2canvas(clone, {
-      backgroundColor: '#0b0f1a',
-      scale: 3,
-      useCORS: true,
-      allowTaint: false,
-      logging: false,
-      imageTimeout: 15000,
-    });
-    return canvas;
-  } finally {
-    document.body.removeChild(clone);
-  }
-};
-
-// ─── Share Modal ─────────────────────────────────────────────────────────────
+// ─── Share Modal ─────────────────────────────────────────────────────
 const ShareModal = ({ onClose, cardRef }) => {
   const [downloading, setDownloading] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -258,13 +238,14 @@ const ShareModal = ({ onClose, cardRef }) => {
     if (!cardRef.current) return;
     setDownloading(true);
     try {
-      const canvas = await captureCard(cardRef.current);
+      const dataUrl = await captureCard(cardRef.current);
       const link = document.createElement('a');
       link.download = 'trackasap-profile.png';
-      link.href = canvas.toDataURL('image/png');
+      link.href = dataUrl;
       link.click();
       toast.success('Card downloaded!');
-    } catch {
+    } catch (e) {
+      console.error('Download error:', e);
       toast.error('Download failed, try again');
     } finally {
       setDownloading(false);
@@ -281,20 +262,19 @@ const ShareModal = ({ onClose, cardRef }) => {
   const handleNativeShare = async () => {
     if (!cardRef.current) return;
     try {
-      const canvas = await captureCard(cardRef.current);
-      canvas.toBlob(async (blob) => {
-        if (!blob) return;
-        const file = new File([blob], 'trackasap-profile.png', { type: 'image/png' });
-        if (navigator.canShare?.({ files: [file] })) {
-          await navigator.share({
-            title: 'My TrackAsap Profile',
-            text: '🚀 Check out my coding stats on TrackAsap – your all-in-one competitive programming tracker!\n\nhttps://track-asap.vercel.app',
-            files: [file],
-          });
-        } else {
-          handleDownload();
-        }
-      });
+      const dataUrl = await captureCard(cardRef.current);
+      const res = await fetch(dataUrl);
+      const blob = await res.blob();
+      const file = new File([blob], 'trackasap-profile.png', { type: 'image/png' });
+      if (navigator.canShare?.({ files: [file] })) {
+        await navigator.share({
+          title: 'My TrackAsap Profile',
+          text: '🚀 Check out my coding stats on TrackAsap – your all-in-one competitive programming tracker!\n\nhttps://track-asap.vercel.app',
+          files: [file],
+        });
+      } else {
+        handleDownload();
+      }
     } catch {
       // user cancelled
     }
@@ -400,22 +380,23 @@ const ProfileShareCard = ({
   return (
     <>
       <div className="space-y-3">
-        {/* ElectricBorder for on-screen display */}
-        <ElectricBorder color="#39FF14" speed={1} chaos={0.12} thickness={2} style={{ borderRadius: 16 }}>
-          {/* cardRef is on the inner content — no canvas element — safe for html2canvas */}
-          <div ref={cardRef}>
-            <ShareCardContent
-              user={user}
-              avatarSrc={avatarSrc}
-              currentUserRanks={currentUserRanks}
-              totalSolved={totalSolved}
-              streak={streak}
-              aggregateContests={aggregateContests}
-              platformRatings={platformRatings}
-              topSheets={topSheets}
-            />
-          </div>
-        </ElectricBorder>
+        {/* cardRef on outer wrapper — html-to-image skips canvas nodes so ElectricBorder is safe */}
+        <div ref={cardRef} className="rounded-2xl">
+          <ElectricBorder color="#39FF14" speed={1} chaos={0.12} thickness={2} style={{ borderRadius: 16 }}>
+            <div>
+              <ShareCardContent
+                user={user}
+                avatarSrc={avatarSrc}
+                currentUserRanks={currentUserRanks}
+                totalSolved={totalSolved}
+                streak={streak}
+                aggregateContests={aggregateContests}
+                platformRatings={platformRatings}
+                topSheets={topSheets}
+              />
+            </div>
+          </ElectricBorder>
+        </div>
 
         <button
           onClick={() => setShowShareModal(true)}
