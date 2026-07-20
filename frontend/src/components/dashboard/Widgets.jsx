@@ -9,7 +9,7 @@ export const LeetCodeStatsWidget = ({ user, leetcodeStats, isPlatformLoading, fe
   if (!user?.leetcodeHandle) return null;
   return (
     <GlassCard className="h-full">
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-4 cursor-move drag-handle">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-[#FFA116]/20 flex items-center justify-center">
             <Code2 className="w-5 h-5 text-[#FFA116]" />
@@ -54,16 +54,16 @@ export const LeetCodeStatsWidget = ({ user, leetcodeStats, isPlatformLoading, fe
           </div>
           <div className="flex items-center justify-around pt-2 border-t border-dark-700/50">
             <div className="text-center">
+              <div className="flex items-center gap-1 text-white"><Trophy className="w-4 h-4 text-yellow-500" /><span className="font-semibold">{leetcodeStats.contestsParticipated || 0}</span></div>
+              <div className="text-xs text-dark-400">Contests</div>
+            </div>
+            <div className="text-center">
               <div className="flex items-center gap-1 text-white"><TrendingUp className="w-4 h-4 text-[#FFA116]" /><span className="font-semibold">#{leetcodeStats.ranking?.toLocaleString()}</span></div>
               <div className="text-xs text-dark-400">Ranking</div>
             </div>
             <div className="text-center">
               <div className="flex items-center gap-1 text-white"><Flame className="w-4 h-4 text-orange-500" /><span className="font-semibold">{leetcodeStats.streak || 0}</span></div>
               <div className="text-xs text-dark-400">Streak</div>
-            </div>
-            <div className="text-center">
-              <div className="flex items-center gap-1 text-white"><CheckCircle2 className="w-4 h-4 text-cyan-400" /><span className="font-semibold">{leetcodeStats.activeDays || 0}</span></div>
-              <div className="text-xs text-dark-400">Active Days</div>
             </div>
           </div>
         </div>
@@ -76,7 +76,7 @@ export const CodeforcesStatsWidget = ({ user, codeforcesStats, isPlatformLoading
   if (!user?.codeforcesHandle) return null;
   return (
     <GlassCard className="h-full">
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-4 cursor-move drag-handle">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-[#1F8ACB]/20 flex items-center justify-center">
             <Code2 className="w-5 h-5 text-[#1F8ACB]" />
@@ -135,7 +135,7 @@ export const CodeChefStatsWidget = ({ user }) => {
   if (!user?.codechefHandle) return null;
   return (
     <GlassCard className="h-full">
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-4 cursor-move drag-handle">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-[#5B4638]/20 flex items-center justify-center">
             <Code2 className="w-5 h-5 text-[#5B4638]" />
@@ -164,7 +164,7 @@ export const LeetCodeHeatmapWidget = ({ user, leetcodeStats }) => {
   if (!user?.leetcodeHandle || !leetcodeStats?.submissionCalendar) return null;
   return (
     <GlassCard className="h-full">
-      <div className="flex items-center gap-3 mb-4">
+      <div className="flex items-center gap-3 mb-4 cursor-move drag-handle">
         <div className="w-8 h-8 rounded-lg bg-[#FFA116]/20 flex items-center justify-center">
           <Code2 className="w-4 h-4 text-[#FFA116]" />
         </div>
@@ -179,7 +179,7 @@ export const LeetCodeRatingWidget = ({ leetcodeStats }) => {
   if (!leetcodeStats?.ratingHistory || leetcodeStats.ratingHistory.length <= 1) return null;
   return (
     <GlassCard className="h-full flex flex-col">
-      <div className="flex items-center gap-3 mb-4">
+      <div className="flex items-center gap-3 mb-4 cursor-move drag-handle">
         <div className="w-8 h-8 rounded-lg bg-[#FFA116]/20 flex items-center justify-center">
           <TrendingUp className="w-4 h-4 text-[#FFA116]" />
         </div>
@@ -204,7 +204,7 @@ export const CodeforcesRatingWidget = ({ codeforcesStats }) => {
   if (!codeforcesStats?.ratingHistory || codeforcesStats.ratingHistory.length <= 1) return null;
   return (
     <GlassCard className="h-full flex flex-col">
-      <div className="flex items-center gap-3 mb-4">
+      <div className="flex items-center gap-3 mb-4 cursor-move drag-handle">
         <div className="w-8 h-8 rounded-lg bg-blue-500/20 flex items-center justify-center">
           <TrendingUp className="w-4 h-4 text-blue-500" />
         </div>
@@ -227,7 +227,7 @@ export const CodeforcesRatingWidget = ({ codeforcesStats }) => {
 
 export const ProblemsTrendWidget = ({ problemsTrend }) => (
   <GlassCard className="h-full flex flex-col">
-    <div className="flex items-center justify-between mb-4 md:mb-6">
+    <div className="flex items-center justify-between mb-4 md:mb-6 cursor-move drag-handle">
       <h3 className="text-base md:text-lg font-semibold text-white">Problems Solved</h3>
       <TrendingUp className="w-5 h-5 text-neon-green" />
     </div>
@@ -276,7 +276,7 @@ export const WeightProgressWidget = ({ weightProgress }) => (
 
 export const PlatformBreakdownWidget = ({ lcCount, ccCount, cfCount }) => (
   <GlassCard className="h-full">
-    <h3 className="text-base md:text-lg font-semibold text-white mb-4 md:mb-6">Platform Breakdown</h3>
+    <h3 className="text-base md:text-lg font-semibold text-white mb-4 md:mb-6 cursor-move drag-handle">Platform Breakdown</h3>
     <div className="grid grid-cols-3 gap-2 md:gap-4">
       <div className="text-center p-2 md:p-4 rounded-xl bg-dark-800/30 border border-dark-700/30">
         <div className="w-8 h-8 md:w-12 md:h-12 mx-auto mb-2 md:mb-3 rounded-lg md:rounded-xl bg-[#FFA116]/10 flex items-center justify-center">
@@ -305,7 +305,7 @@ export const PlatformBreakdownWidget = ({ lcCount, ccCount, cfCount }) => (
 
 export const ComplianceWidget = ({ gymCompliance, dietCompliance, weeklyCompletion }) => (
   <GlassCard className="h-full">
-    <h3 className="text-base md:text-lg font-semibold text-white mb-4 md:mb-6">Compliance</h3>
+    <h3 className="text-base md:text-lg font-semibold text-white mb-4 md:mb-6 cursor-move drag-handle">Compliance</h3>
     <div className="space-y-3 md:space-y-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">

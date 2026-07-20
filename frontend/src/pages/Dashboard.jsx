@@ -137,6 +137,7 @@ const Dashboard = () => {
         onLayoutChange={onLayoutChange}
         isDraggable={true}
         isResizable={true}
+        draggableHandle=".drag-handle"
         margin={[16, 16]}
       >
         {hasProblemsTrend && (
