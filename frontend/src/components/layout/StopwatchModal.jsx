@@ -4,8 +4,7 @@ import { Minus, Maximize2, X, Play, Pause, RotateCcw, Clock, Timer, Settings2 } 
 import { useTimerStore } from '../../store/timerStore';
 
 const AnalogClock = ({ timeMs, mode }) => {
-  const safeTimeMs = Number.isNaN(timeMs) || timeMs === undefined ? 0 : timeMs;
-  const totalSeconds = Math.floor(safeTimeMs / 1000);
+  const totalSeconds = Math.floor(timeMs / 1000);
   const minutes = Math.floor(totalSeconds / 60);
   const seconds = totalSeconds % 60;
   
@@ -57,37 +56,35 @@ const StopwatchModal = ({ isOpen, onClose }) => {
   const [showSettings, setShowSettings] = useState(false);
 
   const {
-    mode, display, isRunning, duration,
+    mode, display, stopwatch, timer,
     setMode, setDisplay, setDuration, start, pause, reset, getCurrentTimeMs
   } = useTimerStore();
 
-  const [currentTimeMs, setCurrentTimeMs] = useState(getCurrentTimeMs());
+  const isRunning = mode === 'stopwatch' ? stopwatch.isRunning : timer.isRunning;
+
+  const [currentTimeMs, setCurrentTimeMs] = useState(getCurrentTimeMs(mode));
 
   useEffect(() => {
     let intervalId;
     if (isRunning) {
       intervalId = setInterval(() => {
-        const t = getCurrentTimeMs();
+        const t = getCurrentTimeMs(mode);
         setCurrentTimeMs(t);
         if (mode === 'timer' && t <= 0) {
-          pause();
+          pause(mode);
           // Could play sound here
         }
       }, 50);
     } else {
-      setCurrentTimeMs(getCurrentTimeMs());
+      setCurrentTimeMs(getCurrentTimeMs(mode));
     }
     return () => clearInterval(intervalId);
   }, [isRunning, mode, getCurrentTimeMs, pause]);
 
-  // Sync when opening
+  // Sync when opening or mode changes
   useEffect(() => {
-    if (isOpen) {
-      setCurrentTimeMs(getCurrentTimeMs());
-      x.set(0);
-      y.set(0);
-    }
-  }, [isOpen, getCurrentTimeMs, x, y]);
+    setCurrentTimeMs(getCurrentTimeMs(mode));
+  }, [isOpen, mode, getCurrentTimeMs]);
 
   const constraintsRef = useRef(null);
 
@@ -158,19 +155,15 @@ const StopwatchModal = ({ isOpen, onClose }) => {
   return (
     <AnimatePresence>
       {isOpen && (
-        <motion.div 
-          key="stopwatch-modal-container"
-          className="fixed inset-0 z-[110] flex items-center justify-center p-4 sm:p-6" 
+        <motion.div
+          ref={constraintsRef}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 bg-black/60 backdrop-blur-lg z-[110] flex items-center justify-center p-4 sm:p-6"
+          onClick={onClose}
           style={{ perspective: 1200 }}
         >
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="absolute inset-0 bg-black/60 backdrop-blur-lg"
-            onClick={onClose}
-          />
-          <div ref={constraintsRef} className="absolute inset-0 pointer-events-none" />
           <style>{`
             .traffic-group:hover .dot-close,
             .traffic-group:hover .dot-minimize,
@@ -391,7 +384,7 @@ const StopwatchModal = ({ isOpen, onClose }) => {
                 {/* Controls */}
                 <div className="flex justify-center gap-4">
                   <button
-                    onClick={isRunning ? pause : start}
+                    onClick={() => isRunning ? pause(mode) : start(mode)}
                     className={`w-14 h-14 rounded-full flex items-center justify-center transition-all ${
                       isRunning 
                         ? 'bg-red-500/20 text-red-500 border border-red-500/30 hover:bg-red-500/30 shadow-[0_0_20px_rgba(239,68,68,0.2)]'
@@ -402,7 +395,7 @@ const StopwatchModal = ({ isOpen, onClose }) => {
                   </button>
 
                   <button
-                    onClick={reset}
+                    onClick={() => reset(mode)}
                     className="w-14 h-14 rounded-full flex items-center justify-center bg-gray-500/10 text-gray-400 border border-gray-500/20 hover:bg-gray-500/20 transition-all hover:text-white"
                   >
                     <RotateCcw size={20} />

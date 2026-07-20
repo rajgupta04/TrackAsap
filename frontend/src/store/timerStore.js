@@ -4,67 +4,96 @@ import { persist } from 'zustand/middleware';
 export const useTimerStore = create(
   persist(
     (set, get) => ({
-      mode: 'stopwatch', // 'stopwatch' | 'timer'
-      display: 'digital', // 'digital' | 'analog'
-      isRunning: false,
-      startTime: null,
-      accumulatedTime: 0,
-      duration: 25 * 60 * 1000, // default 25 mins for timer
+      mode: 'stopwatch', // currently active view in modal
+      display: 'digital', 
+      
+      stopwatch: {
+        isRunning: false,
+        startTime: null,
+        accumulatedTime: 0,
+      },
+      
+      timer: {
+        isRunning: false,
+        startTime: null,
+        accumulatedTime: 0,
+        duration: 25 * 60 * 1000,
+      },
 
       setMode: (mode) => set({ mode }),
       setDisplay: (display) => set({ display }),
       
       setDuration: (ms) => {
-        set({ 
-          duration: ms, 
-          accumulatedTime: 0,
-          startTime: get().isRunning ? Date.now() : null
-        });
+        set((state) => ({
+          timer: {
+            ...state.timer,
+            duration: ms,
+            accumulatedTime: 0,
+            startTime: state.timer.isRunning ? Date.now() : null
+          }
+        }));
       },
 
-      start: () => {
-        if (!get().isRunning) {
-          set({ isRunning: true, startTime: Date.now() });
+      start: (targetMode) => {
+        const m = targetMode || get().mode;
+        if (!get()[m].isRunning) {
+          set((state) => ({
+            [m]: {
+              ...state[m],
+              isRunning: true,
+              startTime: Date.now()
+            }
+          }));
         }
       },
 
-      pause: () => {
-        const state = get();
-        if (state.isRunning) {
+      pause: (targetMode) => {
+        const m = targetMode || get().mode;
+        const targetState = get()[m];
+        if (targetState.isRunning) {
           const now = Date.now();
-          const elapsed = now - state.startTime;
-          set({
-            isRunning: false,
-            accumulatedTime: state.accumulatedTime + elapsed,
-            startTime: null
-          });
+          const elapsed = now - targetState.startTime;
+          set((state) => ({
+            [m]: {
+              ...state[m],
+              isRunning: false,
+              accumulatedTime: state[m].accumulatedTime + elapsed,
+              startTime: null
+            }
+          }));
         }
       },
 
-      reset: () => {
-        set({
-          isRunning: false,
-          startTime: null,
-          accumulatedTime: 0
-        });
+      reset: (targetMode) => {
+        const m = targetMode || get().mode;
+        set((state) => ({
+          [m]: {
+            ...state[m],
+            isRunning: false,
+            startTime: null,
+            accumulatedTime: 0
+          }
+        }));
       },
 
-      // Helper to calculate current active time in ms
-      getCurrentTimeMs: () => {
-        const state = get();
-        let total = state.accumulatedTime || 0;
-        if (state.isRunning && state.startTime) {
-          total += (Date.now() - state.startTime);
+      // Helper to calculate current active time in ms for a specific mode
+      getCurrentTimeMs: (targetMode) => {
+        const m = targetMode || get().mode;
+        const targetState = get()[m];
+        
+        let total = targetState.accumulatedTime;
+        if (targetState.isRunning && targetState.startTime) {
+          total += (Date.now() - targetState.startTime);
         }
         
-        if (state.mode === 'timer') {
-          return Math.max(0, (state.duration || 25 * 60 * 1000) - total);
+        if (m === 'timer') {
+          return Math.max(0, targetState.duration - total);
         }
-        return total || 0;
+        return total;
       }
     }),
     {
-      name: 'trackasap-timer-storage',
+      name: 'trackasap-timer-storage-v2', // Change name to avoid conflicts with previous version
     }
   )
 );

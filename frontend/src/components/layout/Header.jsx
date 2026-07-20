@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Flame, Trophy, Target, RefreshCw, X, Info, Sparkles, Timer } from 'lucide-react';
+import { Flame, Trophy, Target, RefreshCw, X, Info, Sparkles, Timer, Clock } from 'lucide-react';
 import { useTaskStore } from '../../store/taskStore';
 import { useAuthStore } from '../../store/authStore';
 import { useTimerStore } from '../../store/timerStore';
@@ -23,26 +23,32 @@ const Header = () => {
   const navigate = useNavigate();
   const { streak, fetchStreak } = useTaskStore();
   const { user } = useAuthStore();
-  const { isRunning, getCurrentTimeMs } = useTimerStore();
+  const { stopwatch, timer, getCurrentTimeMs } = useTimerStore();
   
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [showStreakModal, setShowStreakModal] = useState(false);
   const [showStopwatchModal, setShowStopwatchModal] = useState(false);
-  const [headerTimeMs, setHeaderTimeMs] = useState(0);
+  
+  const [headerStopwatchMs, setHeaderStopwatchMs] = useState(0);
+  const [headerTimerMs, setHeaderTimerMs] = useState(0);
 
-  // Sync timer for header display
+  // Sync timers for header display
   useEffect(() => {
     let intervalId;
-    if (isRunning) {
-      setHeaderTimeMs(getCurrentTimeMs());
+    if (stopwatch.isRunning || timer.isRunning) {
+      if (stopwatch.isRunning) setHeaderStopwatchMs(getCurrentTimeMs('stopwatch'));
+      if (timer.isRunning) setHeaderTimerMs(getCurrentTimeMs('timer'));
+      
       intervalId = setInterval(() => {
-        setHeaderTimeMs(getCurrentTimeMs());
+        if (stopwatch.isRunning) setHeaderStopwatchMs(getCurrentTimeMs('stopwatch'));
+        if (timer.isRunning) setHeaderTimerMs(getCurrentTimeMs('timer'));
       }, 1000); // 1-second tick is enough for header
     } else {
-      setHeaderTimeMs(getCurrentTimeMs());
+      setHeaderStopwatchMs(getCurrentTimeMs('stopwatch'));
+      setHeaderTimerMs(getCurrentTimeMs('timer'));
     }
     return () => clearInterval(intervalId);
-  }, [isRunning, getCurrentTimeMs]);
+  }, [stopwatch.isRunning, timer.isRunning, getCurrentTimeMs]);
 
   const formatHeaderTime = (ms) => {
     const totalSeconds = Math.max(0, Math.floor(ms / 1000));
@@ -106,21 +112,38 @@ const Header = () => {
 
         {/* Stats */}
         <div className="hidden lg:flex items-center gap-3 relative">
-          <button
-            onClick={() => setShowStopwatchModal(true)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl border transition-all cursor-pointer group ${
-              isRunning 
-                ? 'bg-purple-500/20 border-purple-500/50 shadow-[0_0_15px_rgba(168,85,247,0.15)]' 
-                : 'bg-dark-800/50 border-dark-700/50 hover:bg-dark-700/50 hover:border-dark-600/50'
-            }`}
-          >
-            <Timer size={18} className={`text-purple-400 ${isRunning ? 'animate-pulse' : 'group-hover:animate-pulse'}`} />
-            {isRunning && (
-              <span className="text-sm font-bold text-purple-300 font-mono tracking-wider tabular-nums">
-                {formatHeaderTime(headerTimeMs)}
+          {(!stopwatch.isRunning && !timer.isRunning) && (
+            <button
+              onClick={() => setShowStopwatchModal(true)}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-dark-800/50 border border-dark-700/50 hover:bg-dark-700/50 hover:border-dark-600/50 transition-all cursor-pointer group"
+            >
+              <Timer size={18} className="text-purple-400 group-hover:animate-pulse" />
+            </button>
+          )}
+
+          {stopwatch.isRunning && (
+            <button
+              onClick={() => setShowStopwatchModal(true)}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl border transition-all cursor-pointer group bg-blue-500/20 border-blue-500/50 shadow-[0_0_15px_rgba(59,130,246,0.15)]"
+            >
+              <Clock size={18} className="text-blue-400 animate-pulse" />
+              <span className="text-sm font-bold text-blue-300 font-mono tracking-wider tabular-nums">
+                {formatHeaderTime(headerStopwatchMs)}
               </span>
-            )}
-          </button>
+            </button>
+          )}
+
+          {timer.isRunning && (
+            <button
+              onClick={() => setShowStopwatchModal(true)}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl border transition-all cursor-pointer group bg-purple-500/20 border-purple-500/50 shadow-[0_0_15px_rgba(168,85,247,0.15)]"
+            >
+              <Timer size={18} className="text-purple-400 animate-pulse" />
+              <span className="text-sm font-bold text-purple-300 font-mono tracking-wider tabular-nums">
+                {formatHeaderTime(headerTimerMs)}
+              </span>
+            </button>
+          )}
 
           {/* Progress - clickable to go to analytics */}
           <button
@@ -176,21 +199,38 @@ const Header = () => {
 
         {/* Compact stats for mobile/tablet - also clickable */}
         <div className="flex lg:hidden items-center gap-1.5 sm:gap-2 pr-12 md:pr-0">
-          <button
-            onClick={() => setShowStopwatchModal(true)}
-            className={`flex items-center justify-center p-1.5 sm:p-2 rounded-lg border transition-all gap-1.5 ${
-              isRunning 
-                ? 'bg-purple-500/20 border-purple-500/50' 
-                : 'bg-dark-800/80 border-dark-700/50 hover:bg-dark-700/50'
-            }`}
-          >
-            <Timer size={16} className={`text-purple-400 ${isRunning ? 'animate-pulse' : ''}`} />
-            {isRunning && (
-              <span className="text-xs font-bold text-purple-300 font-mono tracking-wider tabular-nums">
-                {formatHeaderTime(headerTimeMs)}
+          {(!stopwatch.isRunning && !timer.isRunning) && (
+            <button
+              onClick={() => setShowStopwatchModal(true)}
+              className="flex items-center justify-center p-1.5 sm:p-2 rounded-lg bg-dark-800/80 border border-dark-700/50 hover:bg-dark-700/50 transition-all"
+            >
+              <Timer size={16} className="text-purple-400" />
+            </button>
+          )}
+
+          {stopwatch.isRunning && (
+            <button
+              onClick={() => setShowStopwatchModal(true)}
+              className="flex items-center justify-center p-1.5 sm:p-2 rounded-lg border transition-all gap-1.5 bg-blue-500/20 border-blue-500/50"
+            >
+              <Clock size={16} className="text-blue-400 animate-pulse" />
+              <span className="text-xs font-bold text-blue-300 font-mono tracking-wider tabular-nums">
+                {formatHeaderTime(headerStopwatchMs)}
               </span>
-            )}
-          </button>
+            </button>
+          )}
+
+          {timer.isRunning && (
+            <button
+              onClick={() => setShowStopwatchModal(true)}
+              className="flex items-center justify-center p-1.5 sm:p-2 rounded-lg border transition-all gap-1.5 bg-purple-500/20 border-purple-500/50"
+            >
+              <Timer size={16} className="text-purple-400 animate-pulse" />
+              <span className="text-xs font-bold text-purple-300 font-mono tracking-wider tabular-nums">
+                {formatHeaderTime(headerTimerMs)}
+              </span>
+            </button>
+          )}
           <button
             onClick={() => navigate('/analytics')}
             title="Analytics Progress"
