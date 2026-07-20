@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence, useMotionValue, useSpring } from 'framer-motion';
 import { Minus, Maximize2, X, Flame, Trophy, RefreshCw, Info, Sparkles } from 'lucide-react';
 
@@ -14,6 +14,13 @@ const StreakModal = ({ isOpen, onClose, streak, onRefresh, isRefreshing }) => {
   const rotateX = useSpring(0, { stiffness: 300, damping: 15, mass: 0.5 });
   const rotateY = useSpring(0, { stiffness: 300, damping: 15, mass: 0.5 });
   const scale = useSpring(1, { stiffness: 400, damping: 20 });
+
+  useEffect(() => {
+    if (isOpen) {
+      x.set(0);
+      y.set(0);
+    }
+  }, [isOpen, x, y]);
 
   const handleMinimize = useCallback(() => {
     setMinimized(prev => !prev);

@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { Flame, Trophy, Target, RefreshCw, X, Info, Sparkles, Timer } from 'lucide-react';
 import { useTaskStore } from '../../store/taskStore';
 import { useAuthStore } from '../../store/authStore';
+import { useTimerStore } from '../../store/timerStore';
 import StreakModal from './StreakModal';
 import StopwatchModal from './StopwatchModal';
 
@@ -25,6 +26,26 @@ const Header = () => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [showStreakModal, setShowStreakModal] = useState(false);
   const [showStopwatchModal, setShowStopwatchModal] = useState(false);
+  
+  const { isRunning, getCurrentTimeMs } = useTimerStore();
+  const [headerTimeStr, setHeaderTimeStr] = useState('');
+
+  // Live timer updates for the header
+  useEffect(() => {
+    let interval;
+    if (isRunning) {
+      interval = setInterval(() => {
+        const ms = getCurrentTimeMs();
+        const totalSeconds = Math.max(0, Math.floor(ms / 1000));
+        const m = Math.floor(totalSeconds / 60);
+        const s = totalSeconds % 60;
+        setHeaderTimeStr(`${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`);
+      }, 500);
+    } else {
+      setHeaderTimeStr('');
+    }
+    return () => clearInterval(interval);
+  }, [isRunning, getCurrentTimeMs]);
 
   const quotes = [
     "Consistency is key, boss! Roz 2 task or 1 solid problem solve karo!",
@@ -82,7 +103,12 @@ const Header = () => {
             onClick={() => setShowStopwatchModal(true)}
             className="flex items-center gap-2 px-4 py-2 rounded-xl bg-dark-800/50 border border-dark-700/50 hover:bg-dark-700/50 hover:border-dark-600/50 transition-all cursor-pointer group"
           >
-            <Timer size={18} className="text-purple-400 group-hover:animate-pulse" />
+            <Timer size={18} className={`text-purple-400 ${isRunning ? 'animate-pulse' : 'group-hover:animate-pulse'}`} />
+            {isRunning && headerTimeStr && (
+              <span className="text-sm font-digital text-purple-400 font-bold tracking-widest tabular-nums">
+                {headerTimeStr}
+              </span>
+            )}
           </button>
 
           {/* Progress - clickable to go to analytics */}
@@ -141,9 +167,14 @@ const Header = () => {
         <div className="flex lg:hidden items-center gap-1.5 sm:gap-2 pr-12 md:pr-0">
           <button
             onClick={() => setShowStopwatchModal(true)}
-            className="flex items-center justify-center p-1.5 sm:p-2 rounded-lg bg-dark-800/80 border border-dark-700/50 hover:bg-dark-700/50 transition-all"
+            className="flex items-center gap-1.5 justify-center p-1.5 sm:p-2 rounded-lg bg-dark-800/80 border border-dark-700/50 hover:bg-dark-700/50 transition-all"
           >
-            <Timer size={16} className="text-purple-400" />
+            <Timer size={16} className={`text-purple-400 ${isRunning ? 'animate-pulse' : ''}`} />
+            {isRunning && headerTimeStr && (
+              <span className="text-xs font-digital text-purple-400 font-bold tracking-widest tabular-nums">
+                {headerTimeStr}
+              </span>
+            )}
           </button>
           <button
             onClick={() => navigate('/analytics')}

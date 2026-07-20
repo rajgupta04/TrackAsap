@@ -83,8 +83,10 @@ const StopwatchModal = ({ isOpen, onClose }) => {
   useEffect(() => {
     if (isOpen) {
       setCurrentTimeMs(getCurrentTimeMs());
+      x.set(0);
+      y.set(0);
     }
-  }, [isOpen, getCurrentTimeMs]);
+  }, [isOpen, getCurrentTimeMs, x, y]);
 
   const constraintsRef = useRef(null);
 
