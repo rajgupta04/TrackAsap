@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Flame, Trophy, Target, RefreshCw, X, Info, Sparkles } from 'lucide-react';
+import { Flame, Trophy, Target, RefreshCw, X, Info, Sparkles, Timer } from 'lucide-react';
 import { useTaskStore } from '../../store/taskStore';
 import { useAuthStore } from '../../store/authStore';
 import StreakModal from './StreakModal';
+import StopwatchModal from './StopwatchModal';
 
 const pageTitles = {
   '/dashboard': 'Dashboard',
@@ -23,6 +24,7 @@ const Header = () => {
   const { user } = useAuthStore();
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [showStreakModal, setShowStreakModal] = useState(false);
+  const [showStopwatchModal, setShowStopwatchModal] = useState(false);
 
   const quotes = [
     "Consistency is key, boss! Roz 2 task or 1 solid problem solve karo!",
@@ -75,7 +77,14 @@ const Header = () => {
         </div>
 
         {/* Stats */}
-        <div className="hidden lg:flex items-center gap-3 xl:gap-4">
+        <div className="hidden lg:flex items-center gap-3 relative">
+          <button
+            onClick={() => setShowStopwatchModal(true)}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-dark-800/50 border border-dark-700/50 hover:bg-dark-700/50 hover:border-dark-600/50 transition-all cursor-pointer group"
+          >
+            <Timer size={18} className="text-purple-400 group-hover:animate-pulse" />
+          </button>
+
           {/* Progress - clickable to go to analytics */}
           <button
             onClick={() => navigate('/analytics')}
@@ -131,6 +140,12 @@ const Header = () => {
         {/* Compact stats for mobile/tablet - also clickable */}
         <div className="flex lg:hidden items-center gap-1.5 sm:gap-2 pr-12 md:pr-0">
           <button
+            onClick={() => setShowStopwatchModal(true)}
+            className="flex items-center justify-center p-1.5 sm:p-2 rounded-lg bg-dark-800/80 border border-dark-700/50 hover:bg-dark-700/50 transition-all"
+          >
+            <Timer size={16} className="text-purple-400" />
+          </button>
+          <button
             onClick={() => navigate('/analytics')}
             title="Analytics Progress"
             className="flex items-center gap-1 px-2 py-1 sm:px-3 sm:py-1.5 rounded-lg bg-dark-800/80 border border-dark-700/50 hover:bg-dark-700/50 transition-all"
@@ -155,6 +170,11 @@ const Header = () => {
         streak={streak}
         onRefresh={handleRefreshStats}
         isRefreshing={isRefreshing}
+      />
+
+      <StopwatchModal
+        isOpen={showStopwatchModal}
+        onClose={() => setShowStopwatchModal(false)}
       />
     </header>
   );
