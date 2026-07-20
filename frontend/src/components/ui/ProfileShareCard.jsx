@@ -214,21 +214,18 @@ const ShareCardContent = ({
 
 // ─── PNG capture helper ───────────────────────────────────────────────────────
 const captureCard = async (element) => {
-  const rect = element.getBoundingClientRect();
   return html2canvas(element, {
     backgroundColor: '#0b0f1a',
     scale: 3,
     useCORS: true,
-    allowTaint: false,
+    allowTaint: true,
     logging: false,
-    width: rect.width,
-    height: rect.height,
-    x: 0,
-    y: 0,
-    scrollX: 0,
-    scrollY: 0,
-    windowWidth: rect.width,
-    windowHeight: rect.height,
+    imageTimeout: 15000,
+    onclone: (doc, cloned) => {
+      // Make sure the cloned element has no transforms that would misplace it
+      cloned.style.transform = 'none';
+      cloned.style.position = 'static';
+    },
   });
 };
 
@@ -377,13 +374,15 @@ const ProfileShareCard = ({
   platformRatings, topSheets,
 }) => {
   const [showShareModal, setShowShareModal] = useState(false);
+  // Ref on the OUTER wrapper — captures full card including electric border
   const cardRef = useRef(null);
 
   return (
     <>
       <div className="space-y-3">
-        <ElectricBorder color="#39FF14" speed={1} chaos={0.12} thickness={2} style={{ borderRadius: 16 }}>
-          <div ref={cardRef}>
+        {/* cardRef wraps ElectricBorder so PNG includes the glowing border */}
+        <div ref={cardRef} className="rounded-2xl">
+          <ElectricBorder color="#39FF14" speed={1} chaos={0.12} thickness={2} style={{ borderRadius: 16 }}>
             <ShareCardContent
               user={user}
               avatarSrc={avatarSrc}
@@ -394,8 +393,8 @@ const ProfileShareCard = ({
               platformRatings={platformRatings}
               topSheets={topSheets}
             />
-          </div>
-        </ElectricBorder>
+          </ElectricBorder>
+        </div>
 
         <button
           onClick={() => setShowShareModal(true)}
@@ -416,3 +415,4 @@ const ProfileShareCard = ({
 };
 
 export default ProfileShareCard;
+
