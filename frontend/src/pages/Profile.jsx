@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import html2canvas from 'html2canvas';
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -26,6 +27,9 @@ import {
   Copy,
   Check,
   Camera,
+  Share2,
+  Star,
+  Trophy,
 } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { useAnalyticsStore } from '../store/analyticsStore';
@@ -36,6 +40,7 @@ import githubService from '../services/githubService';
 import GlassCard from '../components/ui/GlassCard';
 import NumberInput from '../components/ui/NumberInput';
 import ElectricBorder from '../components/ui/ElectricBorder';
+import ProfileShareCard from '../components/ui/ProfileShareCard';
 
 const TRACKEX_DOWNLOAD_URL = '/track-ex.zip';
 
@@ -129,21 +134,23 @@ const Profile = () => {
     (leetcodeStats?.contestsParticipated || 0); 
     
   const lcRating = leetcodeStats?.ratingHistory?.length > 0 
-    ? Math.max(...leetcodeStats.ratingHistory.map(r => r.rating || 0)) 
+    ? Math.max(...leetcodeStats.ratingHistory.map(r => r.newRating || r.rating || 0)) 
     : 0;
     
   const cfRating = codeforcesStats?.ratingHistory?.length > 0
-    ? Math.max(...codeforcesStats.ratingHistory.map(r => r.rating || 0))
+    ? Math.max(...codeforcesStats.ratingHistory.map(r => r.newRating || r.rating || 0))
     : 0;
-  let highestRating = 0;
-  let highestPlatform = 'N/A';
-  if (cfRating >= lcRating && cfRating > 0) {
-    highestRating = cfRating;
-    highestPlatform = 'Codeforces';
-  } else if (lcRating > 0) {
-    highestRating = Math.round(lcRating);
-    highestPlatform = 'LeetCode';
-  }
+
+  const ccRating = codechefStats?.ratingHistory?.length > 0
+    ? Math.max(...codechefStats.ratingHistory.map(r => r.newRating || r.rating || 0))
+    : (codechefStats?.highestRating || codechefStats?.rating || 0);
+
+  const platformRatings = [
+    lcRating > 0 ? { name: 'LeetCode', rating: Math.round(lcRating), color: '#FFA116' } : null,
+    cfRating > 0 ? { name: 'Codeforces', rating: Math.round(cfRating), color: '#3b82f6' } : null,
+    ccRating > 0 ? { name: 'CodeChef', rating: Math.round(ccRating), color: '#a78bfa' } : null,
+  ].filter(Boolean);
+
   const topSheets = sheets?.length > 0 ? [...sheets].sort((a, b) => (b.completionPercentage || 0) - (a.completionPercentage || 0)).slice(0, 3) : [];
 
   // GitHub integration
@@ -647,86 +654,16 @@ const Profile = () => {
       </form>
       </div>
 
-      <div className="space-y-6">
-        <ElectricBorder
-          color="#FFA116"
-          speed={1}
-          chaos={0.15}
-          thickness={2}
-          style={{ borderRadius: 16 }}
-        >
-          <div className="bg-[#1a1f2e] p-6 rounded-2xl border border-white/5 space-y-6 w-full relative overflow-hidden">
-            <img src="/logoSmall.png" alt="TrackAsap" className="absolute top-4 right-4 w-8 h-8 opacity-50" />
-            
-            <div className="flex items-center gap-4 border-b border-white/10 pb-4">
-              <div className="w-12 h-12 rounded-full overflow-hidden border border-[#FFA116]/50 shrink-0 relative z-10">
-                {avatarSrc ? (
-                  <img src={avatarSrc} alt="Profile" className="w-full h-full object-cover" />
-                ) : (
-                  <div className="w-full h-full bg-dark-600 flex items-center justify-center text-[#FFA116] font-bold">
-                    {user?.name?.charAt(0).toUpperCase() || 'U'}
-                  </div>
-                )}
-              </div>
-              <div className="min-w-0 pr-8 relative z-10">
-                <h3 className="text-lg font-bold text-white truncate">{user?.name || 'User'}</h3>
-                <p className="text-sm text-dark-400 truncate flex items-center gap-1.5 mt-0.5">
-                  TrackAsap Rank: <span className="text-neon-green font-bold">#{currentUserRanks?.global || '--'}</span>
-                </p>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-3 gap-3 relative z-10">
-              <div className="bg-dark-700/50 p-3 rounded-xl text-center">
-                <div className="text-xl font-bold text-[#FFA116]">{totalSolved}</div>
-                <div className="text-[9px] text-dark-400 uppercase tracking-wider font-semibold mt-1">Solved</div>
-              </div>
-              <div className="bg-dark-700/50 p-3 rounded-xl text-center">
-                <div className="text-xl font-bold text-orange-500">{streak?.longestStreak || 0}</div>
-                <div className="text-[9px] text-dark-400 uppercase tracking-wider font-semibold mt-1">Streak</div>
-              </div>
-              <div className="bg-dark-700/50 p-3 rounded-xl text-center">
-                <div className="text-xl font-bold text-purple-400">{aggregateContests}</div>
-                <div className="text-[9px] text-dark-400 uppercase tracking-wider font-semibold mt-1">Contests</div>
-              </div>
-            </div>
-
-            {highestRating > 0 && (
-              <div className="bg-dark-700/50 p-4 rounded-xl flex items-center justify-between relative z-10">
-                <div>
-                  <div className="text-xs text-dark-400">Best Contest Rating</div>
-                  <div className="text-lg font-bold text-cyan-400 flex items-center gap-2">
-                    {highestRating}
-                    <span className="text-[10px] bg-dark-600 px-2 py-0.5 rounded-full text-dark-300 border border-white/5">
-                      {highestPlatform}
-                    </span>
-                  </div>
-                </div>
-                <Zap className="w-6 h-6 text-cyan-400/50" />
-              </div>
-            )}
-
-            {topSheets.length > 0 && (
-              <div className="bg-dark-700/50 p-4 rounded-xl space-y-3 relative z-10">
-                <div className="text-xs text-dark-400 flex items-center gap-1.5 border-b border-white/5 pb-2">
-                  <Target className="w-3.5 h-3.5" /> Top Sheets
-                </div>
-                {topSheets.map((sheet, idx) => (
-                  <div key={idx} className="space-y-1">
-                    <div className="flex justify-between items-center">
-                      <div className="font-bold text-white truncate pr-2 text-xs">{sheet.name}</div>
-                      <div className="text-neon-green text-xs font-bold shrink-0">{sheet.completionPercentage || 0}%</div>
-                    </div>
-                    <div className="w-full h-1 bg-dark-600 rounded-full overflow-hidden">
-                      <div className="h-full bg-neon-green transition-all" style={{ width: `${sheet.completionPercentage || 0}%` }} />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </ElectricBorder>
-      </div>
+      <ProfileShareCard
+        user={user}
+        avatarSrc={avatarSrc}
+        currentUserRanks={currentUserRanks}
+        totalSolved={totalSolved}
+        streak={streak}
+        aggregateContests={aggregateContests}
+        platformRatings={platformRatings}
+        topSheets={topSheets}
+      />
 
       {/* TrackEx Setup Guide Modal */}
       <AnimatePresence>
