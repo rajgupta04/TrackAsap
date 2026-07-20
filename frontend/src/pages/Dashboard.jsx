@@ -61,10 +61,10 @@ const Dashboard = () => {
   }, []);
 
   // Retrieve layout from localStorage or fallback to default
-  const [layout, setLayout] = useState(() => {
-    const saved = localStorage.getItem('dashboard-layout');
+  const [layouts, setLayouts] = useState(() => {
+    const saved = localStorage.getItem('dashboard-layouts-v2');
     if (saved) return JSON.parse(saved);
-    return [
+    const defaultLayout = [
       { i: 'problemsTrend', x: 0, y: 0, w: 6, h: 10 },
       { i: 'weightProgress', x: 6, y: 0, w: 6, h: 10 },
       { i: 'leetcodeStats', x: 0, y: 10, w: 6, h: 8 },
@@ -76,11 +76,12 @@ const Dashboard = () => {
       { i: 'platformBreakdown', x: 0, y: 42, w: 6, h: 6 },
       { i: 'compliance', x: 6, y: 42, w: 6, h: 6 }
     ];
+    return { lg: defaultLayout, md: defaultLayout };
   });
 
-  const onLayoutChange = (newLayout) => {
-    setLayout(newLayout);
-    localStorage.setItem('dashboard-layout', JSON.stringify(newLayout));
+  const onLayoutChange = (currentLayout, allLayouts) => {
+    setLayouts(allLayouts);
+    localStorage.setItem('dashboard-layouts-v2', JSON.stringify(allLayouts));
   };
 
   if (isLoading || !dashboard) {
@@ -130,14 +131,14 @@ const Dashboard = () => {
 
       <ResponsiveGridLayout
         className="layout"
-        layouts={{ lg: layout }}
+        layouts={layouts}
         breakpoints={{ lg: 1024, md: 768, sm: 640, xs: 480, xxs: 0 }}
         cols={{ lg: 12, md: 10, sm: 6, xs: 4, xxs: 2 }}
         rowHeight={30}
         onLayoutChange={onLayoutChange}
         isDraggable={true}
         isResizable={true}
-        draggableHandle=".drag-handle"
+        draggableCancel="button, a"
         margin={[16, 16]}
       >
         {hasProblemsTrend && (
