@@ -16,6 +16,7 @@ import {
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
 import useProblemStore from '../store/problemStore';
+import sheetProblemService from '../services/sheetProblemService';
 import { useAuthStore } from '../store/authStore';
 import githubService from '../services/githubService';
 import GlassCard from '../components/ui/GlassCard';
@@ -74,7 +75,13 @@ const Problems = () => {
 
   const handleSaveCode = async (problemId, code, language) => {
     try {
-      await updateProblem(problemId, { code, language });
+      // Check if it's a SheetProblem — must use a different endpoint
+      const prob = problems.find(p => p._id === problemId);
+      if (prob?.isSheetProblem) {
+        await sheetProblemService.updateProblem(problemId, { code, language });
+      } else {
+        await updateProblem(problemId, { code, language });
+      }
     } catch (error) {
       throw error;
     }
