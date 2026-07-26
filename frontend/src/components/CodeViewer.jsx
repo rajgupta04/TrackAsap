@@ -250,7 +250,8 @@ const CodeViewer = ({ isOpen, onClose, problem: problemProp, onSave }) => {
     setIsDragging(false); scale.set(1); rotateX.set(0); rotateY.set(0);
   }, [scale, rotateX, rotateY]);
 
-  const lineCount = Math.max(1, currentCode.split('\n').length);
+  const actualLineCount = currentCode ? currentCode.split('\n').length : 0;
+  const displayLinesCount = Math.max(17, actualLineCount);
 
   if (!isOpen || !problem) return null;
 
@@ -491,14 +492,14 @@ const CodeViewer = ({ isOpen, onClose, problem: problemProp, onSave }) => {
                   {problem.runtime && <span className="flex items-center gap-1 text-emerald-400"><Zap className="w-3 h-3"/>{problem.runtime}</span>}
                   {problem.memory && <span className="flex items-center gap-1 text-cyan-400"><HardDrive className="w-3 h-3"/>{problem.memory}</span>}
                   {problem.attempts > 1 && <span className="flex items-center gap-1 text-amber-400"><RotateCcw className="w-3 h-3"/>{problem.attempts}×</span>}
-                  <span>{lineCount} lines</span>
+                  <span>{actualLineCount} lines</span>
                 </div>
               </div>
 
               {/* ══ Code Area ════════════════════════════════════════════════ */}
               <div
                 className="flex-1 overflow-auto min-h-0"
-                style={{ background:'#1a1b26', maxHeight: maximized ? 'calc(100vh - 220px)' : '50vh' }}
+                style={{ background:'#1a1b26', minHeight: '380px', maxHeight: maximized ? 'calc(100vh - 220px)' : '55vh' }}
               >
                 <div className="flex min-h-full">
                   {/* Line numbers */}
@@ -509,10 +510,10 @@ const CodeViewer = ({ isOpen, onClose, problem: problemProp, onSave }) => {
                       borderRight:'1px solid rgba(255,255,255,0.04)',
                       fontFamily:"'JetBrains Mono','Fira Code','Consolas',monospace",
                       fontSize:'13px', lineHeight:'1.6', color:'#3b3d52',
-                      minWidth: lineCount >= 100 ? '52px' : '40px', zIndex:10,
+                      minWidth: displayLinesCount >= 100 ? '52px' : '40px', zIndex:10,
                     }}
                   >
-                    {Array.from({ length: lineCount }).map((_, i) => <div key={i}>{i + 1}</div>)}
+                    {Array.from({ length: displayLinesCount }).map((_, i) => <div key={i}>{i + 1}</div>)}
                   </div>
 
                   <div className="flex-1 flex">
