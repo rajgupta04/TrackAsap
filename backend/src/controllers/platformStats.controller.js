@@ -182,7 +182,7 @@ export const getCodeforcesStats = async (req, res) => {
   }
 };
 
-// Fetch CodeChef stats (using unofficial API)
+// Fetch CodeChef stats (using native high-performance HTML parser)
 export const getCodeChefStats = async (req, res) => {
   const { username } = req.params;
 
@@ -191,21 +191,69 @@ export const getCodeChefStats = async (req, res) => {
   }
 
   try {
-    // CodeChef doesn't have an official public API
-    // We'll use a workaround with their profile page or return mock structure
-    // For now, return a placeholder indicating CodeChef integration is limited
-    
+    const profileUrl = `https://www.codechef.com/users/${username}`;
+    const response = await fetch(profileUrl, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.9',
+      },
+    });
+
+    if (!response.ok) {
+      return res.status(404).json({
+        success: false,
+        platform: 'codechef',
+        username,
+        error: 'CodeChef user profile not found',
+      });
+    }
+
+    const html = await response.text();
+
+    // 1. Current Rating
+    const ratingMatch = html.match(/class="rating-number">([^<]+)</i) || html.match(/"rating":\s*(\d+)/i);
+    const rating = ratingMatch ? parseInt(ratingMatch[1].trim()) || 0 : 0;
+
+    // 2. Highest Rating
+    const maxRatingMatch = html.match(/\(highest rating\s*(\d+)\)/i) || html.match(/\(max rating\s*(\d+)\)/i);
+    const maxRating = maxRatingMatch ? parseInt(maxRatingMatch[1]) : rating;
+
+    // 3. Stars Badge
+    const starsMatch = html.match(/class="rating-star">([^<]+)</i) || html.match(/(\d+★)/i);
+    let stars = starsMatch ? starsMatch[1].replace(/[^0-9★]/g, '').trim() : '';
+    if (!stars && rating > 0) {
+      stars = rating >= 2500 ? '7★' : rating >= 2200 ? '6★' : rating >= 2000 ? '5★' : rating >= 1800 ? '4★' : rating >= 1600 ? '3★' : rating >= 1400 ? '2★' : '1★';
+    }
+
+    // 4. Global & Country Ranks
+    const globalRankMatch = html.match(/class='global-rank'[^>]*>(\d+)<\/strong>/i) || html.match(/Global Rank:[^\d]*(\d+)/i);
+    const globalRank = globalRankMatch ? parseInt(globalRankMatch[1]) : null;
+
+    const countryRankMatch = html.match(/class='country-rank'[^>]*>(\d+)<\/strong>/i) || html.match(/Country Rank:[^\d]*(\d+)/i);
+    const countryRank = countryRankMatch ? parseInt(countryRankMatch[1]) : null;
+
+    // 5. Total Problems Solved
+    const solvedMatch = html.match(/Total Problems Solved:\s*(\d+)/i) || html.match(/Total Problems Solved[^\d]*(\d+)/i);
+    const totalSolved = solvedMatch ? parseInt(solvedMatch[1]) : 0;
+
     res.json({
       success: true,
       platform: 'codechef',
       username,
       data: {
-        message: 'CodeChef stats are not available via public API',
-        profileUrl: `https://www.codechef.com/users/${username}`,
+        username,
+        rating,
+        maxRating,
+        stars: stars || '1★',
+        globalRank,
+        countryRank,
+        totalSolved,
+        profileUrl,
       },
     });
   } catch (error) {
-    console.error('CodeChef API Error:', error.message);
+    console.error('CodeChef Scraper Error:', error.message);
     res.status(500).json({
       success: false,
       platform: 'codechef',
