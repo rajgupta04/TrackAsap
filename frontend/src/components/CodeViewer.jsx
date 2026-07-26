@@ -145,16 +145,6 @@ const CodeViewer = ({ isOpen, onClose, problem: problemProp, onSave }) => {
   // ── Language switching via dropdown — seamless independent code per language
   const switchLang = (newLang) => {
     setActiveLang(newLang);
-    if (codeMap[activeLabel]?.[newLang] === undefined) {
-      setCodeMap(prev => ({
-        ...prev,
-        [activeLabel]: {
-          ...(prev[activeLabel] || {}),
-          [newLang]: '',
-        },
-      }));
-      setIsDirty(true);
-    }
   };
 
   // ── Add a new approach
@@ -463,10 +453,10 @@ const CodeViewer = ({ isOpen, onClose, problem: problemProp, onSave }) => {
                       }}
                     >
                       {LANG_OPTIONS.map(opt => {
-                        const hasCode = !!codeMap[activeLabel]?.[opt.value];
+                        const hasCode = !!codeMap[activeLabel]?.[opt.value]?.trim();
                         return (
                           <option key={opt.value} value={opt.value} className="bg-gray-900 text-white font-medium">
-                            {opt.label} {hasCode ? ' • (saved)' : ''}
+                            {opt.label} {hasCode ? ' ✓' : ''}
                           </option>
                         );
                       })}
@@ -474,17 +464,20 @@ const CodeViewer = ({ isOpen, onClose, problem: problemProp, onSave }) => {
                     <ChevronDown className="w-3 h-3 absolute right-2 pointer-events-none" style={{ color: langInfo.color }} />
                   </div>
 
-                  {/* Badges of existing saved languages for this approach */}
-                  <div className="flex items-center gap-1 ml-2">
+                  {/* Badges of existing saved non-empty languages for this approach */}
+                  <div className="flex items-center gap-1.5 ml-2">
                     {langsForApproach.map(l => {
-                      if (l === activeLang) return null;
+                      const codeVal = codeMap[activeLabel]?.[l];
+                      if (l === activeLang || !codeVal || codeVal.trim().length === 0) return null;
                       const info = LANG_MAP[l] || LANG_MAP.other;
                       return (
                         <button
                           key={l}
                           onClick={() => switchLang(l)}
-                          className="px-2 py-0.5 rounded text-[10px] font-semibold text-gray-400 hover:text-white transition-all border border-gray-800 hover:border-gray-700"
+                          className="px-2.5 py-0.5 rounded text-[11px] font-semibold text-gray-300 hover:text-white transition-all border border-gray-700/60 hover:border-gray-500 bg-white/5 flex items-center gap-1"
+                          title={`Switch to saved ${info.label} code`}
                         >
+                          <span className="w-1.5 h-1.5 rounded-full" style={{ background: info.color }} />
                           {info.label}
                         </button>
                       );
