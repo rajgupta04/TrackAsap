@@ -2,7 +2,7 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence, useMotionValue, useSpring, useDragControls } from 'framer-motion';
 import {
   Copy, Check, ExternalLink, Clock, Zap, HardDrive, RotateCcw,
-  Edit2, Save, X, Plus, ChevronDown,
+  Edit2, Save, X, Plus, ChevronDown, Sparkles,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import useProblemStore from '../store/problemStore';
@@ -45,6 +45,38 @@ const PRISM_LANG_MAP = {
   rust: 'rust',
   other: 'clike',
 };
+
+const COMMON_KEYWORDS = {
+  cpp: ['vector', 'string', 'push_back', 'pop_back', 'unordered_map', 'unordered_set', 'priority_queue', 'pair', 'make_pair', 'min', 'max', 'swap', 'sort', 'reverse', 'lower_bound', 'upper_bound', 'cout', 'cin', 'endl', 'nullptr', 'size', 'length', 'empty', 'clear', 'insert', 'erase', 'find', 'begin', 'end', 'INT_MAX', 'INT_MIN', 'return', 'include', 'class', 'public', 'private', 'protected', 'struct', 'typedef', 'template', 'typename', 'auto', 'const', 'static', 'sizeof'],
+  java: ['String', 'System.out.println', 'StringBuilder', 'ArrayList', 'HashMap', 'HashSet', 'LinkedList', 'PriorityQueue', 'Collections.sort', 'Math.max', 'Math.min', 'Math.abs', 'public', 'private', 'protected', 'class', 'interface', 'extends', 'implements', 'static', 'final', 'void', 'return', 'import', 'new', 'override', 'this', 'super'],
+  python: ['print', 'def', 'class', 'return', 'self', 'import', 'from', 'as', 'range', 'len', 'append', 'extend', 'pop', 'split', 'join', 'sorted', 'sort', 'reverse', 'enumerate', 'zip', 'dict', 'list', 'set', 'tuple', 'lambda', 'map', 'filter', 'sum', 'min', 'max', 'abs'],
+  javascript: ['console.log', 'const', 'let', 'var', 'function', 'return', 'async', 'await', 'import', 'export', 'default', 'class', 'constructor', 'prototype', 'map', 'filter', 'reduce', 'forEach', 'includes', 'indexOf', 'slice', 'splice', 'push', 'pop', 'shift', 'unshift', 'concat', 'Object.keys', 'Object.values', 'Math.max', 'Math.min'],
+  c: ['printf', 'scanf', 'malloc', 'free', 'sizeof', 'strlen', 'strcpy', 'strcat', 'strcmp', 'memcpy', 'memset', 'struct', 'typedef', 'return', 'include', 'NULL', 'int', 'char', 'void', 'float', 'double'],
+  go: ['fmt.Println', 'fmt.Printf', 'make', 'append', 'len', 'cap', 'delete', 'package', 'import', 'func', 'type', 'struct', 'interface', 'return', 'range', 'map', 'slice', 'string', 'int'],
+  rust: ['println!', 'format!', 'vec!', 'String', 'Option', 'Result', 'Some', 'None', 'Ok', 'Err', 'pub', 'fn', 'let', 'mut', 'struct', 'enum', 'match', 'impl', 'use', 'mod', 'self', 'Self', 'return'],
+  other: ['return', 'function', 'class', 'struct', 'import', 'export', 'print', 'console'],
+};
+
+function getCodeSuggestions(code, currentPrefix, lang) {
+  if (!currentPrefix || currentPrefix.length < 2) return [];
+
+  const langExtra = COMMON_KEYWORDS[lang] || COMMON_KEYWORDS.other;
+  const docWords = code.match(/\b[a-zA-Z_]\w*\b/g) || [];
+  
+  const allWords = new Set([...langExtra, ...docWords]);
+  
+  const prefixLower = currentPrefix.toLowerCase();
+  const matches = [];
+
+  for (const word of allWords) {
+    if (word.toLowerCase() !== prefixLower && word.toLowerCase().startsWith(prefixLower)) {
+      matches.push(word);
+      if (matches.length >= 6) break;
+    }
+  }
+
+  return matches;
+}
 
 function highlightCode(code, lang) {
   if (!code) return '';
@@ -118,6 +150,11 @@ const CodeViewer = ({ isOpen, onClose, problem: problemProp, onSave }) => {
   const [isSaving, setIsSaving] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
 
+  // ── Autocomplete state
+  const [suggestions, setSuggestions] = useState([]);
+  const [activeSuggestionIdx, setActiveSuggestionIdx] = useState(0);
+  const [currentPrefixInfo, setCurrentPrefixInfo] = useState({ prefix: '', start: 0, end: 0 });
+
   const constraintsRef = useRef(null);
   const textareaRef = useRef(null);
   const preRef = useRef(null);
@@ -138,6 +175,7 @@ const CodeViewer = ({ isOpen, onClose, problem: problemProp, onSave }) => {
   useEffect(() => {
     if (!isOpen || !problem) return;
     setShowUnsavedModal(false);
+    setSuggestions([]);
     const solutions = getSolutions(problem);
     const map = buildCodeMap(solutions);
     const isEmpty = Object.keys(map).length === 0;
@@ -172,23 +210,79 @@ const CodeViewer = ({ isOpen, onClose, problem: problemProp, onSave }) => {
   const currentCode = codeMap[activeLabel]?.[activeLang] ?? '';
   const langInfo = LANG_MAP[activeLang] || LANG_MAP.other;
 
+  const setSelection = (start, end) => {
+    setTimeout(() => {
+      if (textareaRef.current) {
+        textareaRef.current.selectionStart = start;
+        textareaRef.current.selectionEnd = end;
+      }
+    }, 0);
+  };
+
+  // ── Autocomplete checker
+  const checkSuggestions = useCallback((codeText, cursorPos) => {
+    if (!codeText || cursorPos <= 0) {
+      setSuggestions([]);
+      return;
+    }
+    const textBefore = codeText.substring(0, cursorPos);
+    const match = textBefore.match(/\b([a-zA-Z_]\w*)$/);
+    if (!match) {
+      setSuggestions([]);
+      return;
+    }
+    const prefix = match[1];
+    if (prefix.length < 2) {
+      setSuggestions([]);
+      return;
+    }
+    const pStart = cursorPos - prefix.length;
+    const pEnd = cursorPos;
+
+    const matches = getCodeSuggestions(codeText, prefix, activeLang);
+    if (matches.length > 0) {
+      setSuggestions(matches);
+      setActiveSuggestionIdx(0);
+      setCurrentPrefixInfo({ prefix, start: pStart, end: pEnd });
+    } else {
+      setSuggestions([]);
+    }
+  }, [activeLang]);
+
   // ── Code editing
-  const updateCode = useCallback((newCode) => {
+  const updateCode = useCallback((newCode, cursorPos) => {
     setCodeMap(prev => ({
       ...prev,
       [activeLabel]: { ...(prev[activeLabel] || {}), [activeLang]: newCode },
     }));
     setIsDirty(true);
-  }, [activeLabel, activeLang]);
+    if (cursorPos !== undefined) {
+      checkSuggestions(newCode, cursorPos);
+    } else {
+      setSuggestions([]);
+    }
+  }, [activeLabel, activeLang, checkSuggestions]);
+
+  const acceptSuggestion = useCallback((sugWord) => {
+    if (!sugWord || !currentPrefixInfo.prefix) return;
+    const { start, end } = currentPrefixInfo;
+    const newCode = currentCode.substring(0, start) + sugWord + currentCode.substring(end);
+    updateCode(newCode);
+    setSuggestions([]);
+    const newCursor = start + sugWord.length;
+    setSelection(newCursor, newCursor);
+  }, [currentCode, currentPrefixInfo, updateCode]);
 
   const switchApproach = (label) => {
     setActiveLabel(label);
     const langs = Object.keys(codeMap[label] || {});
     setActiveLang(langs[0] || 'cpp');
+    setSuggestions([]);
   };
 
   const switchLang = (newLang) => {
     setActiveLang(newLang);
+    setSuggestions([]);
   };
 
   const confirmAddApproach = () => {
@@ -246,16 +340,31 @@ const CodeViewer = ({ isOpen, onClose, problem: problemProp, onSave }) => {
     }
   };
 
-  const setSelection = (start, end) => {
-    setTimeout(() => {
-      if (textareaRef.current) {
-        textareaRef.current.selectionStart = start;
-        textareaRef.current.selectionEnd = end;
-      }
-    }, 0);
-  };
-
   const handleKeyDown = (e) => {
+    // Autocomplete navigation and acceptance
+    if (suggestions.length > 0) {
+      if (e.key === 'Tab' || e.key === 'Enter') {
+        e.preventDefault();
+        acceptSuggestion(suggestions[activeSuggestionIdx]);
+        return;
+      }
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setActiveSuggestionIdx(i => (i + 1) % suggestions.length);
+        return;
+      }
+      if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setActiveSuggestionIdx(i => (i - 1 + suggestions.length) % suggestions.length);
+        return;
+      }
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        setSuggestions([]);
+        return;
+      }
+    }
+
     // Ctrl + S / Cmd + S: Save
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
       e.preventDefault();
@@ -727,9 +836,9 @@ const CodeViewer = ({ isOpen, onClose, problem: problemProp, onSave }) => {
                 </div>
               </div>
 
-              {/* ══ Code Area with Prism Syntax Highlighting Layer ═══════════ */}
+              {/* ══ Code Area with Prism Syntax Highlighting & Autocomplete ═════ */}
               <div
-                className="flex-1 overflow-auto min-h-0"
+                className="flex-1 overflow-auto min-h-0 relative"
                 style={{ background:'#1a1b26', minHeight: '380px', maxHeight: maximized ? 'calc(100vh - 220px)' : '55vh' }}
               >
                 <div className="flex min-h-full">
@@ -771,7 +880,7 @@ const CodeViewer = ({ isOpen, onClose, problem: problemProp, onSave }) => {
                     <textarea
                       ref={textareaRef}
                       value={currentCode}
-                      onChange={e => updateCode(e.target.value)}
+                      onChange={e => updateCode(e.target.value, e.target.selectionStart)}
                       onKeyDown={handleKeyDown}
                       onScroll={e => {
                         if (preRef.current) {
@@ -788,11 +897,37 @@ const CodeViewer = ({ isOpen, onClose, problem: problemProp, onSave }) => {
                       }}
                       placeholder={`Paste or type your ${langInfo.label} code for ${activeLabel}...`}
                     />
+
+                    {/* Autocomplete Suggestion Popup Tile */}
+                    {suggestions.length > 0 && (
+                      <div
+                        className="absolute left-6 bottom-6 z-[100] w-64 rounded-xl border shadow-2xl overflow-hidden py-1"
+                        style={{ background: '#1e1f31', borderColor: 'rgba(255,255,255,0.14)', boxShadow: '0 20px 40px rgba(0,0,0,0.6)' }}
+                        onClick={e => e.stopPropagation()}
+                      >
+                        <div className="px-3 py-1.5 text-[10px] text-gray-400 uppercase tracking-wider font-semibold border-b border-white/5 flex items-center justify-between bg-black/20">
+                          <span className="flex items-center gap-1"><Sparkles className="w-3 h-3 text-[#39FF14]"/> Suggestions</span>
+                          <span className="text-[#39FF14] font-mono text-[9px]">Tab ↹ replace</span>
+                        </div>
+                        {suggestions.map((sug, i) => (
+                          <div
+                            key={sug}
+                            onClick={() => acceptSuggestion(sug)}
+                            className={`px-3 py-1.5 text-xs font-mono cursor-pointer flex items-center justify-between transition-colors ${
+                              i === activeSuggestionIdx ? 'bg-[#39FF14]/15 text-[#39FF14]' : 'text-gray-300 hover:bg-white/5'
+                            }`}
+                          >
+                            <span className="font-semibold">{sug}</span>
+                            <span className="text-[10px] text-gray-500 font-normal">identifier</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
 
-              {/* ══ Footer (Clean: Notes section removed as requested) ════════ */}
+              {/* ══ Footer ═══════════════════════════════════════════════════ */}
               <div
                 className="flex items-center justify-between px-4 py-3 border-t"
                 style={{ background:'rgba(255,255,255,0.02)', borderColor:'rgba(255,255,255,0.06)' }}
