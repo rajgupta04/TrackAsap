@@ -2,21 +2,19 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence, useMotionValue, useSpring, useDragControls } from 'framer-motion';
 import {
   Copy, Check, ExternalLink, Clock, Zap, HardDrive, RotateCcw,
-  Edit2, Save, X, Plus, ChevronDown, Sparkles,
+  Save, X, Plus, ChevronDown,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import useProblemStore from '../store/problemStore';
 import sheetProblemService from '../services/sheetProblemService';
 
-import Prism from 'prismjs';
-import 'prismjs/components/prism-clike';
-import 'prismjs/components/prism-c';
-import 'prismjs/components/prism-cpp';
-import 'prismjs/components/prism-java';
-import 'prismjs/components/prism-python';
-import 'prismjs/components/prism-javascript';
-import 'prismjs/components/prism-go';
-import 'prismjs/components/prism-rust';
+import CodeMirror from '@uiw/react-codemirror';
+import { cpp } from '@codemirror/lang-cpp';
+import { java } from '@codemirror/lang-java';
+import { python } from '@codemirror/lang-python';
+import { javascript } from '@codemirror/lang-javascript';
+import { tokyoNight } from '@uiw/codemirror-theme-tokyo-night';
+import { EditorView } from '@codemirror/view';
 
 // ── Constants ──────────────────────────────────────────────────────────────
 const DIFFICULTY_COLORS = {
@@ -35,60 +33,21 @@ const LANG_OPTIONS = [
 ];
 const LANG_MAP = Object.fromEntries(LANG_OPTIONS.map(l => [l.value, l]));
 
-const PRISM_LANG_MAP = {
-  cpp: 'cpp',
-  java: 'java',
-  python: 'python',
-  javascript: 'javascript',
-  c: 'c',
-  go: 'go',
-  rust: 'rust',
-  other: 'clike',
-};
-
-const COMMON_KEYWORDS = {
-  cpp: ['vector', 'string', 'push_back', 'pop_back', 'unordered_map', 'unordered_set', 'priority_queue', 'pair', 'make_pair', 'min', 'max', 'swap', 'sort', 'reverse', 'lower_bound', 'upper_bound', 'cout', 'cin', 'endl', 'nullptr', 'size', 'length', 'empty', 'clear', 'insert', 'erase', 'find', 'begin', 'end', 'INT_MAX', 'INT_MIN', 'return', 'include', 'class', 'public', 'private', 'protected', 'struct', 'typedef', 'template', 'typename', 'auto', 'const', 'static', 'sizeof'],
-  java: ['String', 'System.out.println', 'StringBuilder', 'ArrayList', 'HashMap', 'HashSet', 'LinkedList', 'PriorityQueue', 'Collections.sort', 'Math.max', 'Math.min', 'Math.abs', 'public', 'private', 'protected', 'class', 'interface', 'extends', 'implements', 'static', 'final', 'void', 'return', 'import', 'new', 'override', 'this', 'super'],
-  python: ['print', 'def', 'class', 'return', 'self', 'import', 'from', 'as', 'range', 'len', 'append', 'extend', 'pop', 'split', 'join', 'sorted', 'sort', 'reverse', 'enumerate', 'zip', 'dict', 'list', 'set', 'tuple', 'lambda', 'map', 'filter', 'sum', 'min', 'max', 'abs'],
-  javascript: ['console.log', 'const', 'let', 'var', 'function', 'return', 'async', 'await', 'import', 'export', 'default', 'class', 'constructor', 'prototype', 'map', 'filter', 'reduce', 'forEach', 'includes', 'indexOf', 'slice', 'splice', 'push', 'pop', 'shift', 'unshift', 'concat', 'Object.keys', 'Object.values', 'Math.max', 'Math.min'],
-  c: ['printf', 'scanf', 'malloc', 'free', 'sizeof', 'strlen', 'strcpy', 'strcat', 'strcmp', 'memcpy', 'memset', 'struct', 'typedef', 'return', 'include', 'NULL', 'int', 'char', 'void', 'float', 'double'],
-  go: ['fmt.Println', 'fmt.Printf', 'make', 'append', 'len', 'cap', 'delete', 'package', 'import', 'func', 'type', 'struct', 'interface', 'return', 'range', 'map', 'slice', 'string', 'int'],
-  rust: ['println!', 'format!', 'vec!', 'String', 'Option', 'Result', 'Some', 'None', 'Ok', 'Err', 'pub', 'fn', 'let', 'mut', 'struct', 'enum', 'match', 'impl', 'use', 'mod', 'self', 'Self', 'return'],
-  other: ['return', 'function', 'class', 'struct', 'import', 'export', 'print', 'console'],
-};
-
-function getCodeSuggestions(code, currentPrefix, lang) {
-  if (!currentPrefix || currentPrefix.length < 2) return [];
-
-  const langExtra = COMMON_KEYWORDS[lang] || COMMON_KEYWORDS.other;
-  const docWords = code.match(/\b[a-zA-Z_]\w*\b/g) || [];
-  
-  const allWords = new Set([...langExtra, ...docWords]);
-  
-  const prefixLower = currentPrefix.toLowerCase();
-  const matches = [];
-
-  for (const word of allWords) {
-    if (word.toLowerCase() !== prefixLower && word.toLowerCase().startsWith(prefixLower)) {
-      matches.push(word);
-      if (matches.length >= 6) break;
-    }
-  }
-
-  return matches;
-}
-
-function highlightCode(code, lang) {
-  if (!code) return '';
-  const prismLang = PRISM_LANG_MAP[lang] || 'clike';
-  const grammar = Prism.languages[prismLang] || Prism.languages.clike;
-  try {
-    return Prism.highlight(code, grammar, prismLang);
-  } catch {
-    return code
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;');
+function getLanguageExtension(lang) {
+  switch (lang) {
+    case 'cpp':
+    case 'c':
+    case 'go':
+    case 'rust':
+      return cpp();
+    case 'java':
+      return java();
+    case 'python':
+      return python();
+    case 'javascript':
+      return javascript({ jsx: true, typescript: true });
+    default:
+      return cpp();
   }
 }
 
@@ -145,19 +104,11 @@ const CodeViewer = ({ isOpen, onClose, problem: problemProp, onSave }) => {
   const [addingApproach, setAddingApproach] = useState(false);
   const [newApproachInput, setNewApproachInput] = useState('');
 
-  // ── Edit / save state
-  const [isEditing, setIsEditing] = useState(true);
+  // ── Save state
   const [isSaving, setIsSaving] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
 
-  // ── Autocomplete state
-  const [suggestions, setSuggestions] = useState([]);
-  const [activeSuggestionIdx, setActiveSuggestionIdx] = useState(0);
-  const [currentPrefixInfo, setCurrentPrefixInfo] = useState({ prefix: '', start: 0, end: 0 });
-
   const constraintsRef = useRef(null);
-  const textareaRef = useRef(null);
-  const preRef = useRef(null);
   const newApproachRef = useRef(null);
 
   // ── Unsaved prompt state
@@ -175,7 +126,6 @@ const CodeViewer = ({ isOpen, onClose, problem: problemProp, onSave }) => {
   useEffect(() => {
     if (!isOpen || !problem) return;
     setShowUnsavedModal(false);
-    setSuggestions([]);
     const solutions = getSolutions(problem);
     const map = buildCodeMap(solutions);
     const isEmpty = Object.keys(map).length === 0;
@@ -192,7 +142,6 @@ const CodeViewer = ({ isOpen, onClose, problem: problemProp, onSave }) => {
       setActiveLabel(firstLabel);
       setActiveLang(firstLang);
     }
-    setIsEditing(true);
     setIsDirty(false);
     setAddingApproach(false);
   }, [isOpen, problem?._id]); // eslint-disable-line
@@ -210,79 +159,23 @@ const CodeViewer = ({ isOpen, onClose, problem: problemProp, onSave }) => {
   const currentCode = codeMap[activeLabel]?.[activeLang] ?? '';
   const langInfo = LANG_MAP[activeLang] || LANG_MAP.other;
 
-  const setSelection = (start, end) => {
-    setTimeout(() => {
-      if (textareaRef.current) {
-        textareaRef.current.selectionStart = start;
-        textareaRef.current.selectionEnd = end;
-      }
-    }, 0);
-  };
-
-  // ── Autocomplete checker
-  const checkSuggestions = useCallback((codeText, cursorPos) => {
-    if (!codeText || cursorPos <= 0) {
-      setSuggestions([]);
-      return;
-    }
-    const textBefore = codeText.substring(0, cursorPos);
-    const match = textBefore.match(/\b([a-zA-Z_]\w*)$/);
-    if (!match) {
-      setSuggestions([]);
-      return;
-    }
-    const prefix = match[1];
-    if (prefix.length < 2) {
-      setSuggestions([]);
-      return;
-    }
-    const pStart = cursorPos - prefix.length;
-    const pEnd = cursorPos;
-
-    const matches = getCodeSuggestions(codeText, prefix, activeLang);
-    if (matches.length > 0) {
-      setSuggestions(matches);
-      setActiveSuggestionIdx(0);
-      setCurrentPrefixInfo({ prefix, start: pStart, end: pEnd });
-    } else {
-      setSuggestions([]);
-    }
-  }, [activeLang]);
-
   // ── Code editing
-  const updateCode = useCallback((newCode, cursorPos) => {
+  const updateCode = useCallback((newCode) => {
     setCodeMap(prev => ({
       ...prev,
       [activeLabel]: { ...(prev[activeLabel] || {}), [activeLang]: newCode },
     }));
     setIsDirty(true);
-    if (cursorPos !== undefined) {
-      checkSuggestions(newCode, cursorPos);
-    } else {
-      setSuggestions([]);
-    }
-  }, [activeLabel, activeLang, checkSuggestions]);
-
-  const acceptSuggestion = useCallback((sugWord) => {
-    if (!sugWord || !currentPrefixInfo.prefix) return;
-    const { start, end } = currentPrefixInfo;
-    const newCode = currentCode.substring(0, start) + sugWord + currentCode.substring(end);
-    updateCode(newCode);
-    setSuggestions([]);
-    const newCursor = start + sugWord.length;
-    setSelection(newCursor, newCursor);
-  }, [currentCode, currentPrefixInfo, updateCode]);
+  }, [activeLabel, activeLang]);
 
   const switchApproach = (label) => {
     setActiveLabel(label);
     const langs = Object.keys(codeMap[label] || {});
     setActiveLang(langs[0] || 'cpp');
-    setSuggestions([]);
   };
 
   const switchLang = (newLang) => {
     setActiveLang(newLang);
-    setSuggestions([]);
   };
 
   const confirmAddApproach = () => {
@@ -340,210 +233,6 @@ const CodeViewer = ({ isOpen, onClose, problem: problemProp, onSave }) => {
     }
   };
 
-  const handleKeyDown = (e) => {
-    // Autocomplete navigation and acceptance
-    if (suggestions.length > 0) {
-      if (e.key === 'Tab' || e.key === 'Enter') {
-        e.preventDefault();
-        acceptSuggestion(suggestions[activeSuggestionIdx]);
-        return;
-      }
-      if (e.key === 'ArrowDown') {
-        e.preventDefault();
-        setActiveSuggestionIdx(i => (i + 1) % suggestions.length);
-        return;
-      }
-      if (e.key === 'ArrowUp') {
-        e.preventDefault();
-        setActiveSuggestionIdx(i => (i - 1 + suggestions.length) % suggestions.length);
-        return;
-      }
-      if (e.key === 'Escape') {
-        e.preventDefault();
-        setSuggestions([]);
-        return;
-      }
-    }
-
-    // Ctrl + S / Cmd + S: Save
-    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
-      e.preventDefault();
-      handleSave();
-      return;
-    }
-
-    const textarea = textareaRef.current;
-    if (!textarea) return;
-    const s = textarea.selectionStart;
-    const end = textarea.selectionEnd;
-
-    // Alt + Shift + Down: Duplicate line(s) down
-    if (e.altKey && e.shiftKey && e.key === 'ArrowDown') {
-      e.preventDefault();
-      const lines = currentCode.split('\n');
-      let charCount = 0, startLine = 0, endLine = 0;
-      for (let i = 0; i < lines.length; i++) {
-        const lineLen = lines[i].length + 1;
-        if (charCount <= s && s < charCount + lineLen) startLine = i;
-        if (charCount <= end && end <= charCount + lineLen) { endLine = i; break; }
-        charCount += lineLen;
-      }
-      const block = lines.slice(startLine, endLine + 1);
-      const blockStr = block.join('\n');
-      const newLines = [
-        ...lines.slice(0, endLine + 1),
-        ...block,
-        ...lines.slice(endLine + 1),
-      ];
-      updateCode(newLines.join('\n'));
-      setSelection(s + blockStr.length + 1, end + blockStr.length + 1);
-      return;
-    }
-
-    // Alt + Shift + Up: Duplicate line(s) up
-    if (e.altKey && e.shiftKey && e.key === 'ArrowUp') {
-      e.preventDefault();
-      const lines = currentCode.split('\n');
-      let charCount = 0, startLine = 0, endLine = 0;
-      for (let i = 0; i < lines.length; i++) {
-        const lineLen = lines[i].length + 1;
-        if (charCount <= s && s < charCount + lineLen) startLine = i;
-        if (charCount <= end && end <= charCount + lineLen) { endLine = i; break; }
-        charCount += lineLen;
-      }
-      const block = lines.slice(startLine, endLine + 1);
-      const newLines = [
-        ...lines.slice(0, startLine),
-        ...block,
-        ...lines.slice(startLine),
-      ];
-      updateCode(newLines.join('\n'));
-      setSelection(s, end);
-      return;
-    }
-
-    // Alt + Down: Move line(s) down
-    if (e.altKey && !e.shiftKey && e.key === 'ArrowDown') {
-      e.preventDefault();
-      const lines = currentCode.split('\n');
-      let charCount = 0, startLine = 0, endLine = 0;
-      for (let i = 0; i < lines.length; i++) {
-        const lineLen = lines[i].length + 1;
-        if (charCount <= s && s < charCount + lineLen) startLine = i;
-        if (charCount <= end && end <= charCount + lineLen) { endLine = i; break; }
-        charCount += lineLen;
-      }
-      if (endLine < lines.length - 1) {
-        const targetLine = lines[endLine + 1];
-        const block = lines.slice(startLine, endLine + 1);
-        const newLines = [
-          ...lines.slice(0, startLine),
-          targetLine,
-          ...block,
-          ...lines.slice(endLine + 2),
-        ];
-        updateCode(newLines.join('\n'));
-        const shift = targetLine.length + 1;
-        setSelection(s + shift, end + shift);
-      }
-      return;
-    }
-
-    // Alt + Up: Move line(s) up
-    if (e.altKey && !e.shiftKey && e.key === 'ArrowUp') {
-      e.preventDefault();
-      const lines = currentCode.split('\n');
-      let charCount = 0, startLine = 0, endLine = 0;
-      for (let i = 0; i < lines.length; i++) {
-        const lineLen = lines[i].length + 1;
-        if (charCount <= s && s < charCount + lineLen) startLine = i;
-        if (charCount <= end && end <= charCount + lineLen) { endLine = i; break; }
-        charCount += lineLen;
-      }
-      if (startLine > 0) {
-        const targetLine = lines[startLine - 1];
-        const block = lines.slice(startLine, endLine + 1);
-        const newLines = [
-          ...lines.slice(0, startLine - 1),
-          ...block,
-          targetLine,
-          ...lines.slice(endLine + 1),
-        ];
-        updateCode(newLines.join('\n'));
-        const shift = targetLine.length + 1;
-        setSelection(s - shift, end - shift);
-      }
-      return;
-    }
-
-    // Skip closing bracket/quote if user types over it (LeetCode / VS Code muscle memory)
-    const closingChars = ['}', ')', ']', '"', "'"];
-    if (closingChars.includes(e.key) && s === end && currentCode[s] === e.key) {
-      e.preventDefault();
-      setSelection(s + 1, s + 1);
-      return;
-    }
-
-    // Backspace inside empty pair e.g. (|), {|}, [|], "|", '|' -> delete both
-    if (e.key === 'Backspace' && s === end && s > 0) {
-      const charBefore = currentCode[s - 1];
-      const charAfter = currentCode[s];
-      const pairs = { '{': '}', '(': ')', '[': ']', '"': '"', "'": "'" };
-      if (pairs[charBefore] === charAfter) {
-        e.preventDefault();
-        const newCode = currentCode.substring(0, s - 1) + currentCode.substring(s + 1);
-        updateCode(newCode);
-        setSelection(s - 1, s - 1);
-        return;
-      }
-    }
-
-    // Tab key (indent 4 spaces)
-    if (e.key === 'Tab') {
-      e.preventDefault();
-      const newCode = currentCode.substring(0, s) + '    ' + currentCode.substring(end);
-      updateCode(newCode);
-      setSelection(s + 4, s + 4);
-      return;
-    }
-
-    // Enter inside {}
-    if (e.key === 'Enter') {
-      if (s === end && currentCode[s - 1] === '{' && currentCode[s] === '}') {
-        e.preventDefault();
-        const linesBefore = currentCode.substring(0, s).split('\n');
-        const currentLine = linesBefore[linesBefore.length - 1];
-        const indentMatch = currentLine.match(/^\s*/);
-        const indent = indentMatch ? indentMatch[0] : '';
-        const extraIndent = indent + '    ';
-        const insertion = '\n' + extraIndent + '\n' + indent;
-        const newCode = currentCode.substring(0, s) + insertion + currentCode.substring(s);
-        updateCode(newCode);
-        setSelection(s + 1 + extraIndent.length, s + 1 + extraIndent.length);
-        return;
-      }
-    }
-
-    // Auto-bracket & auto-quote completion
-    const bracketPairs = { '{': '}', '(': ')', '[': ']', '"': '"', "'": "'" };
-    if (bracketPairs[e.key]) {
-      e.preventDefault();
-      const open = e.key;
-      const close = bracketPairs[e.key];
-      if (s !== end) {
-        const selectedText = currentCode.substring(s, end);
-        const newCode = currentCode.substring(0, s) + open + selectedText + close + currentCode.substring(end);
-        updateCode(newCode);
-        setSelection(s + 1, end + 1);
-      } else {
-        const newCode = currentCode.substring(0, s) + open + close + currentCode.substring(s);
-        updateCode(newCode);
-        setSelection(s + 1, s + 1);
-      }
-      return;
-    }
-  };
-
   const handleCopy = async () => {
     if (currentCode) {
       try {
@@ -575,7 +264,6 @@ const CodeViewer = ({ isOpen, onClose, problem: problemProp, onSave }) => {
   }, [scale, rotateX, rotateY]);
 
   const actualLineCount = currentCode ? currentCode.split('\n').length : 0;
-  const displayLinesCount = Math.max(17, actualLineCount);
 
   if (!isOpen || !problem) return null;
 
@@ -613,16 +301,11 @@ const CodeViewer = ({ isOpen, onClose, problem: problemProp, onSave }) => {
           .cv-approach-tab .cv-del { opacity:0; transition:opacity 0.12s; }
           .cv-approach-tab:hover .cv-del { opacity:1; }
 
-          /* Tokyo Night Syntax Coloring */
-          .token.comment, .token.prolog, .token.doctype, .token.cdata { color: #565f89; font-style: italic; }
-          .token.punctuation { color: #89ddff; }
-          .token.property, .token.tag, .token.boolean, .token.number, .token.constant, .token.symbol, .token.deleted { color: #ff9e64; }
-          .token.selector, .token.attr-name, .token.string, .token.char, .token.builtin, .token.inserted { color: #9ece6a; }
-          .token.operator, .token.entity, .token.url { color: #89ddff; }
-          .token.atrule, .token.attr-value, .token.keyword { color: #bb9af7; font-weight: 600; }
-          .token.function, .token.class-name { color: #7aa2f7; font-weight: 600; }
-          .token.regex, .token.important, .token.variable { color: #7dcfff; }
-          .token.type, .token.type-definition { color: #2ac3de; font-weight: 600; }
+          .cm-editor { background: #1a1b26 !important; height: 100% !important; min-height: 380px !important; }
+          .cm-gutters { background: #1a1b26 !important; border-right: 1px solid rgba(255,255,255,0.05) !important; color: #3b3d52 !important; }
+          .cm-activeLineGutter { background: rgba(255,255,255,0.03) !important; }
+          .cm-content { padding: 12px 0 !important; }
+          .cm-line { font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace !important; }
         `}</style>
 
         <motion.div
@@ -836,95 +519,48 @@ const CodeViewer = ({ isOpen, onClose, problem: problemProp, onSave }) => {
                 </div>
               </div>
 
-              {/* ══ Code Area with Prism Syntax Highlighting & Autocomplete ═════ */}
+              {/* ══ CodeMirror 6 Editor Engine ═══════════════════════════════ */}
               <div
                 className="flex-1 overflow-auto min-h-0 relative"
                 style={{ background:'#1a1b26', minHeight: '380px', maxHeight: maximized ? 'calc(100vh - 220px)' : '55vh' }}
               >
-                <div className="flex min-h-full">
-                  {/* Line numbers */}
-                  <div
-                    className="sticky left-0 select-none text-right py-4 px-3 flex-shrink-0"
-                    style={{
-                      background:'#1a1b26',
-                      borderRight:'1px solid rgba(255,255,255,0.04)',
-                      fontFamily:"'JetBrains Mono','Fira Code','Consolas',monospace",
-                      fontSize:'13px', lineHeight:'1.6', color:'#3b3d52',
-                      minWidth: displayLinesCount >= 100 ? '52px' : '40px', zIndex:10,
-                    }}
-                  >
-                    {Array.from({ length: displayLinesCount }).map((_, i) => <div key={i}>{i + 1}</div>)}
-                  </div>
-
-                  {/* High-performance Overlay: Prism Syntax Highlighted Pre + Editable Textarea */}
-                  <div className="flex-1 relative min-h-full">
-                    {/* Prism Highlighted Layer */}
-                    <pre
-                      ref={preRef}
-                      className="absolute inset-0 m-0 p-4 font-mono text-[13px] leading-[1.6] pointer-events-none whitespace-pre overflow-hidden bg-transparent"
-                      aria-hidden="true"
-                      style={{
-                        fontFamily: "'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace",
-                        tabSize: 4,
-                      }}
-                    >
-                      <code
-                        className={`language-${PRISM_LANG_MAP[activeLang] || 'clike'}`}
-                        dangerouslySetInnerHTML={{
-                          __html: highlightCode(currentCode, activeLang) + (currentCode.endsWith('\n') ? '<br />' : ''),
-                        }}
-                      />
-                    </pre>
-
-                    {/* Transparent Editable Textarea Layer */}
-                    <textarea
-                      ref={textareaRef}
-                      value={currentCode}
-                      onChange={e => updateCode(e.target.value, e.target.selectionStart)}
-                      onKeyDown={handleKeyDown}
-                      onScroll={e => {
-                        if (preRef.current) {
-                          preRef.current.scrollTop = e.target.scrollTop;
-                          preRef.current.scrollLeft = e.target.scrollLeft;
-                        }
-                      }}
-                      spellCheck={false}
-                      className="absolute inset-0 m-0 p-4 font-mono text-[13px] leading-[1.6] bg-transparent caret-white resize-none outline-none border-none whitespace-pre overflow-auto tab-size-4"
-                      style={{
-                        color: 'transparent',
-                        WebkitTextFillColor: 'transparent',
-                        fontFamily: "'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace",
-                      }}
-                      placeholder={`Paste or type your ${langInfo.label} code for ${activeLabel}...`}
-                    />
-
-                    {/* Autocomplete Suggestion Popup Tile */}
-                    {suggestions.length > 0 && (
-                      <div
-                        className="absolute left-6 bottom-6 z-[100] w-64 rounded-xl border shadow-2xl overflow-hidden py-1"
-                        style={{ background: '#1e1f31', borderColor: 'rgba(255,255,255,0.14)', boxShadow: '0 20px 40px rgba(0,0,0,0.6)' }}
-                        onClick={e => e.stopPropagation()}
-                      >
-                        <div className="px-3 py-1.5 text-[10px] text-gray-400 uppercase tracking-wider font-semibold border-b border-white/5 flex items-center justify-between bg-black/20">
-                          <span className="flex items-center gap-1"><Sparkles className="w-3 h-3 text-[#39FF14]"/> Suggestions</span>
-                          <span className="text-[#39FF14] font-mono text-[9px]">Tab ↹ replace</span>
-                        </div>
-                        {suggestions.map((sug, i) => (
-                          <div
-                            key={sug}
-                            onClick={() => acceptSuggestion(sug)}
-                            className={`px-3 py-1.5 text-xs font-mono cursor-pointer flex items-center justify-between transition-colors ${
-                              i === activeSuggestionIdx ? 'bg-[#39FF14]/15 text-[#39FF14]' : 'text-gray-300 hover:bg-white/5'
-                            }`}
-                          >
-                            <span className="font-semibold">{sug}</span>
-                            <span className="text-[10px] text-gray-500 font-normal">identifier</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
+                <CodeMirror
+                  value={currentCode}
+                  height={maximized ? 'calc(100vh - 220px)' : '380px'}
+                  theme={tokyoNight}
+                  extensions={[
+                    getLanguageExtension(activeLang),
+                    EditorView.lineWrapping,
+                  ]}
+                  onChange={value => updateCode(value)}
+                  placeholder={`Paste or type your ${langInfo.label} code for ${activeLabel}...`}
+                  basicSetup={{
+                    lineNumbers: true,
+                    highlightActiveLineGutter: true,
+                    highlightSpecialChars: true,
+                    history: true,
+                    foldGutter: true,
+                    drawSelection: true,
+                    dropCursor: true,
+                    allowMultipleSelections: true,
+                    indentOnInput: true,
+                    syntaxHighlighting: true,
+                    bracketMatching: true,
+                    closeBrackets: true,
+                    autocompletion: true,
+                    rectangularSelection: true,
+                    crosshairCursor: true,
+                    highlightActiveLine: true,
+                    highlightSelectionMatches: true,
+                    closeBracketsKeymap: true,
+                    defaultKeymap: true,
+                    searchKeymap: true,
+                    historyKeymap: true,
+                    foldKeymap: true,
+                    completionKeymap: true,
+                    lintKeymap: true,
+                  }}
+                />
               </div>
 
               {/* ══ Footer ═══════════════════════════════════════════════════ */}
