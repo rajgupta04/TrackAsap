@@ -246,17 +246,175 @@ const CodeViewer = ({ isOpen, onClose, problem: problemProp, onSave }) => {
     }
   };
 
+  const setSelection = (start, end) => {
+    setTimeout(() => {
+      if (textareaRef.current) {
+        textareaRef.current.selectionStart = start;
+        textareaRef.current.selectionEnd = end;
+      }
+    }, 0);
+  };
+
   const handleKeyDown = (e) => {
+    // Ctrl + S / Cmd + S: Save
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+      e.preventDefault();
+      handleSave();
+      return;
+    }
+
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+    const s = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+
+    // Alt + Shift + Down: Duplicate line(s) down
+    if (e.altKey && e.shiftKey && e.key === 'ArrowDown') {
+      e.preventDefault();
+      const lines = currentCode.split('\n');
+      let charCount = 0, startLine = 0, endLine = 0;
+      for (let i = 0; i < lines.length; i++) {
+        const lineLen = lines[i].length + 1;
+        if (charCount <= s && s < charCount + lineLen) startLine = i;
+        if (charCount <= end && end <= charCount + lineLen) { endLine = i; break; }
+        charCount += lineLen;
+      }
+      const block = lines.slice(startLine, endLine + 1);
+      const blockStr = block.join('\n');
+      const newLines = [
+        ...lines.slice(0, endLine + 1),
+        ...block,
+        ...lines.slice(endLine + 1),
+      ];
+      updateCode(newLines.join('\n'));
+      setSelection(s + blockStr.length + 1, end + blockStr.length + 1);
+      return;
+    }
+
+    // Alt + Shift + Up: Duplicate line(s) up
+    if (e.altKey && e.shiftKey && e.key === 'ArrowUp') {
+      e.preventDefault();
+      const lines = currentCode.split('\n');
+      let charCount = 0, startLine = 0, endLine = 0;
+      for (let i = 0; i < lines.length; i++) {
+        const lineLen = lines[i].length + 1;
+        if (charCount <= s && s < charCount + lineLen) startLine = i;
+        if (charCount <= end && end <= charCount + lineLen) { endLine = i; break; }
+        charCount += lineLen;
+      }
+      const block = lines.slice(startLine, endLine + 1);
+      const newLines = [
+        ...lines.slice(0, startLine),
+        ...block,
+        ...lines.slice(startLine),
+      ];
+      updateCode(newLines.join('\n'));
+      setSelection(s, end);
+      return;
+    }
+
+    // Alt + Down: Move line(s) down
+    if (e.altKey && !e.shiftKey && e.key === 'ArrowDown') {
+      e.preventDefault();
+      const lines = currentCode.split('\n');
+      let charCount = 0, startLine = 0, endLine = 0;
+      for (let i = 0; i < lines.length; i++) {
+        const lineLen = lines[i].length + 1;
+        if (charCount <= s && s < charCount + lineLen) startLine = i;
+        if (charCount <= end && end <= charCount + lineLen) { endLine = i; break; }
+        charCount += lineLen;
+      }
+      if (endLine < lines.length - 1) {
+        const targetLine = lines[endLine + 1];
+        const block = lines.slice(startLine, endLine + 1);
+        const newLines = [
+          ...lines.slice(0, startLine),
+          targetLine,
+          ...block,
+          ...lines.slice(endLine + 2),
+        ];
+        updateCode(newLines.join('\n'));
+        const shift = targetLine.length + 1;
+        setSelection(s + shift, end + shift);
+      }
+      return;
+    }
+
+    // Alt + Up: Move line(s) up
+    if (e.altKey && !e.shiftKey && e.key === 'ArrowUp') {
+      e.preventDefault();
+      const lines = currentCode.split('\n');
+      let charCount = 0, startLine = 0, endLine = 0;
+      for (let i = 0; i < lines.length; i++) {
+        const lineLen = lines[i].length + 1;
+        if (charCount <= s && s < charCount + lineLen) startLine = i;
+        if (charCount <= end && end <= charCount + lineLen) { endLine = i; break; }
+        charCount += lineLen;
+      }
+      if (startLine > 0) {
+        const targetLine = lines[startLine - 1];
+        const block = lines.slice(startLine, endLine + 1);
+        const newLines = [
+          ...lines.slice(0, startLine - 1),
+          ...block,
+          targetLine,
+          ...lines.slice(endLine + 1),
+        ];
+        updateCode(newLines.join('\n'));
+        const shift = targetLine.length + 1;
+        setSelection(s - shift, end - shift);
+      }
+      return;
+    }
+
+    // Tab key (indent 4 spaces)
     if (e.key === 'Tab') {
       e.preventDefault();
-      const { selectionStart: s, selectionEnd: end } = e.target;
       const newCode = currentCode.substring(0, s) + '    ' + currentCode.substring(end);
       updateCode(newCode);
-      setTimeout(() => {
-        if (textareaRef.current) {
-          textareaRef.current.selectionStart = textareaRef.current.selectionEnd = s + 4;
-        }
-      }, 0);
+      setSelection(s + 4, s + 4);
+      return;
+    }
+
+    // Enter inside {}
+    if (e.key === 'Enter') {
+      if (s === end && currentCode[s - 1] === '{' && currentCode[s] === '}') {
+        e.preventDefault();
+        const linesBefore = currentCode.substring(0, s).split('\n');
+        const currentLine = linesBefore[linesBefore.length - 1];
+        const indentMatch = currentLine.match(/^\s*/);
+        const indent = indentMatch ? indentMatch[0] : '';
+        const extraIndent = indent + '    ';
+        const insertion = '\n' + extraIndent + '\n' + indent;
+        const newCode = currentCode.substring(0, s) + insertion + currentCode.substring(s);
+        updateCode(newCode);
+        setSelection(s + 1 + extraIndent.length, s + 1 + extraIndent.length);
+        return;
+      }
+    }
+
+    // Auto-bracket & auto-quote completion
+    const bracketPairs = { '{': '}', '(': ')', '[': ']', '"': '"', "'": "'" };
+    if (bracketPairs[e.key]) {
+      if ((e.key === '"' || e.key === "'") && s === end && currentCode[s] === e.key) {
+        e.preventDefault();
+        setSelection(s + 1, s + 1);
+        return;
+      }
+      e.preventDefault();
+      const open = e.key;
+      const close = bracketPairs[e.key];
+      if (s !== end) {
+        const selectedText = currentCode.substring(s, end);
+        const newCode = currentCode.substring(0, s) + open + selectedText + close + currentCode.substring(end);
+        updateCode(newCode);
+        setSelection(s + 1, end + 1);
+      } else {
+        const newCode = currentCode.substring(0, s) + open + close + currentCode.substring(s);
+        updateCode(newCode);
+        setSelection(s + 1, s + 1);
+      }
+      return;
     }
   };
 
