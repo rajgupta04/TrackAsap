@@ -200,30 +200,78 @@ export const getCodeChefStats = async (req, res) => {
       },
     });
 
-    if (!response.ok) {
+    // Handle profile redirect (e.g. non-existent or renamed handles redirect to home page)
+    if (!response.ok || response.redirected || response.url === 'https://www.codechef.com/' || response.url.includes('/?')) {
       return res.status(404).json({
         success: false,
         platform: 'codechef',
         username,
-        error: 'CodeChef user profile not found',
+        error: `CodeChef profile '${username}' not found. Please check your exact username on codechef.com.`,
       });
     }
 
     const html = await response.text();
 
+    // Double check if page was redirected to CodeChef homepage
+    if (html.includes('Join 5M+ students') && !html.includes('rating-header') && !html.includes('date_versus_rating')) {
+      return res.status(404).json({
+        success: false,
+        platform: 'codechef',
+        username,
+        error: `CodeChef profile '${username}' not found. Please check your exact handle.`,
+      });
+    }
+
     // 1. Current Rating
     const ratingMatch = html.match(/class="rating-number">([^<]+)</i) || html.match(/"rating":\s*(\d+)/i);
-    const rating = ratingMatch ? parseInt(ratingMatch[1].trim()) || 0 : 0;
+    let rating = ratingMatch ? parseInt(ratingMatch[1].trim()) || 0 : 0;
 
-    // 2. Highest Rating
-    const maxRatingMatch = html.match(/\(highest rating\s*(\d+)\)/i) || html.match(/\(max rating\s*(\d+)\)/i);
-    const maxRating = maxRatingMatch ? parseInt(maxRatingMatch[1]) : rating;
+    // 2. Contest Rating History (var date_versus_rating = [...])
+    const ratingHistoryMatch = html.match(/date_versus_rating\s*=\s*(\[[^;]+\])/i) || html.match(/var\s+all_rating\s*=\s*(\[[^;]+\])/i);
+    let ratingHistory = [];
+    let contestsParticipated = 0;
+    let maxRating = 0;
+
+    if (ratingHistoryMatch) {
+      try {
+        const rawHistory = JSON.parse(ratingHistoryMatch[1]);
+        contestsParticipated = rawHistory.length;
+
+        // Extract max rating across all contests
+        const ratings = rawHistory.map((c) => parseInt(c.rating) || 0).filter((r) => r > 0);
+        if (ratings.length > 0) {
+          maxRating = Math.max(...ratings);
+          // If current profile rating is 0 or unrated, set current rating to latest contest rating
+          if (rating === 0 && rawHistory.length > 0) {
+            rating = parseInt(rawHistory[rawHistory.length - 1].rating) || 0;
+          }
+        }
+
+        // Map rating history for chart
+        ratingHistory = rawHistory.slice(-20).map((c) => ({
+          contestName: c.name || c.code,
+          rank: parseInt(c.rank) || 0,
+          newRating: parseInt(c.rating) || 0,
+          date: c.end_date ? c.end_date.split(' ')[0] : `${c.getyear}-${c.getmonth}-${c.getday}`,
+          penalised: !!c.penalised_in || !!c.reason,
+        }));
+      } catch (e) {
+        console.error('CodeChef Rating History JSON parse error:', e.message);
+      }
+    }
+
+    // Fallback Highest Rating from HTML if history was empty
+    if (!maxRating) {
+      const maxRatingMatch = html.match(/\(highest rating\s*(\d+)\)/i) || html.match(/\(max rating\s*(\d+)\)/i);
+      maxRating = maxRatingMatch ? parseInt(maxRatingMatch[1]) : rating;
+    }
 
     // 3. Stars Badge
     const starsMatch = html.match(/class="rating-star">([^<]+)</i) || html.match(/(\d+★)/i);
     let stars = starsMatch ? starsMatch[1].replace(/[^0-9★]/g, '').trim() : '';
-    if (!stars && rating > 0) {
-      stars = rating >= 2500 ? '7★' : rating >= 2200 ? '6★' : rating >= 2000 ? '5★' : rating >= 1800 ? '4★' : rating >= 1600 ? '3★' : rating >= 1400 ? '2★' : '1★';
+    const effectiveRating = Math.max(rating, maxRating);
+    if (!stars && effectiveRating > 0) {
+      stars = effectiveRating >= 2500 ? '7★' : effectiveRating >= 2200 ? '6★' : effectiveRating >= 2000 ? '5★' : effectiveRating >= 1800 ? '4★' : effectiveRating >= 1600 ? '3★' : effectiveRating >= 1400 ? '2★' : '1★';
     }
 
     // 4. Global & Country Ranks
@@ -249,6 +297,8 @@ export const getCodeChefStats = async (req, res) => {
         globalRank,
         countryRank,
         totalSolved,
+        contestsParticipated,
+        ratingHistory,
         profileUrl,
       },
     });

@@ -17,6 +17,7 @@ import {
   LeetCodeStatsWidget,
   CodeforcesStatsWidget,
   CodeChefStatsWidget,
+  CodeChefRatingWidget,
   LeetCodeHeatmapWidget,
   LeetCodeRatingWidget,
   CodeforcesRatingWidget,
@@ -171,6 +172,11 @@ const Dashboard = () => {
         {codeforcesStats?.ratingHistory?.length > 1 && (
           <div key="codeforcesRating" data-grid={{ w: 6, h: 10, x: 6, y: 36, minW: 4, minH: 8 }}>
             <CodeforcesRatingWidget codeforcesStats={codeforcesStats} />
+          </div>
+        )}
+        {codechefStats?.ratingHistory?.length > 1 && (
+          <div key="codechefRating" data-grid={{ w: 6, h: 10, x: 6, y: 46, minW: 4, minH: 8 }}>
+            <CodeChefRatingWidget codechefStats={codechefStats} />
           </div>
         )}
         {hasPlatformHistory && (

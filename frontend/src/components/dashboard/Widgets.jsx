@@ -202,6 +202,13 @@ export const CodeChefStatsWidget = ({ user, codechefStats, isPlatformLoading, fe
           </div>
           <div className="flex items-center justify-around pt-2 border-t border-dark-700/50">
             <div className="text-center">
+              <div className="flex items-center gap-1 text-white justify-center">
+                <Trophy className="w-3.5 h-3.5 text-amber-500" />
+                <span className="font-semibold text-sm">{codechefStats.contestsParticipated || 0}</span>
+              </div>
+              <div className="text-xs text-dark-400">Contests</div>
+            </div>
+            <div className="text-center">
               <div className="text-sm font-semibold text-white">{codechefStats.globalRank ? `#${codechefStats.globalRank.toLocaleString()}` : 'N/A'}</div>
               <div className="text-xs text-dark-400">Global Rank</div>
             </div>
@@ -212,6 +219,40 @@ export const CodeChefStatsWidget = ({ user, codechefStats, isPlatformLoading, fe
           </div>
         </div>
       )}
+    </GlassCard>
+  );
+};
+
+export const CodeChefRatingWidget = ({ codechefStats }) => {
+  if (!codechefStats?.ratingHistory?.length) return null;
+  return (
+    <GlassCard className="h-full">
+      <div className="flex items-center gap-3 mb-4 cursor-move drag-handle">
+        <div className="w-8 h-8 rounded-lg bg-[#5B4638]/20 flex items-center justify-center">
+          <TrendingUp className="w-4 h-4 text-amber-500" />
+        </div>
+        <div>
+          <h3 className="font-semibold text-white">CodeChef Contest History</h3>
+          <p className="text-xs text-dark-400">{codechefStats.contestsParticipated} Contests Participated</p>
+        </div>
+      </div>
+      <div className="h-44">
+        <ResponsiveContainer width="100%" height="100%">
+          <LineChart data={codechefStats.ratingHistory}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+            <XAxis dataKey="date" stroke="#64748b" tick={{ fill: '#94a3b8', fontSize: 10 }} />
+            <YAxis stroke="#64748b" tick={{ fill: '#94a3b8', fontSize: 10 }} domain={['auto', 'auto']} />
+            <Tooltip
+              contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #334155', borderRadius: '12px' }}
+              formatter={(val, name, props) => [
+                `Rating: ${val} (Rank #${props.payload.rank})`,
+                props.payload.contestName,
+              ]}
+            />
+            <Line type="monotone" dataKey="newRating" stroke="#f59e0b" strokeWidth={2} dot={{ fill: '#f59e0b', r: 3 }} />
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
     </GlassCard>
   );
 };
