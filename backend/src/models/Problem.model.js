@@ -1,5 +1,17 @@
 import mongoose from 'mongoose';
 
+const LANG_ENUM = ['cpp', 'java', 'python', 'javascript', 'c', 'go', 'rust', 'other'];
+
+// ── Sub-schema: one approach/solution ────────────────────────────────────────
+const solutionSchema = new mongoose.Schema(
+  {
+    language: { type: String, enum: LANG_ENUM, default: 'cpp' },
+    code: { type: String, default: '' },
+    label: { type: String, default: 'Approach 1', trim: true, maxlength: 60 },
+  },
+  { _id: true, timestamps: { createdAt: true, updatedAt: false } }
+);
+
 const problemSchema = new mongoose.Schema(
   {
     user: {
@@ -19,19 +31,16 @@ const problemSchema = new mongoose.Schema(
       required: [true, 'Problem link is required'],
       trim: true,
     },
-    code: {
-      type: String,
-      default: '',
+    // ── Multi-language / multi-approach solutions ─────────────────────────────
+    solutions: {
+      type: [solutionSchema],
+      default: [],
     },
-    language: {
-      type: String,
-      enum: ['cpp', 'java', 'python', 'javascript', 'c', 'go', 'rust', 'other'],
-      default: 'cpp',
-    },
-    notes: {
-      type: String,
-      default: '',
-    },
+    // Legacy fields – kept for backward compat & TrackEx extension writes
+    code: { type: String, default: '' },
+    language: { type: String, enum: LANG_ENUM, default: 'cpp' },
+    // ─────────────────────────────────────────────────────────────────────────
+    notes: { type: String, default: '' },
     // Platform info
     platform: {
       type: String,
@@ -51,63 +60,29 @@ const problemSchema = new mongoose.Schema(
       default: 'solved',
     },
     // Tags for categorization
-    tags: [{
-      type: String,
-      trim: true,
-    }],
+    tags: [{ type: String, trim: true }],
     // Time spent (in minutes)
-    timeSpent: {
-      type: Number,
-      default: 0,
-    },
+    timeSpent: { type: Number, default: 0 },
     // Date solved
-    solvedAt: {
-      type: Date,
-      default: Date.now,
-    },
+    solvedAt: { type: Date, default: Date.now },
     // Sheet reference (optional)
-    sheet: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Sheet',
-    },
-    sheetTopic: {
-      type: String,
-    },
+    sheet: { type: mongoose.Schema.Types.ObjectId, ref: 'Sheet' },
+    sheetTopic: { type: String },
     // SheetProblem reference (for syncing)
-    sheetProblem: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'SheetProblem',
-    },
+    sheetProblem: { type: mongoose.Schema.Types.ObjectId, ref: 'SheetProblem' },
     // TrackEx extension fields
     source: {
       type: String,
       enum: ['manual', 'track-ex', 'github-sync'],
       default: 'manual',
     },
-    runtime: {
-      type: String,
-      default: '',
-    },
-    memory: {
-      type: String,
-      default: '',
-    },
-    attempts: {
-      type: Number,
-      default: 1,
-    },
-    submissionId: {
-      type: String,
-      default: '',
-    },
-    leetcodeSlug: {
-      type: String,
-      default: '',
-    },
+    runtime: { type: String, default: '' },
+    memory: { type: String, default: '' },
+    attempts: { type: Number, default: 1 },
+    submissionId: { type: String, default: '' },
+    leetcodeSlug: { type: String, default: '' },
   },
-  {
-    timestamps: true,
-  }
+  { timestamps: true }
 );
 
 // Indexes

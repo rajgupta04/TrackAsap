@@ -13,6 +13,7 @@ export const createProblem = async (req, res) => {
       link,
       code,
       language,
+      solutions,
       notes,
       platform,
       difficulty,
@@ -25,13 +26,24 @@ export const createProblem = async (req, res) => {
       sheetTopic,
     } = req.body;
 
+    // Build solutions array — prefer explicit solutions[], else build from code+language
+    let resolvedSolutions = [];
+    if (solutions && solutions.length > 0) {
+      resolvedSolutions = solutions;
+    } else if (code) {
+      resolvedSolutions = [{ language: language || 'cpp', code, label: 'Approach 1' }];
+    }
+
     // Create problem
     const problem = await Problem.create({
       user: req.user._id,
       title,
       link,
-      code,
+      // Legacy fields (for TrackEx extension compat)
+      code: code || '',
       language: language || 'cpp',
+      // Multi-approach solutions
+      solutions: resolvedSolutions,
       notes,
       platform,
       difficulty: difficulty || 'unknown',
@@ -43,19 +55,14 @@ export const createProblem = async (req, res) => {
       sheetTopic: sheetTopic || null,
     });
 
-
     // If associated with a sheet, update the sheet
     if (sheetId) {
       const sheet = await Sheet.findById(sheetId);
       if (sheet) {
         sheet.solvedProblems += 1;
-        
-        // Update topic if specified
         if (sheetTopic) {
           const topic = sheet.topics.find(t => t.name === sheetTopic);
-          if (topic) {
-            topic.solvedProblems += 1;
-          }
+          if (topic) topic.solvedProblems += 1;
         }
         await sheet.save();
       }
@@ -195,9 +202,21 @@ export const getProblem = async (req, res) => {
 // @access  Private
 export const updateProblem = async (req, res) => {
   try {
+    const updateData = { ...req.body };
+
+    // If legacy code+language are sent (e.g. from TrackEx extension),
+    // also push them into solutions[0] if solutions is empty
+    // (don't do this if the caller is explicitly managing solutions[])
+    if (updateData.code && !updateData.solutions) {
+      const existing = await Problem.findOne({ _id: req.params.id, user: req.user._id });
+      if (existing && existing.solutions.length === 0) {
+        updateData.solutions = [{ language: updateData.language || 'cpp', code: updateData.code, label: 'Approach 1' }];
+      }
+    }
+
     const problem = await Problem.findOneAndUpdate(
       { _id: req.params.id, user: req.user._id },
-      req.body,
+      updateData,
       { new: true, runValidators: true }
     );
 
@@ -205,6 +224,89 @@ export const updateProblem = async (req, res) => {
       return res.status(404).json({ message: 'Problem not found' });
     }
 
+    res.json(problem);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Add a solution (language + code + label) to a problem
+// @route   POST /api/problems/:id/solutions
+// @access  Private
+export const addSolution = async (req, res) => {
+  try {
+    const { language, code, label } = req.body;
+    const problem = await Problem.findOne({ _id: req.params.id, user: req.user._id });
+    if (!problem) return res.status(404).json({ message: 'Problem not found' });
+
+    // Auto-label: count existing solutions for that language
+    const sameLang = problem.solutions.filter(s => s.language === language).length;
+    const autoLabel = label || (sameLang === 0 ? 'Approach 1' : `Approach ${sameLang + 1}`);
+
+    problem.solutions.push({ language: language || 'cpp', code: code || '', label: autoLabel });
+
+    // Keep legacy fields in sync with first solution
+    if (problem.solutions.length === 1) {
+      problem.code = code || '';
+      problem.language = language || 'cpp';
+    }
+
+    await problem.save();
+    res.json(problem);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Update a specific solution
+// @route   PUT /api/problems/:id/solutions/:solutionId
+// @access  Private
+export const updateSolution = async (req, res) => {
+  try {
+    const { language, code, label } = req.body;
+    const problem = await Problem.findOne({ _id: req.params.id, user: req.user._id });
+    if (!problem) return res.status(404).json({ message: 'Problem not found' });
+
+    const sol = problem.solutions.id(req.params.solutionId);
+    if (!sol) return res.status(404).json({ message: 'Solution not found' });
+
+    if (language !== undefined) sol.language = language;
+    if (code !== undefined) sol.code = code;
+    if (label !== undefined) sol.label = label;
+
+    // Sync legacy fields to first solution
+    if (problem.solutions[0]?._id?.toString() === req.params.solutionId) {
+      problem.code = sol.code;
+      problem.language = sol.language;
+    }
+
+    await problem.save();
+    res.json(problem);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Delete a specific solution
+// @route   DELETE /api/problems/:id/solutions/:solutionId
+// @access  Private
+export const deleteSolution = async (req, res) => {
+  try {
+    const problem = await Problem.findOne({ _id: req.params.id, user: req.user._id });
+    if (!problem) return res.status(404).json({ message: 'Problem not found' });
+    if (problem.solutions.length <= 1) {
+      return res.status(400).json({ message: 'Cannot delete the only solution. Edit it instead.' });
+    }
+
+    problem.solutions = problem.solutions.filter(
+      s => s._id.toString() !== req.params.solutionId
+    );
+
+    // Re-sync legacy fields
+    problem.code = problem.solutions[0]?.code || '';
+    problem.language = problem.solutions[0]?.language || 'cpp';
+
+    await problem.save();
     res.json(problem);
   } catch (error) {
     res.status(500).json({ message: error.message });
