@@ -367,6 +367,28 @@ const CodeViewer = ({ isOpen, onClose, problem: problemProp, onSave }) => {
       return;
     }
 
+    // Skip closing bracket/quote if user types over it (LeetCode / VS Code muscle memory)
+    const closingChars = ['}', ')', ']', '"', "'"];
+    if (closingChars.includes(e.key) && s === end && currentCode[s] === e.key) {
+      e.preventDefault();
+      setSelection(s + 1, s + 1);
+      return;
+    }
+
+    // Backspace inside empty pair e.g. (|), {|}, [|], "|", '|' -> delete both
+    if (e.key === 'Backspace' && s === end && s > 0) {
+      const charBefore = currentCode[s - 1];
+      const charAfter = currentCode[s];
+      const pairs = { '{': '}', '(': ')', '[': ']', '"': '"', "'": "'" };
+      if (pairs[charBefore] === charAfter) {
+        e.preventDefault();
+        const newCode = currentCode.substring(0, s - 1) + currentCode.substring(s + 1);
+        updateCode(newCode);
+        setSelection(s - 1, s - 1);
+        return;
+      }
+    }
+
     // Tab key (indent 4 spaces)
     if (e.key === 'Tab') {
       e.preventDefault();
@@ -396,11 +418,6 @@ const CodeViewer = ({ isOpen, onClose, problem: problemProp, onSave }) => {
     // Auto-bracket & auto-quote completion
     const bracketPairs = { '{': '}', '(': ')', '[': ']', '"': '"', "'": "'" };
     if (bracketPairs[e.key]) {
-      if ((e.key === '"' || e.key === "'") && s === end && currentCode[s] === e.key) {
-        e.preventDefault();
-        setSelection(s + 1, s + 1);
-        return;
-      }
       e.preventDefault();
       const open = e.key;
       const close = bracketPairs[e.key];
