@@ -118,11 +118,11 @@ export const updateProblemStatus = async (req, res) => {
 // @access  Private
 export const updateSheetProblem = async (req, res) => {
   try {
-    const { title, topic, difficulty, problemLink, articleLink, youtubeLink, notes, code, language, platform, tags } = req.body;
+    const { title, topic, difficulty, problemLink, articleLink, youtubeLink, notes, code, language, solutions, platform, tags } = req.body;
     
     const problem = await SheetProblem.findOneAndUpdate(
       { _id: req.params.id, user: req.user._id },
-      { title, topic, difficulty, problemLink, articleLink, youtubeLink, notes, code, language, platform, tags },
+      { title, topic, difficulty, problemLink, articleLink, youtubeLink, notes, code, language, solutions, platform, tags },
       { new: true }
     );
 
@@ -393,6 +393,7 @@ const syncProblemToProblemsCollection = async (sheetProblem, userId) => {
           notes: sheetProblem.notes || '',
           code: sheetProblem.code || '',
           language: sheetProblem.language || 'cpp',
+          solutions: sheetProblem.solutions || [],
           solvedAt: sheetProblem.lastAttemptedAt || new Date(),
         },
         { upsert: true, new: true }

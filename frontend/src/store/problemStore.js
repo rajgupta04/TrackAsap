@@ -112,6 +112,46 @@ const useProblemStore = create((set, get) => ({
 
   // Clear error
   clearError: () => set({ error: null }),
+
+  // ── Solution actions ──────────────────────────────────────────────────────
+  // Helper to sync an updated problem back into the store
+  _syncProblem: (updated) => set((state) => ({
+    problems: state.problems.map((p) => (p._id === updated._id ? updated : p)),
+    currentProblem: state.currentProblem?._id === updated._id ? updated : state.currentProblem,
+  })),
+
+  // Add a solution to a problem
+  addSolution: async (problemId, data) => {
+    try {
+      const updated = await problemService.addSolution(problemId, data);
+      get()._syncProblem(updated);
+      return updated;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  // Update a specific solution
+  updateSolution: async (problemId, solutionId, data) => {
+    try {
+      const updated = await problemService.updateSolution(problemId, solutionId, data);
+      get()._syncProblem(updated);
+      return updated;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  // Delete a specific solution
+  deleteSolution: async (problemId, solutionId) => {
+    try {
+      const updated = await problemService.deleteSolution(problemId, solutionId);
+      get()._syncProblem(updated);
+      return updated;
+    } catch (error) {
+      throw error;
+    }
+  },
 }));
 
 export default useProblemStore;

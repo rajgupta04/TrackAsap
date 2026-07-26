@@ -42,6 +42,25 @@ export const problemService = {
     const response = await api.get('/problems/stats');
     return response.data;
   },
+
+  // ── Solution sub-resource ────────────────────────────────────────────────
+  // Add a new solution (language + code + label) to a problem
+  addSolution: async (problemId, data) => {
+    const response = await api.post(`/problems/${problemId}/solutions`, data);
+    return response.data;
+  },
+
+  // Update a specific solution
+  updateSolution: async (problemId, solutionId, data) => {
+    const response = await api.put(`/problems/${problemId}/solutions/${solutionId}`, data);
+    return response.data;
+  },
+
+  // Delete a specific solution
+  deleteSolution: async (problemId, solutionId) => {
+    const response = await api.delete(`/problems/${problemId}/solutions/${solutionId}`);
+    return response.data;
+  },
 };
 
 export default problemService;

@@ -1,5 +1,16 @@
 import mongoose from 'mongoose';
 
+const LANG_ENUM = ['cpp', 'java', 'python', 'javascript', 'c', 'go', 'rust', 'other'];
+
+const solutionSchema = new mongoose.Schema(
+  {
+    language: { type: String, enum: LANG_ENUM, default: 'cpp' },
+    code: { type: String, default: '' },
+    label: { type: String, default: 'Approach 1', trim: true, maxlength: 60 },
+  },
+  { _id: true, timestamps: { createdAt: true, updatedAt: false } }
+);
+
 // Individual problem within a sheet (like TakeUForward's structure)
 const sheetProblemSchema = new mongoose.Schema(
   {
@@ -60,15 +71,20 @@ const sheetProblemSchema = new mongoose.Schema(
       enum: ['pending', 'solved', 'revision'],
       default: 'pending',
     },
-    // User's solution code
+    // Multi-approach solutions
+    solutions: {
+      type: [solutionSchema],
+      default: [],
+    },
+    // User's solution code (legacy)
     code: {
       type: String,
       default: '',
     },
-    // Programming language
+    // Programming language (legacy)
     language: {
       type: String,
-      enum: ['cpp', 'java', 'python', 'javascript', 'c', 'go', 'rust', 'other'],
+      enum: LANG_ENUM,
       default: 'cpp',
     },
     // Notes
