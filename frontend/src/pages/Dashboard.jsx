@@ -43,7 +43,8 @@ const Dashboard = () => {
     fetchProblemsTrend,
     fetchWeightProgress,
     fetchLeetCodeStats,
-    fetchCodeforcesStats
+    fetchCodeforcesStats,
+    fetchCodechefStats
   } = useAnalyticsStore();
   
   const { streak, fetchStreak } = useTaskStore();
@@ -57,7 +58,7 @@ const Dashboard = () => {
     // Attempt fetching platform stats if handles exist
     if (user?.leetcodeHandle && !leetcodeStats) fetchLeetCodeStats(user.leetcodeHandle);
     if (user?.codeforcesHandle && !codeforcesStats) fetchCodeforcesStats(user.codeforcesHandle);
-    // codechefStats fetched if supported
+    if (user?.codechefHandle && !codechefStats) fetchCodechefStats(user.codechefHandle);
   }, []);
 
   // Retrieve layout from localStorage or fallback to default
@@ -159,7 +160,7 @@ const Dashboard = () => {
         )}
         {user?.codechefHandle && (
           <div key="codechefStats" data-grid={{ w: 6, h: 11, x: 6, y: 25, minW: 4, minH: 9 }}>
-            <CodeChefStatsWidget user={user} />
+            <CodeChefStatsWidget user={user} codechefStats={codechefStats} isPlatformLoading={isPlatformLoading} fetchCodechefStats={fetchCodechefStats} />
           </div>
         )}
         {leetcodeStats?.ratingHistory?.length > 1 && (

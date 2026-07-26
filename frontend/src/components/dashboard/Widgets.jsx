@@ -138,8 +138,9 @@ export const CodeforcesStatsWidget = ({ user, codeforcesStats, isPlatformLoading
   );
 };
 
-export const CodeChefStatsWidget = ({ user }) => {
+export const CodeChefStatsWidget = ({ user, codechefStats, isPlatformLoading, fetchCodechefStats }) => {
   if (!user?.codechefHandle) return null;
+
   return (
     <GlassCard className="h-full">
       <div className="flex items-center justify-between mb-4 cursor-move drag-handle">
@@ -152,17 +153,65 @@ export const CodeChefStatsWidget = ({ user }) => {
             <p className="text-xs text-dark-400">@{user.codechefHandle}</p>
           </div>
         </div>
-        <a href={`https://www.codechef.com/users/${user.codechefHandle}`} target="_blank" rel="noopener noreferrer" className="p-2 hover:bg-dark-700/50 rounded-lg transition-colors">
-          <ExternalLink className="w-4 h-4 text-dark-400" />
-        </a>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => fetchCodechefStats && fetchCodechefStats(user.codechefHandle)}
+            disabled={isPlatformLoading?.codechef}
+            className="p-2 hover:bg-dark-700/50 rounded-lg transition-colors text-dark-400 hover:text-white"
+            title="Refresh stats"
+          >
+            <RefreshCw className={`w-4 h-4 ${isPlatformLoading?.codechef ? 'animate-spin' : ''}`} />
+          </button>
+          <a
+            href={`https://www.codechef.com/users/${user.codechefHandle}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="p-2 hover:bg-dark-700/50 rounded-lg transition-colors text-dark-400 hover:text-white"
+          >
+            <ExternalLink className="w-4 h-4" />
+          </a>
+        </div>
       </div>
-      <div className="flex flex-col items-center justify-center py-6 text-center">
-        <AlertCircle className="w-8 h-8 text-dark-500 mb-2" />
-        <p className="text-sm text-dark-400">CodeChef API not publicly available</p>
-        <a href={`https://www.codechef.com/users/${user.codechefHandle}`} target="_blank" rel="noopener noreferrer" className="mt-3 text-sm text-[#5B4638] hover:underline flex items-center gap-1">
-          View Profile <ExternalLink className="w-3 h-3" />
-        </a>
-      </div>
+
+      {!codechefStats ? (
+        <div className="flex items-center justify-center py-8">
+          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-[#5B4638]"></div>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          <div className="text-center py-2">
+            <div className="text-3xl font-bold text-amber-500 flex items-center justify-center gap-1.5">
+              {codechefStats.rating || 'Unrated'}
+              {codechefStats.stars && (
+                <span className="text-xs px-2 py-0.5 rounded bg-amber-500/20 text-amber-400 font-medium">
+                  {codechefStats.stars}
+                </span>
+              )}
+            </div>
+            <div className="text-xs text-dark-400 mt-1">Current Rating</div>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div className="bg-dark-700/30 rounded-xl p-3 text-center">
+              <div className="text-lg md:text-xl font-bold text-white">{codechefStats.maxRating || 0}</div>
+              <div className="text-xs text-dark-400">Highest Rating</div>
+            </div>
+            <div className="bg-dark-700/30 rounded-xl p-3 text-center">
+              <div className="text-lg md:text-xl font-bold text-white">{codechefStats.totalSolved || 0}</div>
+              <div className="text-xs text-dark-400">Problems Solved</div>
+            </div>
+          </div>
+          <div className="flex items-center justify-around pt-2 border-t border-dark-700/50">
+            <div className="text-center">
+              <div className="text-sm font-semibold text-white">{codechefStats.globalRank ? `#${codechefStats.globalRank.toLocaleString()}` : 'N/A'}</div>
+              <div className="text-xs text-dark-400">Global Rank</div>
+            </div>
+            <div className="text-center">
+              <div className="text-sm font-semibold text-white">{codechefStats.countryRank ? `#${codechefStats.countryRank.toLocaleString()}` : 'N/A'}</div>
+              <div className="text-xs text-dark-400">Country Rank</div>
+            </div>
+          </div>
+        </div>
+      )}
     </GlassCard>
   );
 };
