@@ -2,7 +2,7 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence, useMotionValue, useSpring, useDragControls } from 'framer-motion';
 import {
   Copy, Check, ExternalLink, Clock, Zap, HardDrive, RotateCcw,
-  Save, X, Plus, ChevronDown,
+  Save, X, Plus, ChevronDown, Palette, AlignLeft,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import useProblemStore from '../store/problemStore';
@@ -13,9 +13,15 @@ import { cpp } from '@codemirror/lang-cpp';
 import { java } from '@codemirror/lang-java';
 import { python } from '@codemirror/lang-python';
 import { javascript } from '@codemirror/lang-javascript';
-import { tokyoNight } from '@uiw/codemirror-theme-tokyo-night';
 import { EditorView } from '@codemirror/view';
 import { autocompletion } from '@codemirror/autocomplete';
+import { linter } from '@codemirror/lint';
+
+import { tokyoNight } from '@uiw/codemirror-theme-tokyo-night';
+import { dracula } from '@uiw/codemirror-theme-dracula';
+import { githubDark } from '@uiw/codemirror-theme-github';
+import { nord } from '@uiw/codemirror-theme-nord';
+import jsBeautify from 'js-beautify';
 
 // ── Constants ──────────────────────────────────────────────────────────────
 const DIFFICULTY_COLORS = {
@@ -34,6 +40,14 @@ const LANG_OPTIONS = [
 ];
 const LANG_MAP = Object.fromEntries(LANG_OPTIONS.map(l => [l.value, l]));
 
+const THEME_OPTIONS = [
+  { value: 'tokyoNight', label: 'Tokyo Night', theme: tokyoNight },
+  { value: 'dracula',    label: 'Dracula',     theme: dracula },
+  { value: 'githubDark', label: 'GitHub Dark', theme: githubDark },
+  { value: 'nord',       label: 'Nord',        theme: nord },
+];
+const THEME_MAP = Object.fromEntries(THEME_OPTIONS.map(t => [t.value, t]));
+
 const COMMON_KEYWORDS = {
   cpp: ['vector', 'string', 'push_back', 'pop_back', 'unordered_map', 'unordered_set', 'priority_queue', 'pair', 'make_pair', 'min', 'max', 'swap', 'sort', 'reverse', 'lower_bound', 'upper_bound', 'cout', 'cin', 'endl', 'nullptr', 'size', 'length', 'empty', 'clear', 'insert', 'erase', 'find', 'begin', 'end', 'INT_MAX', 'INT_MIN', 'return', 'include', 'class', 'public', 'private', 'protected', 'struct', 'typedef', 'template', 'typename', 'auto', 'const', 'static', 'sizeof'],
   java: ['String', 'System.out.println', 'StringBuilder', 'ArrayList', 'HashMap', 'HashSet', 'LinkedList', 'PriorityQueue', 'Collections.sort', 'Math.max', 'Math.min', 'Math.abs', 'public', 'private', 'protected', 'class', 'interface', 'extends', 'implements', 'static', 'final', 'void', 'return', 'import', 'new', 'override', 'this', 'super'],
@@ -44,6 +58,110 @@ const COMMON_KEYWORDS = {
   rust: ['println!', 'format!', 'vec!', 'String', 'Option', 'Result', 'Some', 'None', 'Ok', 'Err', 'pub', 'fn', 'let', 'mut', 'struct', 'enum', 'match', 'impl', 'use', 'mod', 'self', 'Self', 'return'],
   other: ['return', 'function', 'class', 'struct', 'import', 'export', 'print', 'console'],
 };
+
+// ── Real-time Syntax Linter ──
+function codeSyntaxLinter(view) {
+  const diagnostics = [];
+  const doc = view.state.doc.toString();
+  const lines = doc.split('\n');
+
+  const stack = [];
+  const openPairs = { '{': '}', '(': ')', '[': ']' };
+  const closePairs = { '}': '{', ')': '(', ']': '[' };
+
+  for (let pos = 0; pos < doc.length; pos++) {
+    const ch = doc[pos];
+    if (openPairs[ch]) {
+      stack.push({ ch, pos });
+    } else if (closePairs[ch]) {
+      if (stack.length === 0 || stack[stack.length - 1].ch !== closePairs[ch]) {
+        diagnostics.push({
+          from: pos,
+          to: pos + 1,
+          severity: 'error',
+          message: `Unmatched '${ch}'`,
+        });
+      } else {
+        stack.pop();
+      }
+    }
+  }
+
+  for (const unclosed of stack) {
+    diagnostics.push({
+      from: unclosed.pos,
+      to: unclosed.pos + 1,
+      severity: 'error',
+      message: `Unclosed '${unclosed.ch}'`,
+    });
+  }
+
+  let posCount = 0;
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const doubleQuotes = (line.match(/(?<!\\)"/g) || []).length;
+    const singleQuotes = (line.match(/(?<!\\)'/g) || []).length;
+
+    if (doubleQuotes % 2 !== 0) {
+      const lastQuotePos = posCount + line.lastIndexOf('"');
+      diagnostics.push({
+        from: Math.max(posCount, lastQuotePos),
+        to: Math.min(posCount + line.length, lastQuotePos + 1),
+        severity: 'warning',
+        message: 'Unterminated string literal',
+      });
+    }
+
+    if (singleQuotes % 2 !== 0) {
+      const lastQuotePos = posCount + line.lastIndexOf("'");
+      diagnostics.push({
+        from: Math.max(posCount, lastQuotePos),
+        to: Math.min(posCount + line.length, lastQuotePos + 1),
+        severity: 'warning',
+        message: 'Unterminated character literal',
+      });
+    }
+
+    posCount += line.length + 1;
+  }
+
+  return diagnostics;
+}
+
+// ── Code Formatter ──
+function formatCode(code, lang) {
+  if (!code || !code.trim()) return code;
+  try {
+    if (lang === 'javascript' || lang === 'python') {
+      return jsBeautify.js(code, { indent_size: 4, space_in_empty_paren: false });
+    }
+    const lines = code.split('\n');
+    let indentLevel = 0;
+    const formattedLines = [];
+
+    for (let line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed) {
+        formattedLines.push('');
+        continue;
+      }
+
+      if (trimmed.startsWith('}') || trimmed.startsWith(')') || trimmed.startsWith(']')) {
+        indentLevel = Math.max(0, indentLevel - 1);
+      }
+
+      formattedLines.push('    '.repeat(indentLevel) + trimmed);
+
+      const openCount = (trimmed.match(/[{(\[]/g) || []).length;
+      const closeCount = (trimmed.match(/[})\]]/g) || []).length;
+      indentLevel = Math.max(0, indentLevel + openCount - closeCount);
+    }
+
+    return formattedLines.join('\n');
+  } catch {
+    return code;
+  }
+}
 
 function createDocumentCompletions(activeLang) {
   return function getDocumentCompletions(context) {
@@ -127,11 +245,12 @@ const CodeViewer = ({ isOpen, onClose, problem: problemProp, onSave }) => {
 
   const dragControls = useDragControls();
 
-  // ── Window state
+  // ── Window & Theme state
   const [minimized, setMinimized] = useState(false);
   const [maximized, setMaximized] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [activeTheme, setActiveTheme] = useState('tokyoNight');
 
   // ── Code map: { label → { lang → code } }
   const [codeMap, setCodeMap] = useState({});
@@ -196,8 +315,9 @@ const CodeViewer = ({ isOpen, onClose, problem: problemProp, onSave }) => {
   const langsForApproach = Object.keys(codeMap[activeLabel] || {});
   const currentCode = codeMap[activeLabel]?.[activeLang] ?? '';
   const langInfo = LANG_MAP[activeLang] || LANG_MAP.other;
+  const currentTheme = THEME_MAP[activeTheme]?.theme || tokyoNight;
 
-  // ── Code editing
+  // ── Code editing & formatting
   const updateCode = useCallback((newCode) => {
     setCodeMap(prev => ({
       ...prev,
@@ -205,6 +325,28 @@ const CodeViewer = ({ isOpen, onClose, problem: problemProp, onSave }) => {
     }));
     setIsDirty(true);
   }, [activeLabel, activeLang]);
+
+  const handleFormatCode = useCallback(() => {
+    if (!currentCode || !currentCode.trim()) return;
+    const formatted = formatCode(currentCode, activeLang);
+    if (formatted !== currentCode) {
+      updateCode(formatted);
+      toast.success('Code Formatted!');
+    }
+  }, [currentCode, activeLang, updateCode]);
+
+  // Global keydown listener for Alt + Shift + F / Shift + Alt + F (Format Code)
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleGlobalKeyDown = (e) => {
+      if (e.altKey && e.shiftKey && e.key.toLowerCase() === 'f') {
+        e.preventDefault();
+        handleFormatCode();
+      }
+    };
+    window.addEventListener('keydown', handleGlobalKeyDown);
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
+  }, [isOpen, handleFormatCode]);
 
   const switchApproach = (label) => {
     setActiveLabel(label);
@@ -500,12 +642,12 @@ const CodeViewer = ({ isOpen, onClose, problem: problemProp, onSave }) => {
                 )}
               </div>
 
-              {/* ══ ROW 2: Language Selector Dropdown ════════════════════════ */}
+              {/* ══ ROW 2: Language Selector, Theme Picker, & Format Code ════════ */}
               <div
-                className="flex items-center justify-between px-3 py-2 border-b"
+                className="flex items-center justify-between px-3 py-2 border-b flex-wrap gap-2"
                 style={{ borderColor:'rgba(255,255,255,0.04)', background:'rgba(255,255,255,0.015)', minHeight:42 }}
               >
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <span className="w-2.5 h-2.5 rounded-full" style={{ background: langInfo.color }} />
                   
                   {/* Language Dropdown */}
@@ -532,8 +674,36 @@ const CodeViewer = ({ isOpen, onClose, problem: problemProp, onSave }) => {
                     <ChevronDown className="w-3 h-3 absolute right-2 pointer-events-none" style={{ color: langInfo.color }} />
                   </div>
 
+                  {/* Theme Dropdown */}
+                  <div className="relative flex items-center">
+                    <select
+                      value={activeTheme}
+                      onChange={e => setActiveTheme(e.target.value)}
+                      className="appearance-none bg-white/5 hover:bg-white/10 text-gray-300 pl-7 pr-7 py-1 rounded-lg text-xs font-semibold outline-none cursor-pointer border border-white/10 transition-all"
+                    >
+                      {THEME_OPTIONS.map(opt => (
+                        <option key={opt.value} value={opt.value} className="bg-gray-900 text-white font-medium">
+                          {opt.label}
+                        </option>
+                      ))}
+                    </select>
+                    <Palette className="w-3 h-3 absolute left-2 text-purple-400 pointer-events-none" />
+                    <ChevronDown className="w-3 h-3 absolute right-2 text-gray-400 pointer-events-none" />
+                  </div>
+
+                  {/* Format Code Button */}
+                  <button
+                    onClick={handleFormatCode}
+                    className="flex items-center gap-1.5 px-3 py-1 bg-white/5 hover:bg-white/10 text-gray-200 hover:text-white rounded-lg text-xs font-semibold border border-white/10 transition-all shadow-sm group"
+                    title="Format Code [Alt + Shift + F]"
+                  >
+                    <AlignLeft className="w-3.5 h-3.5 text-[#39FF14] group-hover:scale-110 transition-transform" />
+                    <span>Format</span>
+                    <span className="text-[9px] text-gray-400 bg-black/40 px-1.5 py-0.5 rounded font-mono ml-0.5">Alt+Shift+F</span>
+                  </button>
+
                   {/* Badges of existing saved non-empty languages for this approach */}
-                  <div className="flex items-center gap-1.5 ml-2">
+                  <div className="flex items-center gap-1.5 ml-1">
                     {langsForApproach.map(l => {
                       const codeVal = codeMap[activeLabel]?.[l];
                       if (l === activeLang || !codeVal || codeVal.trim().length === 0) return null;
@@ -563,7 +733,7 @@ const CodeViewer = ({ isOpen, onClose, problem: problemProp, onSave }) => {
                 </div>
               </div>
 
-              {/* ══ CodeMirror 6 Editor Engine with Real-time Autocompletion ══ */}
+              {/* ══ CodeMirror 6 Editor Engine with Real-time Linter & Themes ══ */}
               <div
                 className="flex-1 overflow-auto min-h-0 relative"
                 style={{ background:'#1a1b26', minHeight: '380px', maxHeight: maximized ? 'calc(100vh - 220px)' : '55vh' }}
@@ -571,7 +741,7 @@ const CodeViewer = ({ isOpen, onClose, problem: problemProp, onSave }) => {
                 <CodeMirror
                   value={currentCode}
                   height={maximized ? 'calc(100vh - 220px)' : '380px'}
-                  theme={tokyoNight}
+                  theme={currentTheme}
                   extensions={[
                     getLanguageExtension(activeLang),
                     EditorView.lineWrapping,
@@ -579,6 +749,7 @@ const CodeViewer = ({ isOpen, onClose, problem: problemProp, onSave }) => {
                       override: [createDocumentCompletions(activeLang)],
                       activateOnTyping: true,
                     }),
+                    linter(codeSyntaxLinter, { delay: 300 }),
                   ]}
                   onChange={value => updateCode(value)}
                   placeholder={`Paste or type your ${langInfo.label} code for ${activeLabel}...`}
