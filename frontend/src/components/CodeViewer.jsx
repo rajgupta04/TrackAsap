@@ -89,9 +89,21 @@ const CodeViewer = ({ isOpen, onClose, problem: problemProp, onSave }) => {
   const textareaRef = useRef(null);
   const newApproachRef = useRef(null);
 
+  // ── Unsaved prompt state
+  const [showUnsavedModal, setShowUnsavedModal] = useState(false);
+
+  const handleCloseAttempt = () => {
+    if (isDirty) {
+      setShowUnsavedModal(true);
+    } else {
+      onClose();
+    }
+  };
+
   // ── Load / reset when problem changes
   useEffect(() => {
     if (!isOpen || !problem) return;
+    setShowUnsavedModal(false);
     const solutions = getSolutions(problem);
     const map = buildCodeMap(solutions);
     const isEmpty = Object.keys(map).length === 0;
@@ -261,7 +273,7 @@ const CodeViewer = ({ isOpen, onClose, problem: problemProp, onSave }) => {
         ref={constraintsRef}
         initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
         className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[110] flex items-center justify-center"
-        onClick={onClose}
+        onClick={handleCloseAttempt}
         style={{ perspective: 1200 }}
       >
         <style>{`
@@ -308,8 +320,8 @@ const CodeViewer = ({ isOpen, onClose, problem: problemProp, onSave }) => {
           className={`cv-window overflow-hidden ${maximized ? 'maximized' : 'rounded-xl'}`}
           style={{
             x, y, scale, rotateX, rotateY,
-            width: maximized ? '100vw' : undefined,
-            maxWidth: maximized ? '100vw' : '64rem',
+            width: maximized ? '100vw' : '90%',
+            maxWidth: maximized ? '100vw' : '70rem',
             maxHeight: maximized ? '100vh' : '90vh',
             boxShadow: isDragging
               ? '0 40px 80px rgba(0,0,0,0.5),0 0 0 1px rgba(139,92,246,0.15)'
@@ -327,7 +339,7 @@ const CodeViewer = ({ isOpen, onClose, problem: problemProp, onSave }) => {
               onDoubleClick={handleMaximize}
             >
               <div className="cv-traffic flex items-center gap-2" onMouseDown={e => e.stopPropagation()}>
-                <button onClick={onClose} className="w-3.5 h-3.5 rounded-full bg-[#FF5F57] hover:brightness-90 transition-all flex items-center justify-center relative" title="Close">
+                <button onClick={handleCloseAttempt} className="w-3.5 h-3.5 rounded-full bg-[#FF5F57] hover:brightness-90 transition-all flex items-center justify-center relative" title="Close">
                   <svg className="cv-dot-icon w-[8px] h-[8px] absolute" viewBox="0 0 12 12" fill="none"><path d="M3 3L9 9M9 3L3 9" stroke="#4D0000" strokeWidth="1.8" strokeLinecap="round"/></svg>
                 </button>
                 <button onClick={handleMinimize} className="w-3.5 h-3.5 rounded-full bg-[#FEBC2E] hover:brightness-90 transition-all flex items-center justify-center relative" title={minimized?'Expand':'Minimize'}>
@@ -346,7 +358,13 @@ const CodeViewer = ({ isOpen, onClose, problem: problemProp, onSave }) => {
                 <span className="truncate max-w-xs">{problem.title}</span>
                 <span className="text-gray-600">—</span>
                 <span className="text-xs font-semibold capitalize" style={{ color: DIFFICULTY_COLORS[problem.difficulty] }}>{problem.difficulty}</span>
-                {isDirty && <span className="px-1.5 py-0.5 rounded text-[10px] uppercase font-bold bg-amber-500/10 text-amber-500 ml-1">UNSAVED</span>}
+                {isSaving ? (
+                  <span className="px-1.5 py-0.5 rounded text-[10px] uppercase font-bold bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 animate-pulse ml-1">SAVING...</span>
+                ) : isDirty ? (
+                  <span className="px-1.5 py-0.5 rounded text-[10px] uppercase font-bold bg-amber-500/10 text-amber-500 border border-amber-500/20 ml-1">UNSAVED</span>
+                ) : (
+                  <span className="px-1.5 py-0.5 rounded text-[10px] uppercase font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 ml-1">SAVED</span>
+                )}
               </div>
 
               <div className="flex items-center gap-1" onMouseDown={e => e.stopPropagation()}>
@@ -559,7 +577,7 @@ const CodeViewer = ({ isOpen, onClose, problem: problemProp, onSave }) => {
                       className="px-5 py-1.5 bg-neon-green text-black font-semibold rounded-lg hover:bg-neon-green/90 transition-all disabled:opacity-50 flex items-center gap-2 text-sm"
                     >
                       <Save className="w-3.5 h-3.5"/>
-                      {isSaving ? 'Saving…' : 'Save All'}
+                      {isSaving ? 'Saving…' : 'Save'}
                     </button>
                   )}
                 </div>
@@ -569,6 +587,59 @@ const CodeViewer = ({ isOpen, onClose, problem: problemProp, onSave }) => {
           </div>
         </motion.div>
       </motion.div>
+
+      {/* ── Funny Unsaved Changes Popup Tile ── */}
+      {showUnsavedModal && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-[130] flex items-center justify-center bg-black/75 backdrop-blur-md p-4"
+          onClick={e => e.stopPropagation()}
+        >
+          <motion.div
+            initial={{ scale: 0.88, opacity: 0, y: 15 }}
+            animate={{ scale: 1, opacity: 1, y: 0 }}
+            exit={{ scale: 0.88, opacity: 0, y: 15 }}
+            transition={{ type: 'spring', damping: 22, stiffness: 280 }}
+            className="w-full max-w-md rounded-2xl p-6 border shadow-2xl space-y-4 text-center"
+            style={{ background: '#1e1f31', borderColor: 'rgba(255,255,255,0.12)' }}
+          >
+            <div className="w-14 h-14 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-400 flex items-center justify-center mx-auto text-3xl shadow-lg shadow-amber-500/10">
+              🚨
+            </div>
+            <div className="space-y-1.5">
+              <h3 className="text-lg font-bold text-white tracking-wide">Whoops! Forgot to save?</h3>
+              <p className="text-xs text-gray-300 leading-relaxed px-2">
+                Looks like you wrote some awesome code and almost threw it into the digital abyss! 🌌 Save it before it runs away?
+              </p>
+            </div>
+
+            <div className="flex items-center gap-3 pt-3">
+              <button
+                onClick={async () => {
+                  setShowUnsavedModal(false);
+                  await handleSave();
+                  onClose();
+                }}
+                disabled={isSaving}
+                className="flex-1 py-2.5 px-4 bg-neon-green hover:bg-neon-green/90 text-black font-bold rounded-xl text-xs transition-all shadow-lg shadow-neon-green/20 disabled:opacity-50"
+              >
+                {isSaving ? 'Saving...' : 'Alright, Save!'}
+              </button>
+              <button
+                onClick={() => {
+                  setShowUnsavedModal(false);
+                  onClose();
+                }}
+                className="flex-1 py-2.5 px-4 bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white font-semibold rounded-xl text-xs transition-all border border-white/10"
+              >
+                Ignore
+              </button>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
     </AnimatePresence>
   );
 };

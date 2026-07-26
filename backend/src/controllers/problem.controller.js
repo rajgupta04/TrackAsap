@@ -182,10 +182,33 @@ export const getProblems = async (req, res) => {
 // @access  Private
 export const getProblem = async (req, res) => {
   try {
-    const problem = await Problem.findOne({
-      _id: req.params.id,
+    let problem = await Problem.findOne({
+      $or: [{ _id: req.params.id }, { sheetProblem: req.params.id }],
       user: req.user._id,
     }).populate('sheet', 'name category');
+
+    if (!problem) {
+      const sheetProb = await SheetProblem.findOne({ _id: req.params.id, user: req.user._id }).populate('sheet', 'name category');
+      if (sheetProb) {
+        problem = {
+          _id: sheetProb._id,
+          user: sheetProb.user,
+          title: sheetProb.title,
+          link: sheetProb.problemLink || sheetProb.articleLink || '',
+          platform: sheetProb.platform,
+          difficulty: sheetProb.difficulty,
+          status: sheetProb.status,
+          tags: sheetProb.tags || [],
+          solvedAt: sheetProb.lastAttemptedAt || sheetProb.updatedAt,
+          sheet: sheetProb.sheet,
+          notes: sheetProb.notes || '',
+          isSheetProblem: true,
+          code: sheetProb.code || '',
+          language: sheetProb.language || 'cpp',
+          solutions: sheetProb.solutions || [],
+        };
+      }
+    }
 
     if (!problem) {
       return res.status(404).json({ message: 'Problem not found' });
@@ -204,27 +227,73 @@ export const updateProblem = async (req, res) => {
   try {
     const updateData = { ...req.body };
 
-    // If legacy code+language are sent (e.g. from TrackEx extension),
-    // also push them into solutions[0] if solutions is empty
-    // (don't do this if the caller is explicitly managing solutions[])
-    if (updateData.code && !updateData.solutions) {
-      const existing = await Problem.findOne({ _id: req.params.id, user: req.user._id });
-      if (existing && existing.solutions.length === 0) {
+    // Try finding in Problem collection by _id or by sheetProblem reference
+    let problem = await Problem.findOne({
+      $or: [{ _id: req.params.id }, { sheetProblem: req.params.id }],
+      user: req.user._id,
+    });
+
+    if (problem) {
+      if (updateData.code && !updateData.solutions && problem.solutions.length === 0) {
         updateData.solutions = [{ language: updateData.language || 'cpp', code: updateData.code, label: 'Approach 1' }];
       }
+
+      Object.assign(problem, updateData);
+      await problem.save();
+
+      // If synced to a SheetProblem, also update SheetProblem
+      if (problem.sheetProblem) {
+        await SheetProblem.findOneAndUpdate(
+          { _id: problem.sheetProblem, user: req.user._id },
+          {
+            code: problem.code,
+            language: problem.language,
+            solutions: problem.solutions,
+            notes: problem.notes,
+          }
+        );
+      }
+
+      return res.json(problem);
     }
 
-    const problem = await Problem.findOneAndUpdate(
-      { _id: req.params.id, user: req.user._id },
-      updateData,
-      { new: true, runValidators: true }
-    );
+    // If not found in Problem, check if req.params.id is a SheetProblem
+    const sheetProb = await SheetProblem.findOne({ _id: req.params.id, user: req.user._id });
+    if (sheetProb) {
+      if (updateData.solutions) sheetProb.solutions = updateData.solutions;
+      if (updateData.code !== undefined) sheetProb.code = updateData.code;
+      if (updateData.language !== undefined) sheetProb.language = updateData.language;
+      if (updateData.notes !== undefined) sheetProb.notes = updateData.notes;
+      await sheetProb.save();
 
-    if (!problem) {
-      return res.status(404).json({ message: 'Problem not found' });
+      // Create or update a Problem entry for this user & sheetProblem
+      const statusMap = { solved: 'solved', revision: 'revisit', pending: 'todo' };
+      const syncedProblem = await Problem.findOneAndUpdate(
+        { user: req.user._id, sheetProblem: sheetProb._id },
+        {
+          user: req.user._id,
+          title: sheetProb.title,
+          link: sheetProb.problemLink || '',
+          platform: sheetProb.platform || 'other',
+          difficulty: sheetProb.difficulty || 'unknown',
+          status: statusMap[sheetProb.status] || 'solved',
+          tags: sheetProb.tags || [],
+          sheet: sheetProb.sheet,
+          sheetTopic: sheetProb.topic,
+          sheetProblem: sheetProb._id,
+          notes: sheetProb.notes || '',
+          code: sheetProb.code || '',
+          language: sheetProb.language || 'cpp',
+          solutions: sheetProb.solutions || [],
+          solvedAt: sheetProb.lastAttemptedAt || new Date(),
+        },
+        { upsert: true, new: true }
+      );
+
+      return res.json(syncedProblem);
     }
 
-    res.json(problem);
+    return res.status(404).json({ message: 'Problem not found' });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
