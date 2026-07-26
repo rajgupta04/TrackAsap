@@ -3,10 +3,12 @@ import { motion, AnimatePresence, useMotionValue, useSpring, useDragControls } f
 import {
   Copy, Check, ExternalLink, Clock, Zap, HardDrive, RotateCcw,
   Save, X, Plus, ChevronDown, Palette, AlignLeft,
+  Play, Terminal, ChevronUp, CheckCircle2, AlertCircle, AlertTriangle, Loader2, Sparkles,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import useProblemStore from '../store/problemStore';
 import sheetProblemService from '../services/sheetProblemService';
+import compilerService from '../services/compilerService';
 
 import CodeMirror from '@uiw/react-codemirror';
 import { cpp } from '@codemirror/lang-cpp';
@@ -265,6 +267,13 @@ const CodeViewer = ({ isOpen, onClose, problem: problemProp, onSave }) => {
   const [isSaving, setIsSaving] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
 
+  // ── Execution Drawer State
+  const [showConsole, setShowConsole] = useState(false);
+  const [activeConsoleTab, setActiveConsoleTab] = useState('input'); // 'input' | 'output'
+  const [stdinInput, setStdinInput] = useState('');
+  const [isRunningCode, setIsRunningCode] = useState(false);
+  const [executionResult, setExecutionResult] = useState(null);
+
   const constraintsRef = useRef(null);
   const newApproachRef = useRef(null);
 
@@ -283,6 +292,8 @@ const CodeViewer = ({ isOpen, onClose, problem: problemProp, onSave }) => {
   useEffect(() => {
     if (!isOpen || !problem) return;
     setShowUnsavedModal(false);
+    setShowConsole(false);
+    setExecutionResult(null);
     const solutions = getSolutions(problem);
     const map = buildCodeMap(solutions);
     const isEmpty = Object.keys(map).length === 0;
@@ -335,7 +346,40 @@ const CodeViewer = ({ isOpen, onClose, problem: problemProp, onSave }) => {
     }
   }, [currentCode, activeLang, updateCode]);
 
-  // Global keydown listener for Alt + Shift + F / Shift + Alt + F (Format Code)
+  // ── Code Execution via Azure Judge0 Compiler Engine
+  const handleRunCode = async () => {
+    if (!currentCode || !currentCode.trim()) {
+      toast.error('Code cannot be empty!');
+      return;
+    }
+    setIsRunningCode(true);
+    setShowConsole(true);
+    setActiveConsoleTab('output');
+    try {
+      const res = await compilerService.runCode({
+        source_code: currentCode,
+        language: activeLang,
+        stdin: stdinInput,
+      });
+      setExecutionResult(res);
+      if (res.status?.id === 3) {
+        toast.success(`Executed in ${res.timeMs}ms!`);
+      } else {
+        toast.error(res.status?.description || 'Execution finished with warnings');
+      }
+    } catch (err) {
+      console.error('Run code error:', err);
+      toast.error(err?.response?.data?.message || err?.message || 'Execution failed');
+      setExecutionResult({
+        status: { id: 13, description: 'Error' },
+        stderr: err?.response?.data?.message || err?.message || 'Failed to connect to Azure Compiler Engine',
+      });
+    } finally {
+      setIsRunningCode(false);
+    }
+  };
+
+  // Global keydown listener for Alt + Shift + F (Format Code)
   useEffect(() => {
     if (!isOpen) return;
     const handleGlobalKeyDown = (e) => {
@@ -481,7 +525,7 @@ const CodeViewer = ({ isOpen, onClose, problem: problemProp, onSave }) => {
           .cv-approach-tab .cv-del { opacity:0; transition:opacity 0.12s; }
           .cv-approach-tab:hover .cv-del { opacity:1; }
 
-          .cm-editor { background: #1a1b26 !important; height: 100% !important; min-height: 380px !important; }
+          .cm-editor { background: #1a1b26 !important; height: 100% !important; min-height: 350px !important; }
           .cm-gutters { background: #1a1b26 !important; border-right: 1px solid rgba(255,255,255,0.05) !important; color: #3b3d52 !important; }
           .cm-activeLineGutter { background: rgba(255,255,255,0.03) !important; }
           .cm-content { padding: 12px 0 !important; }
@@ -735,12 +779,12 @@ const CodeViewer = ({ isOpen, onClose, problem: problemProp, onSave }) => {
 
               {/* ══ CodeMirror 6 Editor Engine with Real-time Linter & Themes ══ */}
               <div
-                className="flex-1 overflow-auto min-h-0 relative"
-                style={{ background:'#1a1b26', minHeight: '380px', maxHeight: maximized ? 'calc(100vh - 220px)' : '55vh' }}
+                className="flex-1 overflow-auto min-h-0 relative flex flex-col"
+                style={{ background:'#1a1b26', minHeight: '350px', maxHeight: maximized ? 'calc(100vh - 260px)' : '50vh' }}
               >
                 <CodeMirror
                   value={currentCode}
-                  height={maximized ? 'calc(100vh - 220px)' : '380px'}
+                  height="100%"
                   theme={currentTheme}
                   extensions={[
                     getLanguageExtension(activeLang),
@@ -780,6 +824,129 @@ const CodeViewer = ({ isOpen, onClose, problem: problemProp, onSave }) => {
                     lintKeymap: true,
                   }}
                 />
+
+                {/* ══ Slide-up Execution Console Drawer ══ */}
+                <AnimatePresence>
+                  {showConsole && (
+                    <motion.div
+                      initial={{ y: 240, opacity: 0 }}
+                      animate={{ y: 0, opacity: 1 }}
+                      exit={{ y: 240, opacity: 0 }}
+                      transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+                      className="absolute bottom-0 left-0 right-0 z-40 border-t flex flex-col shadow-2xl"
+                      style={{ background: '#12131c', borderColor: 'rgba(255,255,255,0.1)', height: 220 }}
+                    >
+                      {/* Drawer Header */}
+                      <div className="flex items-center justify-between px-4 py-2 border-b bg-black/40 border-white/5">
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => setActiveConsoleTab('input')}
+                            className={`px-3 py-1 text-xs font-semibold rounded-md transition-all flex items-center gap-1.5 ${
+                              activeConsoleTab === 'input' ? 'bg-white/10 text-white' : 'text-gray-400 hover:text-gray-200'
+                            }`}
+                          >
+                            <Terminal className="w-3.5 h-3.5 text-cyan-400"/>
+                            <span>Custom Input (stdin)</span>
+                          </button>
+                          <button
+                            onClick={() => setActiveConsoleTab('output')}
+                            className={`px-3 py-1 text-xs font-semibold rounded-md transition-all flex items-center gap-1.5 ${
+                              activeConsoleTab === 'output' ? 'bg-white/10 text-white' : 'text-gray-400 hover:text-gray-200'
+                            }`}
+                          >
+                            <Sparkles className="w-3.5 h-3.5 text-[#39FF14]"/>
+                            <span>Execution Result</span>
+                            {executionResult && (
+                              <span className={`w-2 h-2 rounded-full ${executionResult.status?.id === 3 ? 'bg-emerald-400' : 'bg-red-400'}`} />
+                            )}
+                          </button>
+                        </div>
+
+                        <button
+                          onClick={() => setShowConsole(false)}
+                          className="p-1 text-gray-500 hover:text-white rounded-md hover:bg-white/5 transition-all"
+                          title="Hide Console"
+                        >
+                          <ChevronDown className="w-4 h-4"/>
+                        </button>
+                      </div>
+
+                      {/* Drawer Content */}
+                      <div className="flex-1 p-3 overflow-auto font-mono text-xs">
+                        {activeConsoleTab === 'input' ? (
+                          <div className="h-full flex flex-col space-y-1">
+                            <span className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">Standard Input (stdin)</span>
+                            <textarea
+                              value={stdinInput}
+                              onChange={e => setStdinInput(e.target.value)}
+                              placeholder="Enter custom input values here (e.g. 5 10)..."
+                              className="flex-1 w-full p-2.5 rounded-lg bg-black/30 border border-white/5 text-gray-200 font-mono outline-none resize-none focus:border-cyan-500/40 transition-colors"
+                            />
+                          </div>
+                        ) : (
+                          <div className="h-full flex flex-col space-y-2">
+                            {isRunningCode ? (
+                              <div className="flex-1 flex items-center justify-center flex-col gap-2 text-gray-400">
+                                <Loader2 className="w-6 h-6 text-cyan-400 animate-spin" />
+                                <span className="text-xs font-semibold text-cyan-300">Executing on Azure Judge0 Engine...</span>
+                              </div>
+                            ) : executionResult ? (
+                              <div className="space-y-2">
+                                {/* Status Header */}
+                                <div className="flex items-center justify-between border-b border-white/5 pb-2">
+                                  <div className="flex items-center gap-2">
+                                    {executionResult.status?.id === 3 ? (
+                                      <span className="px-2.5 py-1 rounded-md text-xs font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 flex items-center gap-1.5">
+                                        <CheckCircle2 className="w-4 h-4"/>
+                                        {executionResult.status?.description || 'Accepted'}
+                                      </span>
+                                    ) : (
+                                      <span className="px-2.5 py-1 rounded-md text-xs font-bold bg-red-500/15 text-red-400 border border-red-500/30 flex items-center gap-1.5">
+                                        <AlertCircle className="w-4 h-4"/>
+                                        {executionResult.status?.description || 'Error'}
+                                      </span>
+                                    )}
+                                  </div>
+
+                                  <div className="flex items-center gap-3 text-[11px] text-gray-400">
+                                    <span>Runtime: <strong className="text-emerald-400">{executionResult.timeMs || 0} ms</strong></span>
+                                    <span>Memory: <strong className="text-cyan-400">{executionResult.memoryMb || 0} MB</strong></span>
+                                  </div>
+                                </div>
+
+                                {/* Stdout / Output */}
+                                {executionResult.stdout && (
+                                  <div>
+                                    <div className="text-[10px] text-gray-500 uppercase font-semibold mb-1">Standard Output (stdout)</div>
+                                    <pre className="p-2.5 rounded-lg bg-black/40 border border-white/5 text-emerald-300 whitespace-pre-wrap overflow-x-auto max-h-28">
+                                      {executionResult.stdout}
+                                    </pre>
+                                  </div>
+                                )}
+
+                                {/* Compile / Stderr error */}
+                                {(executionResult.compile_output || executionResult.stderr) && (
+                                  <div>
+                                    <div className="text-[10px] text-red-400 uppercase font-semibold mb-1 flex items-center gap-1">
+                                      <AlertTriangle className="w-3 h-3"/> Error Output
+                                    </div>
+                                    <pre className="p-2.5 rounded-lg bg-red-950/30 border border-red-500/20 text-red-300 whitespace-pre-wrap overflow-x-auto max-h-28">
+                                      {executionResult.compile_output || executionResult.stderr}
+                                    </pre>
+                                  </div>
+                                )}
+                              </div>
+                            ) : (
+                              <div className="flex-1 flex items-center justify-center text-gray-500 text-xs">
+                                Click "Run Code" below to compile and execute your solution!
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
 
               {/* ══ Footer ═══════════════════════════════════════════════════ */}
@@ -787,7 +954,33 @@ const CodeViewer = ({ isOpen, onClose, problem: problemProp, onSave }) => {
                 className="flex items-center justify-between px-4 py-3 border-t"
                 style={{ background:'rgba(255,255,255,0.02)', borderColor:'rgba(255,255,255,0.06)' }}
               >
-                <div className="flex items-center gap-3 flex-shrink-0 ml-auto">
+                {/* Left: Run Code & Toggle Console */}
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={handleRunCode}
+                    disabled={isRunningCode}
+                    className="px-4 py-1.5 bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-300 font-bold rounded-lg border border-cyan-500/30 transition-all flex items-center gap-2 text-xs shadow-lg shadow-cyan-500/10 disabled:opacity-50"
+                  >
+                    {isRunningCode ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin text-cyan-300"/>
+                    ) : (
+                      <Play className="w-3.5 h-3.5 text-cyan-300 fill-cyan-300"/>
+                    )}
+                    <span>{isRunningCode ? 'Running...' : 'Run Code'}</span>
+                  </button>
+
+                  <button
+                    onClick={() => setShowConsole(p => !p)}
+                    className="px-3 py-1.5 bg-white/5 hover:bg-white/10 text-gray-300 rounded-lg text-xs font-semibold border border-white/10 transition-all flex items-center gap-1.5"
+                  >
+                    <Terminal className="w-3.5 h-3.5 text-gray-400"/>
+                    <span>Console</span>
+                    {showConsole ? <ChevronDown className="w-3 h-3"/> : <ChevronUp className="w-3 h-3"/>}
+                  </button>
+                </div>
+
+                {/* Right: Metadata & Save */}
+                <div className="flex items-center gap-3 flex-shrink-0">
                   {problem.source === 'track-ex' && problem.leetcodeSlug && (
                     <a href={`https://leetcode.com/problems/${problem.leetcodeSlug}/`} target="_blank" rel="noopener noreferrer" className="text-[10px] text-gray-600 hover:text-[#8B5CF6] transition-colors">
                       View on LeetCode →
