@@ -1,4 +1,6 @@
-// Fetch LeetCode stats using alfa-leetcode-api
+const LEETCODE_API_URL = process.env.LEETCODE_API_URL || 'http://localhost:3000';
+
+// Fetch LeetCode stats using self-hosted alfa-leetcode-api on Azure VM
 export const getLeetCodeStats = async (req, res) => {
   const { username } = req.params;
 
@@ -7,10 +9,13 @@ export const getLeetCodeStats = async (req, res) => {
   }
 
   try {
+    // Helper fetcher: queries self-hosted LeetCode API server-side
+    const safeFetch = async (endpoint) => {
+      return fetch(`${LEETCODE_API_URL}/${username}${endpoint}`);
+    };
+
     // Fetch solved problems count
-    const solvedResponse = await fetch(
-      `https://alfa-leetcode-api.onrender.com/${username}/solved`
-    );
+    const solvedResponse = await safeFetch('/solved');
 
     if (!solvedResponse.ok) {
       throw new Error('Failed to fetch LeetCode data');
@@ -19,9 +24,7 @@ export const getLeetCodeStats = async (req, res) => {
     const solvedData = await solvedResponse.json();
 
     // Fetch user profile for additional details
-    const profileResponse = await fetch(
-      `https://alfa-leetcode-api.onrender.com/${username}`
-    );
+    const profileResponse = await safeFetch('');
 
     let profileData = {};
     if (profileResponse.ok) {
@@ -29,9 +32,7 @@ export const getLeetCodeStats = async (req, res) => {
     }
 
     // Fetch submission calendar/streak data
-    const calendarResponse = await fetch(
-      `https://alfa-leetcode-api.onrender.com/${username}/calendar`
-    );
+    const calendarResponse = await safeFetch('/calendar');
 
     let calendarData = {};
     if (calendarResponse.ok) {
@@ -39,9 +40,7 @@ export const getLeetCodeStats = async (req, res) => {
     }
 
     // Fetch contest data
-    const contestResponse = await fetch(
-      `https://alfa-leetcode-api.onrender.com/${username}/contest`
-    );
+    const contestResponse = await safeFetch('/contest');
 
     let contestData = {};
     let contestsParticipated = 0;
@@ -235,7 +234,7 @@ export const getAllPlatformStats = async (req, res) => {
 
   if (leetcode) {
     fetchPromises.push(
-      fetch(`https://alfa-leetcode-api.onrender.com/${leetcode}/solved`)
+      fetch(`${LEETCODE_API_URL}/${leetcode}/solved`)
         .then((r) => r.json())
         .then((data) => {
           results.leetcode = {
