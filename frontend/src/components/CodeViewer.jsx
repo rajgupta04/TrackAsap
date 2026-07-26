@@ -15,6 +15,7 @@ import { python } from '@codemirror/lang-python';
 import { javascript } from '@codemirror/lang-javascript';
 import { tokyoNight } from '@uiw/codemirror-theme-tokyo-night';
 import { EditorView } from '@codemirror/view';
+import { autocompletion } from '@codemirror/autocomplete';
 
 // ── Constants ──────────────────────────────────────────────────────────────
 const DIFFICULTY_COLORS = {
@@ -32,6 +33,43 @@ const LANG_OPTIONS = [
   { value: 'other',      label: 'Other',      color: '#6B7280' },
 ];
 const LANG_MAP = Object.fromEntries(LANG_OPTIONS.map(l => [l.value, l]));
+
+const COMMON_KEYWORDS = {
+  cpp: ['vector', 'string', 'push_back', 'pop_back', 'unordered_map', 'unordered_set', 'priority_queue', 'pair', 'make_pair', 'min', 'max', 'swap', 'sort', 'reverse', 'lower_bound', 'upper_bound', 'cout', 'cin', 'endl', 'nullptr', 'size', 'length', 'empty', 'clear', 'insert', 'erase', 'find', 'begin', 'end', 'INT_MAX', 'INT_MIN', 'return', 'include', 'class', 'public', 'private', 'protected', 'struct', 'typedef', 'template', 'typename', 'auto', 'const', 'static', 'sizeof'],
+  java: ['String', 'System.out.println', 'StringBuilder', 'ArrayList', 'HashMap', 'HashSet', 'LinkedList', 'PriorityQueue', 'Collections.sort', 'Math.max', 'Math.min', 'Math.abs', 'public', 'private', 'protected', 'class', 'interface', 'extends', 'implements', 'static', 'final', 'void', 'return', 'import', 'new', 'override', 'this', 'super'],
+  python: ['print', 'def', 'class', 'return', 'self', 'import', 'from', 'as', 'range', 'len', 'append', 'extend', 'pop', 'split', 'join', 'sorted', 'sort', 'reverse', 'enumerate', 'zip', 'dict', 'list', 'set', 'tuple', 'lambda', 'map', 'filter', 'sum', 'min', 'max', 'abs'],
+  javascript: ['console.log', 'const', 'let', 'var', 'function', 'return', 'async', 'await', 'import', 'export', 'default', 'class', 'constructor', 'prototype', 'map', 'filter', 'reduce', 'forEach', 'includes', 'indexOf', 'slice', 'splice', 'push', 'pop', 'shift', 'unshift', 'concat', 'Object.keys', 'Object.values', 'Math.max', 'Math.min'],
+  c: ['printf', 'scanf', 'malloc', 'free', 'sizeof', 'strlen', 'strcpy', 'strcat', 'strcmp', 'memcpy', 'memset', 'struct', 'typedef', 'return', 'include', 'NULL', 'int', 'char', 'void', 'float', 'double'],
+  go: ['fmt.Println', 'fmt.Printf', 'make', 'append', 'len', 'cap', 'delete', 'package', 'import', 'func', 'type', 'struct', 'interface', 'return', 'range', 'map', 'slice', 'string', 'int'],
+  rust: ['println!', 'format!', 'vec!', 'String', 'Option', 'Result', 'Some', 'None', 'Ok', 'Err', 'pub', 'fn', 'let', 'mut', 'struct', 'enum', 'match', 'impl', 'use', 'mod', 'self', 'Self', 'return'],
+  other: ['return', 'function', 'class', 'struct', 'import', 'export', 'print', 'console'],
+};
+
+function createDocumentCompletions(activeLang) {
+  return function getDocumentCompletions(context) {
+    const word = context.matchBefore(/\w*/);
+    if (!word || (word.from === word.to && !context.explicit)) return null;
+
+    const docText = context.state.doc.toString();
+    const docWords = docText.match(/\b[a-zA-Z_]\w*\b/g) || [];
+    const langExtra = COMMON_KEYWORDS[activeLang] || COMMON_KEYWORDS.other;
+
+    const allWords = Array.from(new Set([...langExtra, ...docWords]));
+    const prefixLower = word.text.toLowerCase();
+
+    const options = allWords
+      .filter(w => w.toLowerCase() !== prefixLower && w.toLowerCase().startsWith(prefixLower))
+      .map(w => ({ label: w, type: 'variable' }));
+
+    if (options.length === 0) return null;
+
+    return {
+      from: word.from,
+      options,
+      validFor: /^\w*$/,
+    };
+  };
+}
 
 function getLanguageExtension(lang) {
   switch (lang) {
@@ -306,6 +344,12 @@ const CodeViewer = ({ isOpen, onClose, problem: problemProp, onSave }) => {
           .cm-activeLineGutter { background: rgba(255,255,255,0.03) !important; }
           .cm-content { padding: 12px 0 !important; }
           .cm-line { font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace !important; }
+
+          /* CodeMirror Autocomplete Dropdown Theme */
+          .cm-tooltip-autocomplete { background: #1e1f31 !important; border: 1px solid rgba(255,255,255,0.12) !important; border-radius: 8px !important; box-shadow: 0 15px 35px rgba(0,0,0,0.6) !important; }
+          .cm-tooltip-autocomplete > ul { font-family: 'JetBrains Mono', monospace !important; font-size: 12px !important; }
+          .cm-tooltip-autocomplete > ul > li { color: #a9b1d6 !important; padding: 4px 10px !important; }
+          .cm-tooltip-autocomplete > ul > li[aria-selected] { background: rgba(57,255,20,0.15) !important; color: #39FF14 !important; border-radius: 4px !important; font-weight: 600; }
         `}</style>
 
         <motion.div
@@ -519,7 +563,7 @@ const CodeViewer = ({ isOpen, onClose, problem: problemProp, onSave }) => {
                 </div>
               </div>
 
-              {/* ══ CodeMirror 6 Editor Engine ═══════════════════════════════ */}
+              {/* ══ CodeMirror 6 Editor Engine with Real-time Autocompletion ══ */}
               <div
                 className="flex-1 overflow-auto min-h-0 relative"
                 style={{ background:'#1a1b26', minHeight: '380px', maxHeight: maximized ? 'calc(100vh - 220px)' : '55vh' }}
@@ -531,6 +575,10 @@ const CodeViewer = ({ isOpen, onClose, problem: problemProp, onSave }) => {
                   extensions={[
                     getLanguageExtension(activeLang),
                     EditorView.lineWrapping,
+                    autocompletion({
+                      override: [createDocumentCompletions(activeLang)],
+                      activateOnTyping: true,
+                    }),
                   ]}
                   onChange={value => updateCode(value)}
                   placeholder={`Paste or type your ${langInfo.label} code for ${activeLabel}...`}
