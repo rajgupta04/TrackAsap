@@ -2,21 +2,26 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence, useMotionValue, useSpring, useDragControls } from 'framer-motion';
 import {
   Copy, Check, ExternalLink, Clock, Zap, HardDrive, RotateCcw,
-  Edit2, Save, X, Plus, ChevronDown,
+  Save, X, Plus, ChevronDown, Palette, AlignLeft,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import useProblemStore from '../store/problemStore';
 import sheetProblemService from '../services/sheetProblemService';
 
-import Prism from 'prismjs';
-import 'prismjs/components/prism-clike';
-import 'prismjs/components/prism-c';
-import 'prismjs/components/prism-cpp';
-import 'prismjs/components/prism-java';
-import 'prismjs/components/prism-python';
-import 'prismjs/components/prism-javascript';
-import 'prismjs/components/prism-go';
-import 'prismjs/components/prism-rust';
+import CodeMirror from '@uiw/react-codemirror';
+import { cpp } from '@codemirror/lang-cpp';
+import { java } from '@codemirror/lang-java';
+import { python } from '@codemirror/lang-python';
+import { javascript } from '@codemirror/lang-javascript';
+import { EditorView } from '@codemirror/view';
+import { autocompletion } from '@codemirror/autocomplete';
+import { linter } from '@codemirror/lint';
+
+import { tokyoNight } from '@uiw/codemirror-theme-tokyo-night';
+import { dracula } from '@uiw/codemirror-theme-dracula';
+import { githubDark } from '@uiw/codemirror-theme-github';
+import { nord } from '@uiw/codemirror-theme-nord';
+import jsBeautify from 'js-beautify';
 
 // ── Constants ──────────────────────────────────────────────────────────────
 const DIFFICULTY_COLORS = {
@@ -35,28 +40,170 @@ const LANG_OPTIONS = [
 ];
 const LANG_MAP = Object.fromEntries(LANG_OPTIONS.map(l => [l.value, l]));
 
-const PRISM_LANG_MAP = {
-  cpp: 'cpp',
-  java: 'java',
-  python: 'python',
-  javascript: 'javascript',
-  c: 'c',
-  go: 'go',
-  rust: 'rust',
-  other: 'clike',
+const THEME_OPTIONS = [
+  { value: 'tokyoNight', label: 'Tokyo Night', theme: tokyoNight },
+  { value: 'dracula',    label: 'Dracula',     theme: dracula },
+  { value: 'githubDark', label: 'GitHub Dark', theme: githubDark },
+  { value: 'nord',       label: 'Nord',        theme: nord },
+];
+const THEME_MAP = Object.fromEntries(THEME_OPTIONS.map(t => [t.value, t]));
+
+const COMMON_KEYWORDS = {
+  cpp: ['vector', 'string', 'push_back', 'pop_back', 'unordered_map', 'unordered_set', 'priority_queue', 'pair', 'make_pair', 'min', 'max', 'swap', 'sort', 'reverse', 'lower_bound', 'upper_bound', 'cout', 'cin', 'endl', 'nullptr', 'size', 'length', 'empty', 'clear', 'insert', 'erase', 'find', 'begin', 'end', 'INT_MAX', 'INT_MIN', 'return', 'include', 'class', 'public', 'private', 'protected', 'struct', 'typedef', 'template', 'typename', 'auto', 'const', 'static', 'sizeof'],
+  java: ['String', 'System.out.println', 'StringBuilder', 'ArrayList', 'HashMap', 'HashSet', 'LinkedList', 'PriorityQueue', 'Collections.sort', 'Math.max', 'Math.min', 'Math.abs', 'public', 'private', 'protected', 'class', 'interface', 'extends', 'implements', 'static', 'final', 'void', 'return', 'import', 'new', 'override', 'this', 'super'],
+  python: ['print', 'def', 'class', 'return', 'self', 'import', 'from', 'as', 'range', 'len', 'append', 'extend', 'pop', 'split', 'join', 'sorted', 'sort', 'reverse', 'enumerate', 'zip', 'dict', 'list', 'set', 'tuple', 'lambda', 'map', 'filter', 'sum', 'min', 'max', 'abs'],
+  javascript: ['console.log', 'const', 'let', 'var', 'function', 'return', 'async', 'await', 'import', 'export', 'default', 'class', 'constructor', 'prototype', 'map', 'filter', 'reduce', 'forEach', 'includes', 'indexOf', 'slice', 'splice', 'push', 'pop', 'shift', 'unshift', 'concat', 'Object.keys', 'Object.values', 'Math.max', 'Math.min'],
+  c: ['printf', 'scanf', 'malloc', 'free', 'sizeof', 'strlen', 'strcpy', 'strcat', 'strcmp', 'memcpy', 'memset', 'struct', 'typedef', 'return', 'include', 'NULL', 'int', 'char', 'void', 'float', 'double'],
+  go: ['fmt.Println', 'fmt.Printf', 'make', 'append', 'len', 'cap', 'delete', 'package', 'import', 'func', 'type', 'struct', 'interface', 'return', 'range', 'map', 'slice', 'string', 'int'],
+  rust: ['println!', 'format!', 'vec!', 'String', 'Option', 'Result', 'Some', 'None', 'Ok', 'Err', 'pub', 'fn', 'let', 'mut', 'struct', 'enum', 'match', 'impl', 'use', 'mod', 'self', 'Self', 'return'],
+  other: ['return', 'function', 'class', 'struct', 'import', 'export', 'print', 'console'],
 };
 
-function highlightCode(code, lang) {
-  if (!code) return '';
-  const prismLang = PRISM_LANG_MAP[lang] || 'clike';
-  const grammar = Prism.languages[prismLang] || Prism.languages.clike;
+// ── Real-time Syntax Linter ──
+function codeSyntaxLinter(view) {
+  const diagnostics = [];
+  const doc = view.state.doc.toString();
+  const lines = doc.split('\n');
+
+  const stack = [];
+  const openPairs = { '{': '}', '(': ')', '[': ']' };
+  const closePairs = { '}': '{', ')': '(', ']': '[' };
+
+  for (let pos = 0; pos < doc.length; pos++) {
+    const ch = doc[pos];
+    if (openPairs[ch]) {
+      stack.push({ ch, pos });
+    } else if (closePairs[ch]) {
+      if (stack.length === 0 || stack[stack.length - 1].ch !== closePairs[ch]) {
+        diagnostics.push({
+          from: pos,
+          to: pos + 1,
+          severity: 'error',
+          message: `Unmatched '${ch}'`,
+        });
+      } else {
+        stack.pop();
+      }
+    }
+  }
+
+  for (const unclosed of stack) {
+    diagnostics.push({
+      from: unclosed.pos,
+      to: unclosed.pos + 1,
+      severity: 'error',
+      message: `Unclosed '${unclosed.ch}'`,
+    });
+  }
+
+  let posCount = 0;
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const doubleQuotes = (line.match(/(?<!\\)"/g) || []).length;
+    const singleQuotes = (line.match(/(?<!\\)'/g) || []).length;
+
+    if (doubleQuotes % 2 !== 0) {
+      const lastQuotePos = posCount + line.lastIndexOf('"');
+      diagnostics.push({
+        from: Math.max(posCount, lastQuotePos),
+        to: Math.min(posCount + line.length, lastQuotePos + 1),
+        severity: 'warning',
+        message: 'Unterminated string literal',
+      });
+    }
+
+    if (singleQuotes % 2 !== 0) {
+      const lastQuotePos = posCount + line.lastIndexOf("'");
+      diagnostics.push({
+        from: Math.max(posCount, lastQuotePos),
+        to: Math.min(posCount + line.length, lastQuotePos + 1),
+        severity: 'warning',
+        message: 'Unterminated character literal',
+      });
+    }
+
+    posCount += line.length + 1;
+  }
+
+  return diagnostics;
+}
+
+// ── Code Formatter ──
+function formatCode(code, lang) {
+  if (!code || !code.trim()) return code;
   try {
-    return Prism.highlight(code, grammar, prismLang);
+    if (lang === 'javascript' || lang === 'python') {
+      return jsBeautify.js(code, { indent_size: 4, space_in_empty_paren: false });
+    }
+    const lines = code.split('\n');
+    let indentLevel = 0;
+    const formattedLines = [];
+
+    for (let line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed) {
+        formattedLines.push('');
+        continue;
+      }
+
+      if (trimmed.startsWith('}') || trimmed.startsWith(')') || trimmed.startsWith(']')) {
+        indentLevel = Math.max(0, indentLevel - 1);
+      }
+
+      formattedLines.push('    '.repeat(indentLevel) + trimmed);
+
+      const openCount = (trimmed.match(/[{(\[]/g) || []).length;
+      const closeCount = (trimmed.match(/[})\]]/g) || []).length;
+      indentLevel = Math.max(0, indentLevel + openCount - closeCount);
+    }
+
+    return formattedLines.join('\n');
   } catch {
-    return code
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;');
+    return code;
+  }
+}
+
+function createDocumentCompletions(activeLang) {
+  return function getDocumentCompletions(context) {
+    const word = context.matchBefore(/\w*/);
+    if (!word || (word.from === word.to && !context.explicit)) return null;
+
+    const docText = context.state.doc.toString();
+    const docWords = docText.match(/\b[a-zA-Z_]\w*\b/g) || [];
+    const langExtra = COMMON_KEYWORDS[activeLang] || COMMON_KEYWORDS.other;
+
+    const allWords = Array.from(new Set([...langExtra, ...docWords]));
+    const prefixLower = word.text.toLowerCase();
+
+    const options = allWords
+      .filter(w => w.toLowerCase() !== prefixLower && w.toLowerCase().startsWith(prefixLower))
+      .map(w => ({ label: w, type: 'variable' }));
+
+    if (options.length === 0) return null;
+
+    return {
+      from: word.from,
+      options,
+      validFor: /^\w*$/,
+    };
+  };
+}
+
+function getLanguageExtension(lang) {
+  switch (lang) {
+    case 'cpp':
+    case 'c':
+    case 'go':
+    case 'rust':
+      return cpp();
+    case 'java':
+      return java();
+    case 'python':
+      return python();
+    case 'javascript':
+      return javascript({ jsx: true, typescript: true });
+    default:
+      return cpp();
   }
 }
 
@@ -98,11 +245,12 @@ const CodeViewer = ({ isOpen, onClose, problem: problemProp, onSave }) => {
 
   const dragControls = useDragControls();
 
-  // ── Window state
+  // ── Window & Theme state
   const [minimized, setMinimized] = useState(false);
   const [maximized, setMaximized] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [activeTheme, setActiveTheme] = useState('tokyoNight');
 
   // ── Code map: { label → { lang → code } }
   const [codeMap, setCodeMap] = useState({});
@@ -113,14 +261,11 @@ const CodeViewer = ({ isOpen, onClose, problem: problemProp, onSave }) => {
   const [addingApproach, setAddingApproach] = useState(false);
   const [newApproachInput, setNewApproachInput] = useState('');
 
-  // ── Edit / save state
-  const [isEditing, setIsEditing] = useState(true);
+  // ── Save state
   const [isSaving, setIsSaving] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
 
   const constraintsRef = useRef(null);
-  const textareaRef = useRef(null);
-  const preRef = useRef(null);
   const newApproachRef = useRef(null);
 
   // ── Unsaved prompt state
@@ -154,7 +299,6 @@ const CodeViewer = ({ isOpen, onClose, problem: problemProp, onSave }) => {
       setActiveLabel(firstLabel);
       setActiveLang(firstLang);
     }
-    setIsEditing(true);
     setIsDirty(false);
     setAddingApproach(false);
   }, [isOpen, problem?._id]); // eslint-disable-line
@@ -171,8 +315,9 @@ const CodeViewer = ({ isOpen, onClose, problem: problemProp, onSave }) => {
   const langsForApproach = Object.keys(codeMap[activeLabel] || {});
   const currentCode = codeMap[activeLabel]?.[activeLang] ?? '';
   const langInfo = LANG_MAP[activeLang] || LANG_MAP.other;
+  const currentTheme = THEME_MAP[activeTheme]?.theme || tokyoNight;
 
-  // ── Code editing
+  // ── Code editing & formatting
   const updateCode = useCallback((newCode) => {
     setCodeMap(prev => ({
       ...prev,
@@ -180,6 +325,28 @@ const CodeViewer = ({ isOpen, onClose, problem: problemProp, onSave }) => {
     }));
     setIsDirty(true);
   }, [activeLabel, activeLang]);
+
+  const handleFormatCode = useCallback(() => {
+    if (!currentCode || !currentCode.trim()) return;
+    const formatted = formatCode(currentCode, activeLang);
+    if (formatted !== currentCode) {
+      updateCode(formatted);
+      toast.success('Code Formatted!');
+    }
+  }, [currentCode, activeLang, updateCode]);
+
+  // Global keydown listener for Alt + Shift + F / Shift + Alt + F (Format Code)
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleGlobalKeyDown = (e) => {
+      if (e.altKey && e.shiftKey && e.key.toLowerCase() === 'f') {
+        e.preventDefault();
+        handleFormatCode();
+      }
+    };
+    window.addEventListener('keydown', handleGlobalKeyDown);
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
+  }, [isOpen, handleFormatCode]);
 
   const switchApproach = (label) => {
     setActiveLabel(label);
@@ -246,178 +413,6 @@ const CodeViewer = ({ isOpen, onClose, problem: problemProp, onSave }) => {
     }
   };
 
-  const setSelection = (start, end) => {
-    setTimeout(() => {
-      if (textareaRef.current) {
-        textareaRef.current.selectionStart = start;
-        textareaRef.current.selectionEnd = end;
-      }
-    }, 0);
-  };
-
-  const handleKeyDown = (e) => {
-    // Ctrl + S / Cmd + S: Save
-    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
-      e.preventDefault();
-      handleSave();
-      return;
-    }
-
-    const textarea = textareaRef.current;
-    if (!textarea) return;
-    const s = textarea.selectionStart;
-    const end = textarea.selectionEnd;
-
-    // Alt + Shift + Down: Duplicate line(s) down
-    if (e.altKey && e.shiftKey && e.key === 'ArrowDown') {
-      e.preventDefault();
-      const lines = currentCode.split('\n');
-      let charCount = 0, startLine = 0, endLine = 0;
-      for (let i = 0; i < lines.length; i++) {
-        const lineLen = lines[i].length + 1;
-        if (charCount <= s && s < charCount + lineLen) startLine = i;
-        if (charCount <= end && end <= charCount + lineLen) { endLine = i; break; }
-        charCount += lineLen;
-      }
-      const block = lines.slice(startLine, endLine + 1);
-      const blockStr = block.join('\n');
-      const newLines = [
-        ...lines.slice(0, endLine + 1),
-        ...block,
-        ...lines.slice(endLine + 1),
-      ];
-      updateCode(newLines.join('\n'));
-      setSelection(s + blockStr.length + 1, end + blockStr.length + 1);
-      return;
-    }
-
-    // Alt + Shift + Up: Duplicate line(s) up
-    if (e.altKey && e.shiftKey && e.key === 'ArrowUp') {
-      e.preventDefault();
-      const lines = currentCode.split('\n');
-      let charCount = 0, startLine = 0, endLine = 0;
-      for (let i = 0; i < lines.length; i++) {
-        const lineLen = lines[i].length + 1;
-        if (charCount <= s && s < charCount + lineLen) startLine = i;
-        if (charCount <= end && end <= charCount + lineLen) { endLine = i; break; }
-        charCount += lineLen;
-      }
-      const block = lines.slice(startLine, endLine + 1);
-      const newLines = [
-        ...lines.slice(0, startLine),
-        ...block,
-        ...lines.slice(startLine),
-      ];
-      updateCode(newLines.join('\n'));
-      setSelection(s, end);
-      return;
-    }
-
-    // Alt + Down: Move line(s) down
-    if (e.altKey && !e.shiftKey && e.key === 'ArrowDown') {
-      e.preventDefault();
-      const lines = currentCode.split('\n');
-      let charCount = 0, startLine = 0, endLine = 0;
-      for (let i = 0; i < lines.length; i++) {
-        const lineLen = lines[i].length + 1;
-        if (charCount <= s && s < charCount + lineLen) startLine = i;
-        if (charCount <= end && end <= charCount + lineLen) { endLine = i; break; }
-        charCount += lineLen;
-      }
-      if (endLine < lines.length - 1) {
-        const targetLine = lines[endLine + 1];
-        const block = lines.slice(startLine, endLine + 1);
-        const newLines = [
-          ...lines.slice(0, startLine),
-          targetLine,
-          ...block,
-          ...lines.slice(endLine + 2),
-        ];
-        updateCode(newLines.join('\n'));
-        const shift = targetLine.length + 1;
-        setSelection(s + shift, end + shift);
-      }
-      return;
-    }
-
-    // Alt + Up: Move line(s) up
-    if (e.altKey && !e.shiftKey && e.key === 'ArrowUp') {
-      e.preventDefault();
-      const lines = currentCode.split('\n');
-      let charCount = 0, startLine = 0, endLine = 0;
-      for (let i = 0; i < lines.length; i++) {
-        const lineLen = lines[i].length + 1;
-        if (charCount <= s && s < charCount + lineLen) startLine = i;
-        if (charCount <= end && end <= charCount + lineLen) { endLine = i; break; }
-        charCount += lineLen;
-      }
-      if (startLine > 0) {
-        const targetLine = lines[startLine - 1];
-        const block = lines.slice(startLine, endLine + 1);
-        const newLines = [
-          ...lines.slice(0, startLine - 1),
-          ...block,
-          targetLine,
-          ...lines.slice(endLine + 1),
-        ];
-        updateCode(newLines.join('\n'));
-        const shift = targetLine.length + 1;
-        setSelection(s - shift, end - shift);
-      }
-      return;
-    }
-
-    // Tab key (indent 4 spaces)
-    if (e.key === 'Tab') {
-      e.preventDefault();
-      const newCode = currentCode.substring(0, s) + '    ' + currentCode.substring(end);
-      updateCode(newCode);
-      setSelection(s + 4, s + 4);
-      return;
-    }
-
-    // Enter inside {}
-    if (e.key === 'Enter') {
-      if (s === end && currentCode[s - 1] === '{' && currentCode[s] === '}') {
-        e.preventDefault();
-        const linesBefore = currentCode.substring(0, s).split('\n');
-        const currentLine = linesBefore[linesBefore.length - 1];
-        const indentMatch = currentLine.match(/^\s*/);
-        const indent = indentMatch ? indentMatch[0] : '';
-        const extraIndent = indent + '    ';
-        const insertion = '\n' + extraIndent + '\n' + indent;
-        const newCode = currentCode.substring(0, s) + insertion + currentCode.substring(s);
-        updateCode(newCode);
-        setSelection(s + 1 + extraIndent.length, s + 1 + extraIndent.length);
-        return;
-      }
-    }
-
-    // Auto-bracket & auto-quote completion
-    const bracketPairs = { '{': '}', '(': ')', '[': ']', '"': '"', "'": "'" };
-    if (bracketPairs[e.key]) {
-      if ((e.key === '"' || e.key === "'") && s === end && currentCode[s] === e.key) {
-        e.preventDefault();
-        setSelection(s + 1, s + 1);
-        return;
-      }
-      e.preventDefault();
-      const open = e.key;
-      const close = bracketPairs[e.key];
-      if (s !== end) {
-        const selectedText = currentCode.substring(s, end);
-        const newCode = currentCode.substring(0, s) + open + selectedText + close + currentCode.substring(end);
-        updateCode(newCode);
-        setSelection(s + 1, end + 1);
-      } else {
-        const newCode = currentCode.substring(0, s) + open + close + currentCode.substring(s);
-        updateCode(newCode);
-        setSelection(s + 1, s + 1);
-      }
-      return;
-    }
-  };
-
   const handleCopy = async () => {
     if (currentCode) {
       try {
@@ -449,7 +444,6 @@ const CodeViewer = ({ isOpen, onClose, problem: problemProp, onSave }) => {
   }, [scale, rotateX, rotateY]);
 
   const actualLineCount = currentCode ? currentCode.split('\n').length : 0;
-  const displayLinesCount = Math.max(17, actualLineCount);
 
   if (!isOpen || !problem) return null;
 
@@ -487,16 +481,17 @@ const CodeViewer = ({ isOpen, onClose, problem: problemProp, onSave }) => {
           .cv-approach-tab .cv-del { opacity:0; transition:opacity 0.12s; }
           .cv-approach-tab:hover .cv-del { opacity:1; }
 
-          /* Tokyo Night Syntax Coloring */
-          .token.comment, .token.prolog, .token.doctype, .token.cdata { color: #565f89; font-style: italic; }
-          .token.punctuation { color: #89ddff; }
-          .token.property, .token.tag, .token.boolean, .token.number, .token.constant, .token.symbol, .token.deleted { color: #ff9e64; }
-          .token.selector, .token.attr-name, .token.string, .token.char, .token.builtin, .token.inserted { color: #9ece6a; }
-          .token.operator, .token.entity, .token.url { color: #89ddff; }
-          .token.atrule, .token.attr-value, .token.keyword { color: #bb9af7; font-weight: 600; }
-          .token.function, .token.class-name { color: #7aa2f7; font-weight: 600; }
-          .token.regex, .token.important, .token.variable { color: #7dcfff; }
-          .token.type, .token.type-definition { color: #2ac3de; font-weight: 600; }
+          .cm-editor { background: #1a1b26 !important; height: 100% !important; min-height: 380px !important; }
+          .cm-gutters { background: #1a1b26 !important; border-right: 1px solid rgba(255,255,255,0.05) !important; color: #3b3d52 !important; }
+          .cm-activeLineGutter { background: rgba(255,255,255,0.03) !important; }
+          .cm-content { padding: 12px 0 !important; }
+          .cm-line { font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace !important; }
+
+          /* CodeMirror Autocomplete Dropdown Theme */
+          .cm-tooltip-autocomplete { background: #1e1f31 !important; border: 1px solid rgba(255,255,255,0.12) !important; border-radius: 8px !important; box-shadow: 0 15px 35px rgba(0,0,0,0.6) !important; }
+          .cm-tooltip-autocomplete > ul { font-family: 'JetBrains Mono', monospace !important; font-size: 12px !important; }
+          .cm-tooltip-autocomplete > ul > li { color: #a9b1d6 !important; padding: 4px 10px !important; }
+          .cm-tooltip-autocomplete > ul > li[aria-selected] { background: rgba(57,255,20,0.15) !important; color: #39FF14 !important; border-radius: 4px !important; font-weight: 600; }
         `}</style>
 
         <motion.div
@@ -647,12 +642,12 @@ const CodeViewer = ({ isOpen, onClose, problem: problemProp, onSave }) => {
                 )}
               </div>
 
-              {/* ══ ROW 2: Language Selector Dropdown ════════════════════════ */}
+              {/* ══ ROW 2: Language Selector, Theme Picker, & Format Code ════════ */}
               <div
-                className="flex items-center justify-between px-3 py-2 border-b"
+                className="flex items-center justify-between px-3 py-2 border-b flex-wrap gap-2"
                 style={{ borderColor:'rgba(255,255,255,0.04)', background:'rgba(255,255,255,0.015)', minHeight:42 }}
               >
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <span className="w-2.5 h-2.5 rounded-full" style={{ background: langInfo.color }} />
                   
                   {/* Language Dropdown */}
@@ -679,8 +674,36 @@ const CodeViewer = ({ isOpen, onClose, problem: problemProp, onSave }) => {
                     <ChevronDown className="w-3 h-3 absolute right-2 pointer-events-none" style={{ color: langInfo.color }} />
                   </div>
 
+                  {/* Theme Dropdown */}
+                  <div className="relative flex items-center">
+                    <select
+                      value={activeTheme}
+                      onChange={e => setActiveTheme(e.target.value)}
+                      className="appearance-none bg-white/5 hover:bg-white/10 text-gray-300 pl-7 pr-7 py-1 rounded-lg text-xs font-semibold outline-none cursor-pointer border border-white/10 transition-all"
+                    >
+                      {THEME_OPTIONS.map(opt => (
+                        <option key={opt.value} value={opt.value} className="bg-gray-900 text-white font-medium">
+                          {opt.label}
+                        </option>
+                      ))}
+                    </select>
+                    <Palette className="w-3 h-3 absolute left-2 text-purple-400 pointer-events-none" />
+                    <ChevronDown className="w-3 h-3 absolute right-2 text-gray-400 pointer-events-none" />
+                  </div>
+
+                  {/* Format Code Button */}
+                  <button
+                    onClick={handleFormatCode}
+                    className="flex items-center gap-1.5 px-3 py-1 bg-white/5 hover:bg-white/10 text-gray-200 hover:text-white rounded-lg text-xs font-semibold border border-white/10 transition-all shadow-sm group"
+                    title="Format Code [Alt + Shift + F]"
+                  >
+                    <AlignLeft className="w-3.5 h-3.5 text-[#39FF14] group-hover:scale-110 transition-transform" />
+                    <span>Format</span>
+                    <span className="text-[9px] text-gray-400 bg-black/40 px-1.5 py-0.5 rounded font-mono ml-0.5">Alt+Shift+F</span>
+                  </button>
+
                   {/* Badges of existing saved non-empty languages for this approach */}
-                  <div className="flex items-center gap-1.5 ml-2">
+                  <div className="flex items-center gap-1.5 ml-1">
                     {langsForApproach.map(l => {
                       const codeVal = codeMap[activeLabel]?.[l];
                       if (l === activeLang || !codeVal || codeVal.trim().length === 0) return null;
@@ -710,72 +733,56 @@ const CodeViewer = ({ isOpen, onClose, problem: problemProp, onSave }) => {
                 </div>
               </div>
 
-              {/* ══ Code Area with Prism Syntax Highlighting Layer ═══════════ */}
+              {/* ══ CodeMirror 6 Editor Engine with Real-time Linter & Themes ══ */}
               <div
-                className="flex-1 overflow-auto min-h-0"
+                className="flex-1 overflow-auto min-h-0 relative"
                 style={{ background:'#1a1b26', minHeight: '380px', maxHeight: maximized ? 'calc(100vh - 220px)' : '55vh' }}
               >
-                <div className="flex min-h-full">
-                  {/* Line numbers */}
-                  <div
-                    className="sticky left-0 select-none text-right py-4 px-3 flex-shrink-0"
-                    style={{
-                      background:'#1a1b26',
-                      borderRight:'1px solid rgba(255,255,255,0.04)',
-                      fontFamily:"'JetBrains Mono','Fira Code','Consolas',monospace",
-                      fontSize:'13px', lineHeight:'1.6', color:'#3b3d52',
-                      minWidth: displayLinesCount >= 100 ? '52px' : '40px', zIndex:10,
-                    }}
-                  >
-                    {Array.from({ length: displayLinesCount }).map((_, i) => <div key={i}>{i + 1}</div>)}
-                  </div>
-
-                  {/* High-performance Overlay: Prism Syntax Highlighted Pre + Editable Textarea */}
-                  <div className="flex-1 relative min-h-full">
-                    {/* Prism Highlighted Layer */}
-                    <pre
-                      ref={preRef}
-                      className="absolute inset-0 m-0 p-4 font-mono text-[13px] leading-[1.6] pointer-events-none whitespace-pre overflow-hidden bg-transparent"
-                      aria-hidden="true"
-                      style={{
-                        fontFamily: "'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace",
-                        tabSize: 4,
-                      }}
-                    >
-                      <code
-                        className={`language-${PRISM_LANG_MAP[activeLang] || 'clike'}`}
-                        dangerouslySetInnerHTML={{
-                          __html: highlightCode(currentCode, activeLang) + (currentCode.endsWith('\n') ? '<br />' : ''),
-                        }}
-                      />
-                    </pre>
-
-                    {/* Transparent Editable Textarea Layer */}
-                    <textarea
-                      ref={textareaRef}
-                      value={currentCode}
-                      onChange={e => updateCode(e.target.value)}
-                      onKeyDown={handleKeyDown}
-                      onScroll={e => {
-                        if (preRef.current) {
-                          preRef.current.scrollTop = e.target.scrollTop;
-                          preRef.current.scrollLeft = e.target.scrollLeft;
-                        }
-                      }}
-                      spellCheck={false}
-                      className="absolute inset-0 m-0 p-4 font-mono text-[13px] leading-[1.6] bg-transparent caret-white resize-none outline-none border-none whitespace-pre overflow-auto tab-size-4"
-                      style={{
-                        color: 'transparent',
-                        WebkitTextFillColor: 'transparent',
-                        fontFamily: "'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace",
-                      }}
-                      placeholder={`Paste or type your ${langInfo.label} code for ${activeLabel}...`}
-                    />
-                  </div>
-                </div>
+                <CodeMirror
+                  value={currentCode}
+                  height={maximized ? 'calc(100vh - 220px)' : '380px'}
+                  theme={currentTheme}
+                  extensions={[
+                    getLanguageExtension(activeLang),
+                    EditorView.lineWrapping,
+                    autocompletion({
+                      override: [createDocumentCompletions(activeLang)],
+                      activateOnTyping: true,
+                    }),
+                    linter(codeSyntaxLinter, { delay: 300 }),
+                  ]}
+                  onChange={value => updateCode(value)}
+                  placeholder={`Paste or type your ${langInfo.label} code for ${activeLabel}...`}
+                  basicSetup={{
+                    lineNumbers: true,
+                    highlightActiveLineGutter: true,
+                    highlightSpecialChars: true,
+                    history: true,
+                    foldGutter: true,
+                    drawSelection: true,
+                    dropCursor: true,
+                    allowMultipleSelections: true,
+                    indentOnInput: true,
+                    syntaxHighlighting: true,
+                    bracketMatching: true,
+                    closeBrackets: true,
+                    autocompletion: true,
+                    rectangularSelection: true,
+                    crosshairCursor: true,
+                    highlightActiveLine: true,
+                    highlightSelectionMatches: true,
+                    closeBracketsKeymap: true,
+                    defaultKeymap: true,
+                    searchKeymap: true,
+                    historyKeymap: true,
+                    foldKeymap: true,
+                    completionKeymap: true,
+                    lintKeymap: true,
+                  }}
+                />
               </div>
 
-              {/* ══ Footer (Clean: Notes section removed as requested) ════════ */}
+              {/* ══ Footer ═══════════════════════════════════════════════════ */}
               <div
                 className="flex items-center justify-between px-4 py-3 border-t"
                 style={{ background:'rgba(255,255,255,0.02)', borderColor:'rgba(255,255,255,0.06)' }}
