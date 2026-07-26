@@ -6,6 +6,8 @@ import {
   adminDeletePost,
   getAdminStats,
   getUserDetails,
+  getCompilerSettings,
+  updateCompilerSettings,
 } from '../controllers/admin.controller.js';
 
 const router = express.Router();
@@ -19,5 +21,9 @@ router.get('/users/:id/details', getUserDetails);
 router.get('/users', getUsers);
 router.put('/users/:id/ban', toggleBanUser);
 router.delete('/posts/:id', adminDeletePost);
+
+// Compiler Control & Rate Limiting
+router.get('/compiler-settings', getCompilerSettings);
+router.put('/compiler-settings', updateCompilerSettings);
 
 export default router;

@@ -537,7 +537,7 @@ const CodeViewer = ({ isOpen, onClose, problem: problemProp, onSave }) => {
           .cv-approach-tab .cv-del { opacity:0; transition:opacity 0.12s; }
           .cv-approach-tab:hover .cv-del { opacity:1; }
 
-          .cm-editor { background: #1a1b26 !important; height: 100% !important; min-height: 350px !important; }
+          .cm-editor { background: #1a1b26 !important; height: 100% !important; min-height: 420px !important; }
           .cm-gutters { background: #1a1b26 !important; border-right: 1px solid rgba(255,255,255,0.05) !important; color: #3b3d52 !important; }
           .cm-activeLineGutter { background: rgba(255,255,255,0.03) !important; }
           .cm-content { padding: 12px 0 !important; }
@@ -565,8 +565,9 @@ const CodeViewer = ({ isOpen, onClose, problem: problemProp, onSave }) => {
           style={{
             x, y, scale, rotateX, rotateY,
             width: maximized ? '100vw' : '90%',
-            maxWidth: maximized ? '100vw' : '70rem',
-            maxHeight: maximized ? '100vh' : '90vh',
+            maxWidth: maximized ? '100vw' : '72rem',
+            height: maximized ? '100vh' : '85vh',
+            maxHeight: maximized ? '100vh' : '92vh',
             boxShadow: isDragging
               ? '0 40px 80px rgba(0,0,0,0.5),0 0 0 1px rgba(139,92,246,0.15)'
               : '0 20px 60px rgba(0,0,0,0.4),0 0 0 1px rgba(255,255,255,0.06)',
@@ -789,81 +790,85 @@ const CodeViewer = ({ isOpen, onClose, problem: problemProp, onSave }) => {
                 </div>
               </div>
 
-              {/* ══ CodeMirror 6 Editor Engine with Real-time Linter & Themes ══ */}
-              <div
-                className="flex-1 overflow-auto min-h-0 relative flex flex-col"
-                style={{ background:'#1a1b26', minHeight: '350px', maxHeight: maximized ? 'calc(100vh - 260px)' : '50vh' }}
-              >
-                <CodeMirror
-                  value={currentCode}
-                  height="100%"
-                  theme={currentTheme}
-                  extensions={[
-                    getLanguageExtension(activeLang),
-                    EditorView.lineWrapping,
-                    autocompletion({
-                      override: [createDocumentCompletions(activeLang)],
-                      activateOnTyping: true,
-                    }),
-                    linter(codeSyntaxLinter, { delay: 300 }),
-                  ]}
-                  onChange={value => updateCode(value)}
-                  placeholder={`Paste or type your ${langInfo.label} code for ${activeLabel}...`}
-                  basicSetup={{
-                    lineNumbers: true,
-                    highlightActiveLineGutter: true,
-                    highlightSpecialChars: true,
-                    history: true,
-                    foldGutter: true,
-                    drawSelection: true,
-                    dropCursor: true,
-                    allowMultipleSelections: true,
-                    indentOnInput: true,
-                    syntaxHighlighting: true,
-                    bracketMatching: true,
-                    closeBrackets: true,
-                    autocompletion: true,
-                    rectangularSelection: true,
-                    crosshairCursor: true,
-                    highlightActiveLine: true,
-                    highlightSelectionMatches: true,
-                    closeBracketsKeymap: true,
-                    defaultKeymap: true,
-                    searchKeymap: true,
-                    historyKeymap: true,
-                    foldKeymap: true,
-                    completionKeymap: true,
-                    lintKeymap: true,
-                  }}
-                />
+               {/* ══ Main Workspace Area: Left Code Editor + Right Console Panel ══ */}
+              <div className="flex-1 flex flex-row min-h-0 overflow-hidden relative">
 
-                {/* ══ Slide-up Execution Console Drawer ══ */}
+                {/* LEFT PANEL: CodeMirror 6 Editor Engine */}
+                <div
+                  className="flex-1 overflow-auto min-h-0 relative flex flex-col min-w-0"
+                  style={{ background:'#1a1b26' }}
+                >
+                  <CodeMirror
+                    value={currentCode}
+                    height="100%"
+                    theme={currentTheme}
+                    extensions={[
+                      getLanguageExtension(activeLang),
+                      EditorView.lineWrapping,
+                      autocompletion({
+                        override: [createDocumentCompletions(activeLang)],
+                        activateOnTyping: true,
+                      }),
+                      linter(codeSyntaxLinter, { delay: 300 }),
+                    ]}
+                    onChange={value => updateCode(value)}
+                    placeholder={`Paste or type your ${langInfo.label} code for ${activeLabel}...`}
+                    basicSetup={{
+                      lineNumbers: true,
+                      highlightActiveLineGutter: true,
+                      highlightSpecialChars: true,
+                      history: true,
+                      foldGutter: true,
+                      drawSelection: true,
+                      dropCursor: true,
+                      allowMultipleSelections: true,
+                      indentOnInput: true,
+                      syntaxHighlighting: true,
+                      bracketMatching: true,
+                      closeBrackets: true,
+                      autocompletion: true,
+                      rectangularSelection: true,
+                      crosshairCursor: true,
+                      highlightActiveLine: true,
+                      highlightSelectionMatches: true,
+                      closeBracketsKeymap: true,
+                      defaultKeymap: true,
+                      searchKeymap: true,
+                      historyKeymap: true,
+                      foldKeymap: true,
+                      completionKeymap: true,
+                      lintKeymap: true,
+                    }}
+                  />
+                </div>
+
+                {/* RIGHT PANEL: Execution Console & Custom Input Panel */}
                 <AnimatePresence>
                   {showConsole && (
                     <motion.div
-                      initial={{ y: 240, opacity: 0 }}
-                      animate={{ y: 0, opacity: 1 }}
-                      exit={{ y: 240, opacity: 0 }}
+                      initial={{ width: 0, opacity: 0 }}
+                      animate={{ width: 440, opacity: 1 }}
+                      exit={{ width: 0, opacity: 0 }}
                       transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-                      className="absolute bottom-0 left-0 right-0 z-40 border-t flex flex-col shadow-2xl"
-                      style={{ background: '#12131c', borderColor: 'rgba(255,255,255,0.1)', height: 220 }}
+                      className="h-full border-l border-white/10 flex flex-col flex-shrink-0 overflow-hidden relative z-20 shadow-2xl"
+                      style={{ background: '#12131c', width: '440px' }}
                     >
-                      {/* Drawer Header */}
-                      <div className="flex items-center justify-between px-4 py-2 border-b bg-black/40 border-white/5">
-                        <div className="flex items-center gap-2">
+                      {/* Right Panel Header */}
+                      <div className="flex items-center justify-between px-3 py-2 border-b bg-black/40 border-white/5">
+                        <div className="flex items-center gap-1.5 bg-white/5 p-1 rounded-lg border border-white/10">
                           <button
                             onClick={() => setActiveConsoleTab('input')}
-                            className={`px-3 py-1 text-xs font-semibold rounded-md transition-all flex items-center gap-1.5 ${
-                              activeConsoleTab === 'input' ? 'bg-white/10 text-white' : 'text-gray-400 hover:text-gray-200'
+                            className={`px-2.5 py-1 text-xs font-semibold rounded-md transition-all flex items-center gap-1.5 ${
+                              activeConsoleTab === 'input' ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 shadow-sm' : 'text-gray-400 hover:text-gray-200'
                             }`}
                           >
                             <Terminal className="w-3.5 h-3.5 text-cyan-400"/>
-                            <span>Custom Input (stdin)</span>
+                            <span>Custom Input</span>
                           </button>
                           <button
                             onClick={() => setActiveConsoleTab('output')}
-                            className={`px-3 py-1 text-xs font-semibold rounded-md transition-all flex items-center gap-1.5 ${
-                              activeConsoleTab === 'output' ? 'bg-white/10 text-white' : 'text-gray-400 hover:text-gray-200'
+                            className={`px-2.5 py-1 text-xs font-semibold rounded-md transition-all flex items-center gap-1.5 ${
+                              activeConsoleTab === 'output' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 shadow-sm' : 'text-gray-400 hover:text-gray-200'
                             }`}
                           >
                             <Sparkles className="w-3.5 h-3.5 text-[#39FF14]"/>
@@ -876,17 +881,17 @@ const CodeViewer = ({ isOpen, onClose, problem: problemProp, onSave }) => {
 
                         <button
                           onClick={() => setShowConsole(false)}
-                          className="p-1 text-gray-500 hover:text-white rounded-md hover:bg-white/5 transition-all"
+                          className="p-1.5 text-gray-500 hover:text-white rounded-md hover:bg-white/5 transition-all"
                           title="Hide Console"
                         >
-                          <ChevronDown className="w-4 h-4"/>
+                          <X className="w-4 h-4"/>
                         </button>
                       </div>
 
-                      {/* Drawer Content */}
+                      {/* Right Panel Body */}
                       <div className="flex-1 p-3 overflow-auto font-mono text-xs">
                         {activeConsoleTab === 'input' ? (
-                          <div className="h-full flex flex-col space-y-1">
+                          <div className="h-full flex flex-col space-y-2">
                             <span className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">Standard Input (stdin)</span>
                             <textarea
                               value={stdinInput}
@@ -896,61 +901,115 @@ const CodeViewer = ({ isOpen, onClose, problem: problemProp, onSave }) => {
                             />
                           </div>
                         ) : (
-                          <div className="h-full flex flex-col space-y-2">
+                          <div className="h-full flex flex-col space-y-3">
                             {isRunningCode ? (
-                              <div className="flex-1 flex items-center justify-center flex-col gap-2 text-gray-400">
-                                <Loader2 className="w-6 h-6 text-cyan-400 animate-spin" />
-                                <span className="text-xs font-semibold text-cyan-300">Executing on Azure Judge0 Engine...</span>
+                              <div className="flex-1 flex flex-col items-center justify-center gap-4 text-gray-400 py-6">
+                                {/* Sleek Glowing Compiler Ring & Laser Scanner */}
+                                <div className="relative flex items-center justify-center">
+                                  <motion.div
+                                    className="absolute w-16 h-16 rounded-full bg-cyan-500/20 blur-md"
+                                    animate={{ scale: [1, 1.3, 1], opacity: [0.3, 0.7, 0.3] }}
+                                    transition={{ repeat: Infinity, duration: 1.5 }}
+                                  />
+                                  <motion.div
+                                    className="w-12 h-12 rounded-full border-2 border-transparent border-t-cyan-400 border-r-emerald-400 p-1"
+                                    animate={{ rotate: 360 }}
+                                    transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}
+                                  >
+                                    <div className="w-full h-full rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center">
+                                      <Sparkles className="w-5 h-5 text-cyan-300 animate-pulse" />
+                                    </div>
+                                  </motion.div>
+                                </div>
+
+                                <div className="w-48 h-1 rounded-full bg-white/5 overflow-hidden relative border border-white/10">
+                                  <motion.div
+                                    className="h-full bg-gradient-to-r from-cyan-500 via-emerald-400 to-purple-500 rounded-full w-20"
+                                    animate={{ x: [-80, 200] }}
+                                    transition={{ repeat: Infinity, duration: 1.2, ease: 'easeInOut' }}
+                                  />
+                                </div>
+
+                                <div className="flex flex-col items-center gap-1 font-mono text-xs text-center">
+                                  <span className="font-bold text-cyan-300 tracking-wide flex items-center gap-2">
+                                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+                                    Executing Code...
+                                  </span>
+                                  <span className="text-[10px] text-gray-500">
+                                    Evaluating test cases & memory
+                                  </span>
+                                </div>
                               </div>
                             ) : executionResult ? (
-                              <div className="space-y-2">
+                              <div className="space-y-3 h-full flex flex-col">
                                 {/* Status Header */}
                                 <div className="flex items-center justify-between border-b border-white/5 pb-2">
-                                  <div className="flex items-center gap-2">
-                                    {executionResult.status?.id === 3 ? (
-                                      <span className="px-2.5 py-1 rounded-md text-xs font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 flex items-center gap-1.5">
-                                        <CheckCircle2 className="w-4 h-4"/>
-                                        {executionResult.status?.description || 'Accepted'}
-                                      </span>
-                                    ) : (
-                                      <span className="px-2.5 py-1 rounded-md text-xs font-bold bg-red-500/15 text-red-400 border border-red-500/30 flex items-center gap-1.5">
-                                        <AlertCircle className="w-4 h-4"/>
-                                        {executionResult.status?.description || 'Error'}
-                                      </span>
-                                    )}
-                                  </div>
+                                  {executionResult.status?.id === 3 ? (
+                                    <span className="px-2.5 py-1 rounded-md text-xs font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 flex items-center gap-1.5">
+                                      <CheckCircle2 className="w-4 h-4"/>
+                                      {executionResult.status?.description || 'Accepted'}
+                                    </span>
+                                  ) : (
+                                    <span className="px-2.5 py-1 rounded-md text-xs font-bold bg-red-500/15 text-red-400 border border-red-500/30 flex items-center gap-1.5">
+                                      <AlertCircle className="w-4 h-4"/>
+                                      {executionResult.status?.description || 'Error'}
+                                    </span>
+                                  )}
 
-                                  <div className="flex items-center gap-3 text-[11px] text-gray-400">
-                                    <span>Runtime: <strong className="text-emerald-400">{executionResult.timeMs || 0} ms</strong></span>
-                                    <span>Memory: <strong className="text-cyan-400">{executionResult.memoryMb || 0} MB</strong></span>
+                                  <div className="flex items-center gap-2 text-[11px] text-gray-400">
+                                    <span className="bg-white/5 px-2 py-0.5 rounded border border-white/5">
+                                      ⚡ <strong className="text-emerald-400">{executionResult.timeMs || 0} ms</strong>
+                                    </span>
+                                    <span className="bg-white/5 px-2 py-0.5 rounded border border-white/5">
+                                      💾 <strong className="text-cyan-400">{executionResult.memoryMb || 0} MB</strong>
+                                    </span>
                                   </div>
                                 </div>
 
-                                {/* Stdout / Output */}
+                                {/* Stdout */}
                                 {executionResult.stdout && (
-                                  <div>
+                                  <div className="flex-1 flex flex-col min-h-0">
                                     <div className="text-[10px] text-gray-500 uppercase font-semibold mb-1">Standard Output (stdout)</div>
-                                    <pre className="p-2.5 rounded-lg bg-black/40 border border-white/5 text-emerald-300 whitespace-pre-wrap overflow-x-auto max-h-28">
-                                      {executionResult.stdout}
-                                    </pre>
+                                    <div className="flex-1 rounded-lg bg-black/40 border border-white/5 overflow-auto">
+                                      <div className="flex font-mono text-xs">
+                                        <div className="select-none py-2 px-2 text-right border-r border-white/5 bg-white/[0.02] flex-shrink-0">
+                                          {executionResult.stdout.split('\n').filter((_, i, arr) => i < arr.length - 1 || arr[i] !== '').map((_, i) => (
+                                            <div key={i} className="text-[10px] text-gray-600 leading-[18px]">{i + 1}</div>
+                                          ))}
+                                        </div>
+                                        <pre className="py-2 px-3 text-emerald-300 whitespace-pre-wrap flex-1 leading-[18px]">
+                                          {executionResult.stdout}
+                                        </pre>
+                                      </div>
+                                    </div>
                                   </div>
                                 )}
 
-                                {/* Compile / Stderr error */}
+                                {/* Error Output */}
                                 {(executionResult.compile_output || executionResult.stderr) && (
-                                  <div>
+                                  <div className={executionResult.stdout ? 'h-40 flex flex-col' : 'flex-1 flex flex-col min-h-0'}>
                                     <div className="text-[10px] text-red-400 uppercase font-semibold mb-1 flex items-center gap-1">
                                       <AlertTriangle className="w-3 h-3"/> Error Output
                                     </div>
-                                    <pre className="p-2.5 rounded-lg bg-red-950/30 border border-red-500/20 text-red-300 whitespace-pre-wrap overflow-x-auto max-h-28">
-                                      {executionResult.compile_output || executionResult.stderr}
-                                    </pre>
+                                    <div className="flex-1 rounded-lg bg-red-950/30 border border-red-500/20 overflow-auto">
+                                      <div className="flex font-mono text-xs">
+                                        <div className="select-none py-2 px-2 text-right border-r border-red-500/10 bg-red-950/20 flex-shrink-0">
+                                          {(executionResult.compile_output || executionResult.stderr).split('\n').filter((_, i, arr) => i < arr.length - 1 || arr[i] !== '').map((_, i) => (
+                                            <div key={i} className="text-[10px] text-red-700 leading-[18px]">{i + 1}</div>
+                                          ))}
+                                        </div>
+                                        <pre className="py-2 px-3 text-red-300 whitespace-pre-wrap flex-1 leading-[18px]">
+                                          {executionResult.compile_output || executionResult.stderr}
+                                        </pre>
+                                      </div>
+                                    </div>
                                   </div>
                                 )}
                               </div>
                             ) : (
-                              <div className="flex-1 flex items-center justify-center text-gray-500 text-xs">
-                                Click "Run Code" below to compile and execute your solution!
+                              <div className="flex-1 flex flex-col items-center justify-center text-gray-500 text-xs gap-2 text-center p-4">
+                                <Terminal className="w-8 h-8 text-gray-600 stroke-[1.5]" />
+                                <span>Click <strong>Run Code</strong> to execute your code & view stdout / errors!</span>
                               </div>
                             )}
                           </div>
@@ -959,6 +1018,7 @@ const CodeViewer = ({ isOpen, onClose, problem: problemProp, onSave }) => {
                     </motion.div>
                   )}
                 </AnimatePresence>
+
               </div>
 
               {/* ══ Footer ═══════════════════════════════════════════════════ */}

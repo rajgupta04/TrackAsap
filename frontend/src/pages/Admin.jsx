@@ -22,9 +22,13 @@ import {
   StickyNote,
   Code,
   Zap,
+  Cpu,
+  Save,
+  Loader2,
 } from 'lucide-react';
 import { useAdminStore } from '../store/adminStore';
 import { useAuthStore } from '../store/authStore';
+import adminService from '../services/adminService';
 import toast from 'react-hot-toast';
 import CodeViewer from '../components/CodeViewer';
 
@@ -106,6 +110,36 @@ const Admin = () => {
   const [selectedCodeProblem, setSelectedCodeProblem] = useState(null);
   const [selectedNotesProblem, setSelectedNotesProblem] = useState(null);
 
+  // Compiler & Rate Limiter Control State
+  const [compilerSettings, setCompilerSettings] = useState({ enabled: true, maxRunsPerMinute: 15 });
+  const [isCompilerLoading, setIsCompilerLoading] = useState(false);
+  const [isSavingCompiler, setIsSavingCompiler] = useState(false);
+
+  const fetchCompilerSettings = async () => {
+    try {
+      setIsCompilerLoading(true);
+      const data = await adminService.getCompilerSettings();
+      if (data) setCompilerSettings(data);
+    } catch (err) {
+      console.error('Failed to fetch compiler settings:', err);
+    } finally {
+      setIsCompilerLoading(false);
+    }
+  };
+
+  const handleSaveCompilerSettings = async () => {
+    try {
+      setIsSavingCompiler(true);
+      const res = await adminService.updateCompilerSettings(compilerSettings);
+      toast.success(res.message || 'Compiler settings saved!');
+      if (res.settings) setCompilerSettings(res.settings);
+    } catch (err) {
+      toast.error('Failed to save compiler settings');
+    } finally {
+      setIsSavingCompiler(false);
+    }
+  };
+
   // Bucket form state
   const [bucketMode, setBucketMode] = useState('form'); // 'form' | 'json' | 'csv'
   const csvFileInputRef = useRef(null);
@@ -133,6 +167,7 @@ const Admin = () => {
     fetchStats();
     fetchUsers();
     fetchSystemAnalytics();
+    fetchCompilerSettings();
   }, []);
 
   const handleSearch = () => {
@@ -334,11 +369,12 @@ const Admin = () => {
       )}
 
       {/* Tab Buttons */}
-      <div className="flex gap-2">
+      <div className="flex gap-2 flex-wrap">
         {[
           { id: 'analytics', label: 'System Analytics', icon: Activity },
           { id: 'users', label: 'User Management', icon: Users },
           { id: 'buckets', label: 'Bucket Manager', icon: Package },
+          { id: 'compiler', label: 'Compiler & Rate Limiter', icon: Cpu },
         ].map((tab) => (
           <button
             key={tab.id}
@@ -512,6 +548,123 @@ const Admin = () => {
                   )}
                 </tbody>
               </table>
+            </div>
+          </div>
+        </motion.div>
+      )}
+
+      {/* Compiler & Rate Limiter Control Tab */}
+      {activeTab === 'compiler' && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="space-y-6 max-w-4xl"
+        >
+          {/* Card 1: Engine Status & Killswitch */}
+          <div className="bg-dark-800/50 backdrop-blur-xl border border-dark-700/50 rounded-2xl p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className={`p-3 rounded-xl ${compilerSettings.enabled ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'}`}>
+                  <Cpu size={24} />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                    Compiler Execution Engine
+                    {compilerSettings.enabled ? (
+                      <span className="text-xs px-2 py-0.5 rounded-full font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                        ● System Active & Online
+                      </span>
+                    ) : (
+                      <span className="text-xs px-2 py-0.5 rounded-full font-bold bg-red-500/15 text-red-400 border border-red-500/30">
+                        🔴 Execution Disabled
+                      </span>
+                    )}
+                  </h3>
+                  <p className="text-xs text-dark-400 mt-0.5">Control global code execution permissions across Python, C++, Java, JavaScript & SQL.</p>
+                </div>
+              </div>
+
+              {/* Toggle Switch */}
+              <button
+                onClick={() => setCompilerSettings(prev => ({ ...prev, enabled: !prev.enabled }))}
+                className={`relative inline-flex h-7 w-14 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                  compilerSettings.enabled ? 'bg-emerald-500' : 'bg-dark-600'
+                }`}
+              >
+                <span
+                  className={`pointer-events-none inline-block h-6 w-6 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                    compilerSettings.enabled ? 'translate-x-7' : 'translate-x-0'
+                  }`}
+                />
+              </button>
+            </div>
+          </div>
+
+          {/* Card 2: Anti-Spam Rate Limiter Controls */}
+          <div className="bg-dark-800/50 backdrop-blur-xl border border-dark-700/50 rounded-2xl p-6 space-y-6">
+            <div className="flex items-center gap-3">
+              <div className="p-3 rounded-xl bg-purple-500/10 text-purple-400 border border-purple-500/20">
+                <Zap size={24} />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-white">Anti-Spam Rate Limiting</h3>
+                <p className="text-xs text-dark-400 mt-0.5">Limit the maximum number of code executions allowed per user per minute to protect Azure infrastructure.</p>
+              </div>
+            </div>
+
+            {/* Presets */}
+            <div className="space-y-2">
+              <label className="text-xs font-semibold text-dark-300">Quick Presets (Executions / Minute):</label>
+              <div className="flex gap-2 flex-wrap">
+                {[5, 10, 15, 20, 30, 60].map(val => (
+                  <button
+                    key={val}
+                    onClick={() => setCompilerSettings(prev => ({ ...prev, maxRunsPerMinute: val }))}
+                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all border ${
+                      compilerSettings.maxRunsPerMinute === val
+                        ? 'bg-neon-green/20 text-neon-green border-neon-green/40 shadow-lg shadow-neon-green/10'
+                        : 'bg-dark-900/50 text-dark-300 border-dark-700 hover:border-dark-600 hover:text-white'
+                    }`}
+                  >
+                    {val} runs / min
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Custom Input */}
+            <div className="flex items-center gap-4 bg-black/30 p-4 rounded-xl border border-dark-700/50">
+              <div className="flex-1 space-y-1">
+                <span className="text-xs font-semibold text-white">Custom Executions Limit</span>
+                <p className="text-[11px] text-dark-400">Users exceeding this limit will receive an interactive 429 wait timer.</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  min="1"
+                  max="120"
+                  value={compilerSettings.maxRunsPerMinute}
+                  onChange={e => setCompilerSettings(prev => ({ ...prev, maxRunsPerMinute: parseInt(e.target.value) || 1 }))}
+                  className="w-24 px-3 py-2 rounded-xl bg-dark-900 border border-dark-700 text-white font-mono font-bold text-center text-sm outline-none focus:border-neon-green/50"
+                />
+                <span className="text-xs font-semibold text-dark-400">runs / min</span>
+              </div>
+            </div>
+
+            {/* Save Settings Action */}
+            <div className="pt-2 flex justify-end">
+              <button
+                onClick={handleSaveCompilerSettings}
+                disabled={isSavingCompiler}
+                className="px-6 py-2.5 bg-neon-green text-black font-bold rounded-xl hover:bg-neon-green/90 transition-all disabled:opacity-50 flex items-center gap-2 text-sm shadow-lg shadow-neon-green/20 cursor-pointer"
+              >
+                {isSavingCompiler ? (
+                  <Loader2 className="w-4 h-4 animate-spin text-black" />
+                ) : (
+                  <Save className="w-4 h-4" />
+                )}
+                <span>{isSavingCompiler ? 'Saving Settings...' : 'Save Compiler Controls'}</span>
+              </button>
             </div>
           </div>
         </motion.div>

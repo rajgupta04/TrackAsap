@@ -59,6 +59,18 @@ const adminService = {
     const response = await api.get(`/admin/users/${userId}/details`);
     return response.data;
   },
+
+  // Get compiler settings
+  getCompilerSettings: async () => {
+    const response = await api.get('/admin/compiler-settings');
+    return response.data;
+  },
+
+  // Update compiler settings
+  updateCompilerSettings: async (settings) => {
+    const response = await api.put('/admin/compiler-settings', settings);
+    return response.data;
+  },
 };
 
 export default adminService;

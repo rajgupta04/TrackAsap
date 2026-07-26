@@ -2,6 +2,7 @@ import User from '../models/User.model.js';
 import DiscussionPost from '../models/DiscussionPost.model.js';
 import Sheet from '../models/Sheet.model.js';
 import SheetProblem from '../models/SheetProblem.model.js';
+import { compilerConfig } from './compiler.controller.js';
 
 // @desc    Get all users (admin only)
 // @route   GET /api/admin/users
@@ -157,5 +158,44 @@ export const getUserDetails = async (req, res) => {
   } catch (error) {
     console.error('Admin get user details error:', error);
     res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// @desc    Get compiler rate limiter & status settings
+// @route   GET /api/admin/compiler-settings
+// @access  Private/Admin
+export const getCompilerSettings = async (req, res) => {
+  try {
+    res.json({
+      enabled: compilerConfig.enabled,
+      maxRunsPerMinute: compilerConfig.maxRunsPerMinute,
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to fetch compiler settings' });
+  }
+};
+
+// @desc    Update compiler rate limiter & status settings
+// @route   PUT /api/admin/compiler-settings
+// @access  Private/Admin
+export const updateCompilerSettings = async (req, res) => {
+  try {
+    const { enabled, maxRunsPerMinute } = req.body;
+    if (typeof enabled === 'boolean') {
+      compilerConfig.enabled = enabled;
+    }
+    if (typeof maxRunsPerMinute === 'number' && maxRunsPerMinute > 0) {
+      compilerConfig.maxRunsPerMinute = Math.min(Math.max(1, maxRunsPerMinute), 120);
+    }
+
+    res.json({
+      message: 'Compiler settings updated successfully',
+      settings: {
+        enabled: compilerConfig.enabled,
+        maxRunsPerMinute: compilerConfig.maxRunsPerMinute,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to update compiler settings' });
   }
 };

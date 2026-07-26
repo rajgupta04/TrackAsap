@@ -2,7 +2,7 @@ import api from '../lib/api';
 
 const compilerService = {
   /**
-   * Run code via Azure Judge0 Compiler Engine API
+   * Run code via Azure Piston Compiler Engine API
    * @param {Object} data { source_code, language, stdin }
    */
   runCode: async (data) => {
