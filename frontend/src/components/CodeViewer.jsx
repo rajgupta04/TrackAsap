@@ -325,6 +325,21 @@ const CodeViewer = ({ isOpen, onClose, problem: problemProp, onSave }) => {
   const langInfo = LANG_MAP[activeLang] || LANG_MAP.cpp;
   const currentTheme = THEME_MAP[activeTheme]?.theme || tokyoNight;
 
+  const sheetName = problem?._sheetName || problem?.sheet?.name || problem?.sheetName || '';
+  const topicName = problem?.topic || problem?.category || '';
+  const titleName = problem?.title || '';
+  const isSqlProblem = 
+    /sql/i.test(sheetName) || 
+    /sql/i.test(topicName) || 
+    /sql/i.test(titleName) ||
+    langsForApproach.includes('sql');
+
+  const availableLangOptions = LANG_OPTIONS.filter(opt => {
+    if (opt.value === 'sql') return isSqlProblem;
+    return true;
+  });
+
+
   // ── Code editing & formatting
   const updateCode = useCallback((newCode) => {
     setCodeMap(prev => ({
@@ -703,7 +718,7 @@ const CodeViewer = ({ isOpen, onClose, problem: problemProp, onSave }) => {
                         borderColor: `${langInfo.color}40`,
                       }}
                     >
-                      {LANG_OPTIONS.map(opt => {
+                      {availableLangOptions.map(opt => {
                         const hasCode = !!codeMap[activeLabel]?.[opt.value]?.trim();
                         return (
                           <option key={opt.value} value={opt.value} className="bg-gray-900 text-white font-medium">
@@ -712,7 +727,7 @@ const CodeViewer = ({ isOpen, onClose, problem: problemProp, onSave }) => {
                         );
                       })}
                     </select>
-                    <ChevronDown className="w-3 h-3 absolute right-2 pointer-events-none" style={{ color: langInfo.color }} />
+                    <ChevronDown className="w-3 h-3 absolute right-[#28C840] pointer-events-none" style={{ color: langInfo.color }} />
                   </div>
 
                   {/* Theme Dropdown */}
