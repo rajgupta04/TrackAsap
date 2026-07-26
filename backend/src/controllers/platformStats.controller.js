@@ -255,6 +255,17 @@ export const getCodeChefStats = async (req, res) => {
           date: c.end_date ? c.end_date.split(' ')[0] : `${c.getyear}-${c.getmonth}-${c.getday}`,
           penalised: !!c.penalised_in || !!c.reason,
         }));
+
+        // Map submission/contest calendar for heatmap
+        const submissionCalendar = {};
+        rawHistory.forEach((c) => {
+          const dateStr = c.end_date ? c.end_date.split(' ')[0] : `${c.getyear}-${c.getmonth}-${c.getday}`;
+          const ts = Math.floor(new Date(dateStr).getTime() / 1000);
+          if (ts > 0) {
+            submissionCalendar[ts] = (submissionCalendar[ts] || 0) + 1;
+          }
+        });
+        res.locals_calendar = submissionCalendar;
       } catch (e) {
         console.error('CodeChef Rating History JSON parse error:', e.message);
       }
@@ -299,6 +310,7 @@ export const getCodeChefStats = async (req, res) => {
         totalSolved,
         contestsParticipated,
         ratingHistory,
+        submissionCalendar: res.locals_calendar || {},
         profileUrl,
       },
     });

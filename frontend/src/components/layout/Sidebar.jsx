@@ -18,6 +18,7 @@ import {
   Shield,
   Trophy,
   PanelLeftOpen,
+  Code2,
 } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 
@@ -28,6 +29,7 @@ const navItems = [
   { path: '/analytics', icon: BarChart3, label: 'Analytics' },
   { path: '/sheets', icon: BookOpen, label: 'Sheets' },
   { path: '/problems', icon: Code, label: 'Problems' },
+  { path: '/playground', icon: Code2, label: 'Playground' },
   { path: '/discussion', icon: MessageSquare, label: 'Discussion' },
   { path: '/physique', icon: Dumbbell, label: 'Physique' },
   { path: '/profile', icon: User, label: 'Profile' },

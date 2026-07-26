@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence, useMotionValue, useSpring } from 'framer-motion';
 import { Minus, Maximize2, X, Play, Pause, RotateCcw, Clock, Timer, Settings2 } from 'lucide-react';
 import { useTimerStore } from '../../store/timerStore';
@@ -152,7 +153,7 @@ const StopwatchModal = ({ isOpen, onClose }) => {
     }
   };
 
-  return (
+  return createPortal(
     <AnimatePresence>
       {isOpen && (
         <motion.div
@@ -406,7 +407,8 @@ const StopwatchModal = ({ isOpen, onClose }) => {
           </motion.div>
         </motion.div>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   );
 };
 

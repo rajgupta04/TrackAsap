@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Link as LinkIcon, Code, FileText, Clock, Tag, ChevronDown } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -97,7 +98,7 @@ const ProblemModal = ({ isOpen, onClose, platform, date, sheetId, sheetTopic, on
 
   if (!isOpen) return null;
 
-  return (
+  return createPortal(
     <AnimatePresence>
       <motion.div
         initial={{ opacity: 0 }}
@@ -286,7 +287,8 @@ const ProblemModal = ({ isOpen, onClose, platform, date, sheetId, sheetTopic, on
           </GlassCard>
         </motion.div>
       </motion.div>
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   );
 };
 

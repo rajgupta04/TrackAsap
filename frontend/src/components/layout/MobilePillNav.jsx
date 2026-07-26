@@ -6,7 +6,8 @@ import {
   Code,
   User,
   Calendar,
-  MessageSquare
+  MessageSquare,
+  Code2
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 
@@ -14,6 +15,7 @@ const navPiles = [
   { path: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
   { path: '/sheets', icon: BookOpen, label: 'Sheets' },
   { path: '/problems', icon: Code, label: 'Problems' },
+  { path: '/playground', icon: Code2, label: 'Playground' },
   { path: '/profile', icon: User, label: 'Profile' },
   { path: '/daily-tracker', icon: Calendar, label: 'Daily Tracker' },
 ];

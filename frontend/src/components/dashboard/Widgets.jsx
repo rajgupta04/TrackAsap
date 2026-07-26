@@ -217,6 +217,13 @@ export const CodeChefStatsWidget = ({ user, codechefStats, isPlatformLoading, fe
               <div className="text-xs text-dark-400">Country Rank</div>
             </div>
           </div>
+          {codechefStats.submissionCalendar && (
+            <div className="pt-4 border-t border-dark-700/50">
+              <div className="overflow-x-auto">
+                <LeetCodeHeatmap submissionCalendar={codechefStats.submissionCalendar} />
+              </div>
+            </div>
+          )}
         </div>
       )}
     </GlassCard>
@@ -226,17 +233,17 @@ export const CodeChefStatsWidget = ({ user, codechefStats, isPlatformLoading, fe
 export const CodeChefRatingWidget = ({ codechefStats }) => {
   if (!codechefStats?.ratingHistory?.length) return null;
   return (
-    <GlassCard className="h-full">
+    <GlassCard className="h-full flex flex-col">
       <div className="flex items-center gap-3 mb-4 cursor-move drag-handle">
         <div className="w-8 h-8 rounded-lg bg-[#5B4638]/20 flex items-center justify-center">
           <TrendingUp className="w-4 h-4 text-amber-500" />
         </div>
         <div>
           <h3 className="font-semibold text-white">CodeChef Contest History</h3>
-          <p className="text-xs text-dark-400">{codechefStats.contestsParticipated} Contests Participated</p>
+          <p className="text-xs text-dark-400">{codechefStats.contestsParticipated} Contests Participated • Peak Rating: {codechefStats.maxRating || 0}</p>
         </div>
       </div>
-      <div className="h-44">
+      <div className="flex-1 min-h-[220px] w-full">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={codechefStats.ratingHistory}>
             <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
@@ -253,6 +260,21 @@ export const CodeChefRatingWidget = ({ codechefStats }) => {
           </LineChart>
         </ResponsiveContainer>
       </div>
+    </GlassCard>
+  );
+};
+
+export const CodeChefHeatmapWidget = ({ user, codechefStats }) => {
+  if (!user?.codechefHandle || !codechefStats?.submissionCalendar) return null;
+  return (
+    <GlassCard className="h-full">
+      <div className="flex items-center gap-3 mb-4 cursor-move drag-handle">
+        <div className="w-8 h-8 rounded-lg bg-[#5B4638]/20 flex items-center justify-center">
+          <Code2 className="w-4 h-4 text-amber-500" />
+        </div>
+        <h3 className="font-semibold text-white">CodeChef Activity</h3>
+      </div>
+      <LeetCodeHeatmap submissionCalendar={codechefStats.submissionCalendar} />
     </GlassCard>
   );
 };

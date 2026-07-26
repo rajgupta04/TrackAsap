@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence, useMotionValue, useSpring } from 'framer-motion';
 import { Minus, Maximize2, X, Flame, Trophy, RefreshCw, Info, Sparkles } from 'lucide-react';
 
@@ -60,7 +61,7 @@ const StreakModal = ({ isOpen, onClose, streak, onRefresh, isRefreshing }) => {
 
   const randomQuote = quotes[Math.floor(Math.random() * quotes.length)];
 
-  return (
+  return createPortal(
     <AnimatePresence>
       {isOpen && (
         <motion.div
@@ -270,7 +271,8 @@ const StreakModal = ({ isOpen, onClose, streak, onRefresh, isRefreshing }) => {
         </motion.div>
       </motion.div>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   );
 };
 
