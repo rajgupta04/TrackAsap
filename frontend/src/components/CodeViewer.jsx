@@ -3,16 +3,19 @@ import { motion, AnimatePresence, useMotionValue, useSpring, useDragControls } f
 import {
   Copy, Check, ExternalLink, Clock, Zap, HardDrive, RotateCcw,
   Save, X, Plus, ChevronDown, Palette, AlignLeft,
+  Play, Terminal, ChevronUp, CheckCircle2, AlertCircle, AlertTriangle, Loader2, Sparkles,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import useProblemStore from '../store/problemStore';
 import sheetProblemService from '../services/sheetProblemService';
+import compilerService from '../services/compilerService';
 
 import CodeMirror from '@uiw/react-codemirror';
 import { cpp } from '@codemirror/lang-cpp';
 import { java } from '@codemirror/lang-java';
 import { python } from '@codemirror/lang-python';
 import { javascript } from '@codemirror/lang-javascript';
+import { sql } from '@codemirror/lang-sql';
 import { EditorView } from '@codemirror/view';
 import { autocompletion } from '@codemirror/autocomplete';
 import { linter } from '@codemirror/lint';
@@ -34,9 +37,7 @@ const LANG_OPTIONS = [
   { value: 'python',     label: 'Python',     color: '#3B82F6' },
   { value: 'javascript', label: 'JavaScript', color: '#EAB308' },
   { value: 'c',          label: 'C',          color: '#5C6BC0' },
-  { value: 'go',         label: 'Go',         color: '#00ACD7' },
-  { value: 'rust',       label: 'Rust',       color: '#CE422B' },
-  { value: 'other',      label: 'Other',      color: '#6B7280' },
+  { value: 'sql',        label: 'SQL',        color: '#E38C00' },
 ];
 const LANG_MAP = Object.fromEntries(LANG_OPTIONS.map(l => [l.value, l]));
 
@@ -54,9 +55,7 @@ const COMMON_KEYWORDS = {
   python: ['print', 'def', 'class', 'return', 'self', 'import', 'from', 'as', 'range', 'len', 'append', 'extend', 'pop', 'split', 'join', 'sorted', 'sort', 'reverse', 'enumerate', 'zip', 'dict', 'list', 'set', 'tuple', 'lambda', 'map', 'filter', 'sum', 'min', 'max', 'abs'],
   javascript: ['console.log', 'const', 'let', 'var', 'function', 'return', 'async', 'await', 'import', 'export', 'default', 'class', 'constructor', 'prototype', 'map', 'filter', 'reduce', 'forEach', 'includes', 'indexOf', 'slice', 'splice', 'push', 'pop', 'shift', 'unshift', 'concat', 'Object.keys', 'Object.values', 'Math.max', 'Math.min'],
   c: ['printf', 'scanf', 'malloc', 'free', 'sizeof', 'strlen', 'strcpy', 'strcat', 'strcmp', 'memcpy', 'memset', 'struct', 'typedef', 'return', 'include', 'NULL', 'int', 'char', 'void', 'float', 'double'],
-  go: ['fmt.Println', 'fmt.Printf', 'make', 'append', 'len', 'cap', 'delete', 'package', 'import', 'func', 'type', 'struct', 'interface', 'return', 'range', 'map', 'slice', 'string', 'int'],
-  rust: ['println!', 'format!', 'vec!', 'String', 'Option', 'Result', 'Some', 'None', 'Ok', 'Err', 'pub', 'fn', 'let', 'mut', 'struct', 'enum', 'match', 'impl', 'use', 'mod', 'self', 'Self', 'return'],
-  other: ['return', 'function', 'class', 'struct', 'import', 'export', 'print', 'console'],
+  sql: ['SELECT', 'FROM', 'WHERE', 'JOIN', 'LEFT JOIN', 'RIGHT JOIN', 'INNER JOIN', 'GROUP BY', 'HAVING', 'ORDER BY', 'LIMIT', 'OFFSET', 'COUNT', 'SUM', 'AVG', 'MIN', 'MAX', 'AS', 'ON', 'AND', 'OR', 'NOT', 'IN', 'BETWEEN', 'LIKE', 'IS NULL', 'IS NOT NULL', 'UPDATE', 'INSERT INTO', 'DELETE FROM', 'CREATE TABLE'],
 };
 
 // ── Real-time Syntax Linter ──
@@ -170,7 +169,7 @@ function createDocumentCompletions(activeLang) {
 
     const docText = context.state.doc.toString();
     const docWords = docText.match(/\b[a-zA-Z_]\w*\b/g) || [];
-    const langExtra = COMMON_KEYWORDS[activeLang] || COMMON_KEYWORDS.other;
+    const langExtra = COMMON_KEYWORDS[activeLang] || COMMON_KEYWORDS.cpp;
 
     const allWords = Array.from(new Set([...langExtra, ...docWords]));
     const prefixLower = word.text.toLowerCase();
@@ -193,8 +192,6 @@ function getLanguageExtension(lang) {
   switch (lang) {
     case 'cpp':
     case 'c':
-    case 'go':
-    case 'rust':
       return cpp();
     case 'java':
       return java();
@@ -202,6 +199,8 @@ function getLanguageExtension(lang) {
       return python();
     case 'javascript':
       return javascript({ jsx: true, typescript: true });
+    case 'sql':
+      return sql();
     default:
       return cpp();
   }
@@ -265,6 +264,13 @@ const CodeViewer = ({ isOpen, onClose, problem: problemProp, onSave }) => {
   const [isSaving, setIsSaving] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
 
+  // ── Execution Drawer State
+  const [showConsole, setShowConsole] = useState(false);
+  const [activeConsoleTab, setActiveConsoleTab] = useState('input'); // 'input' | 'output'
+  const [stdinInput, setStdinInput] = useState('');
+  const [isRunningCode, setIsRunningCode] = useState(false);
+  const [executionResult, setExecutionResult] = useState(null);
+
   const constraintsRef = useRef(null);
   const newApproachRef = useRef(null);
 
@@ -283,6 +289,8 @@ const CodeViewer = ({ isOpen, onClose, problem: problemProp, onSave }) => {
   useEffect(() => {
     if (!isOpen || !problem) return;
     setShowUnsavedModal(false);
+    setShowConsole(false);
+    setExecutionResult(null);
     const solutions = getSolutions(problem);
     const map = buildCodeMap(solutions);
     const isEmpty = Object.keys(map).length === 0;
@@ -314,8 +322,23 @@ const CodeViewer = ({ isOpen, onClose, problem: problemProp, onSave }) => {
   const approaches = Object.keys(codeMap);
   const langsForApproach = Object.keys(codeMap[activeLabel] || {});
   const currentCode = codeMap[activeLabel]?.[activeLang] ?? '';
-  const langInfo = LANG_MAP[activeLang] || LANG_MAP.other;
+  const langInfo = LANG_MAP[activeLang] || LANG_MAP.cpp;
   const currentTheme = THEME_MAP[activeTheme]?.theme || tokyoNight;
+
+  const sheetName = problem?._sheetName || problem?.sheet?.name || problem?.sheetName || '';
+  const topicName = problem?.topic || problem?.category || '';
+  const titleName = problem?.title || '';
+  const isSqlProblem = 
+    /sql/i.test(sheetName) || 
+    /sql/i.test(topicName) || 
+    /sql/i.test(titleName) ||
+    langsForApproach.includes('sql');
+
+  const availableLangOptions = LANG_OPTIONS.filter(opt => {
+    if (opt.value === 'sql') return isSqlProblem;
+    return true;
+  });
+
 
   // ── Code editing & formatting
   const updateCode = useCallback((newCode) => {
@@ -335,7 +358,40 @@ const CodeViewer = ({ isOpen, onClose, problem: problemProp, onSave }) => {
     }
   }, [currentCode, activeLang, updateCode]);
 
-  // Global keydown listener for Alt + Shift + F / Shift + Alt + F (Format Code)
+  // ── Code Execution via Azure Judge0 Compiler Engine
+  const handleRunCode = async () => {
+    if (!currentCode || !currentCode.trim()) {
+      toast.error('Code cannot be empty!');
+      return;
+    }
+    setIsRunningCode(true);
+    setShowConsole(true);
+    setActiveConsoleTab('output');
+    try {
+      const res = await compilerService.runCode({
+        source_code: currentCode,
+        language: activeLang,
+        stdin: stdinInput,
+      });
+      setExecutionResult(res);
+      if (res.status?.id === 3) {
+        toast.success(`Executed in ${res.timeMs}ms!`);
+      } else {
+        toast.error(res.status?.description || 'Execution finished with warnings');
+      }
+    } catch (err) {
+      console.error('Run code error:', err);
+      toast.error(err?.response?.data?.message || err?.message || 'Execution failed');
+      setExecutionResult({
+        status: { id: 13, description: 'Error' },
+        stderr: err?.response?.data?.message || err?.message || 'Failed to connect to Azure Compiler Engine',
+      });
+    } finally {
+      setIsRunningCode(false);
+    }
+  };
+
+  // Global keydown listener for Alt + Shift + F (Format Code)
   useEffect(() => {
     if (!isOpen) return;
     const handleGlobalKeyDown = (e) => {
@@ -481,7 +537,7 @@ const CodeViewer = ({ isOpen, onClose, problem: problemProp, onSave }) => {
           .cv-approach-tab .cv-del { opacity:0; transition:opacity 0.12s; }
           .cv-approach-tab:hover .cv-del { opacity:1; }
 
-          .cm-editor { background: #1a1b26 !important; height: 100% !important; min-height: 380px !important; }
+          .cm-editor { background: #1a1b26 !important; height: 100% !important; min-height: 420px !important; }
           .cm-gutters { background: #1a1b26 !important; border-right: 1px solid rgba(255,255,255,0.05) !important; color: #3b3d52 !important; }
           .cm-activeLineGutter { background: rgba(255,255,255,0.03) !important; }
           .cm-content { padding: 12px 0 !important; }
@@ -509,8 +565,9 @@ const CodeViewer = ({ isOpen, onClose, problem: problemProp, onSave }) => {
           style={{
             x, y, scale, rotateX, rotateY,
             width: maximized ? '100vw' : '90%',
-            maxWidth: maximized ? '100vw' : '70rem',
-            maxHeight: maximized ? '100vh' : '90vh',
+            maxWidth: maximized ? '100vw' : '72rem',
+            height: maximized ? '100vh' : '85vh',
+            maxHeight: maximized ? '100vh' : '92vh',
             boxShadow: isDragging
               ? '0 40px 80px rgba(0,0,0,0.5),0 0 0 1px rgba(139,92,246,0.15)'
               : '0 20px 60px rgba(0,0,0,0.4),0 0 0 1px rgba(255,255,255,0.06)',
@@ -662,7 +719,7 @@ const CodeViewer = ({ isOpen, onClose, problem: problemProp, onSave }) => {
                         borderColor: `${langInfo.color}40`,
                       }}
                     >
-                      {LANG_OPTIONS.map(opt => {
+                      {availableLangOptions.map(opt => {
                         const hasCode = !!codeMap[activeLabel]?.[opt.value]?.trim();
                         return (
                           <option key={opt.value} value={opt.value} className="bg-gray-900 text-white font-medium">
@@ -671,7 +728,7 @@ const CodeViewer = ({ isOpen, onClose, problem: problemProp, onSave }) => {
                         );
                       })}
                     </select>
-                    <ChevronDown className="w-3 h-3 absolute right-2 pointer-events-none" style={{ color: langInfo.color }} />
+                    <ChevronDown className="w-3 h-3 absolute right-[#28C840] pointer-events-none" style={{ color: langInfo.color }} />
                   </div>
 
                   {/* Theme Dropdown */}
@@ -707,7 +764,7 @@ const CodeViewer = ({ isOpen, onClose, problem: problemProp, onSave }) => {
                     {langsForApproach.map(l => {
                       const codeVal = codeMap[activeLabel]?.[l];
                       if (l === activeLang || !codeVal || codeVal.trim().length === 0) return null;
-                      const info = LANG_MAP[l] || LANG_MAP.other;
+                      const info = LANG_MAP[l] || LANG_MAP.cpp;
                       return (
                         <button
                           key={l}
@@ -733,53 +790,235 @@ const CodeViewer = ({ isOpen, onClose, problem: problemProp, onSave }) => {
                 </div>
               </div>
 
-              {/* ══ CodeMirror 6 Editor Engine with Real-time Linter & Themes ══ */}
-              <div
-                className="flex-1 overflow-auto min-h-0 relative"
-                style={{ background:'#1a1b26', minHeight: '380px', maxHeight: maximized ? 'calc(100vh - 220px)' : '55vh' }}
-              >
-                <CodeMirror
-                  value={currentCode}
-                  height={maximized ? 'calc(100vh - 220px)' : '380px'}
-                  theme={currentTheme}
-                  extensions={[
-                    getLanguageExtension(activeLang),
-                    EditorView.lineWrapping,
-                    autocompletion({
-                      override: [createDocumentCompletions(activeLang)],
-                      activateOnTyping: true,
-                    }),
-                    linter(codeSyntaxLinter, { delay: 300 }),
-                  ]}
-                  onChange={value => updateCode(value)}
-                  placeholder={`Paste or type your ${langInfo.label} code for ${activeLabel}...`}
-                  basicSetup={{
-                    lineNumbers: true,
-                    highlightActiveLineGutter: true,
-                    highlightSpecialChars: true,
-                    history: true,
-                    foldGutter: true,
-                    drawSelection: true,
-                    dropCursor: true,
-                    allowMultipleSelections: true,
-                    indentOnInput: true,
-                    syntaxHighlighting: true,
-                    bracketMatching: true,
-                    closeBrackets: true,
-                    autocompletion: true,
-                    rectangularSelection: true,
-                    crosshairCursor: true,
-                    highlightActiveLine: true,
-                    highlightSelectionMatches: true,
-                    closeBracketsKeymap: true,
-                    defaultKeymap: true,
-                    searchKeymap: true,
-                    historyKeymap: true,
-                    foldKeymap: true,
-                    completionKeymap: true,
-                    lintKeymap: true,
-                  }}
-                />
+               {/* ══ Main Workspace Area: Left Code Editor + Right Console Panel ══ */}
+              <div className="flex-1 flex flex-row min-h-0 overflow-hidden relative">
+
+                {/* LEFT PANEL: CodeMirror 6 Editor Engine */}
+                <div
+                  className="flex-1 overflow-auto min-h-0 relative flex flex-col min-w-0"
+                  style={{ background:'#1a1b26' }}
+                >
+                  <CodeMirror
+                    value={currentCode}
+                    height="100%"
+                    theme={currentTheme}
+                    extensions={[
+                      getLanguageExtension(activeLang),
+                      EditorView.lineWrapping,
+                      autocompletion({
+                        override: [createDocumentCompletions(activeLang)],
+                        activateOnTyping: true,
+                      }),
+                      linter(codeSyntaxLinter, { delay: 300 }),
+                    ]}
+                    onChange={value => updateCode(value)}
+                    placeholder={`Paste or type your ${langInfo.label} code for ${activeLabel}...`}
+                    basicSetup={{
+                      lineNumbers: true,
+                      highlightActiveLineGutter: true,
+                      highlightSpecialChars: true,
+                      history: true,
+                      foldGutter: true,
+                      drawSelection: true,
+                      dropCursor: true,
+                      allowMultipleSelections: true,
+                      indentOnInput: true,
+                      syntaxHighlighting: true,
+                      bracketMatching: true,
+                      closeBrackets: true,
+                      autocompletion: true,
+                      rectangularSelection: true,
+                      crosshairCursor: true,
+                      highlightActiveLine: true,
+                      highlightSelectionMatches: true,
+                      closeBracketsKeymap: true,
+                      defaultKeymap: true,
+                      searchKeymap: true,
+                      historyKeymap: true,
+                      foldKeymap: true,
+                      completionKeymap: true,
+                      lintKeymap: true,
+                    }}
+                  />
+                </div>
+
+                {/* RIGHT PANEL: Execution Console & Custom Input Panel */}
+                <AnimatePresence>
+                  {showConsole && (
+                    <motion.div
+                      initial={{ width: 0, opacity: 0 }}
+                      animate={{ width: 440, opacity: 1 }}
+                      exit={{ width: 0, opacity: 0 }}
+                      transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+                      className="h-full border-l border-white/10 flex flex-col flex-shrink-0 overflow-hidden relative z-20 shadow-2xl"
+                      style={{ background: '#12131c', width: '440px' }}
+                    >
+                      {/* Right Panel Header */}
+                      <div className="flex items-center justify-between px-3 py-2 border-b bg-black/40 border-white/5">
+                        <div className="flex items-center gap-1.5 bg-white/5 p-1 rounded-lg border border-white/10">
+                          <button
+                            onClick={() => setActiveConsoleTab('input')}
+                            className={`px-2.5 py-1 text-xs font-semibold rounded-md transition-all flex items-center gap-1.5 ${
+                              activeConsoleTab === 'input' ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 shadow-sm' : 'text-gray-400 hover:text-gray-200'
+                            }`}
+                          >
+                            <Terminal className="w-3.5 h-3.5 text-cyan-400"/>
+                            <span>Custom Input</span>
+                          </button>
+                          <button
+                            onClick={() => setActiveConsoleTab('output')}
+                            className={`px-2.5 py-1 text-xs font-semibold rounded-md transition-all flex items-center gap-1.5 ${
+                              activeConsoleTab === 'output' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 shadow-sm' : 'text-gray-400 hover:text-gray-200'
+                            }`}
+                          >
+                            <Sparkles className="w-3.5 h-3.5 text-[#39FF14]"/>
+                            <span>Execution Result</span>
+                            {executionResult && (
+                              <span className={`w-2 h-2 rounded-full ${executionResult.status?.id === 3 ? 'bg-emerald-400' : 'bg-red-400'}`} />
+                            )}
+                          </button>
+                        </div>
+
+                        <button
+                          onClick={() => setShowConsole(false)}
+                          className="p-1.5 text-gray-500 hover:text-white rounded-md hover:bg-white/5 transition-all"
+                          title="Hide Console"
+                        >
+                          <X className="w-4 h-4"/>
+                        </button>
+                      </div>
+
+                      {/* Right Panel Body */}
+                      <div className="flex-1 p-3 overflow-auto font-mono text-xs">
+                        {activeConsoleTab === 'input' ? (
+                          <div className="h-full flex flex-col space-y-2">
+                            <span className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">Standard Input (stdin)</span>
+                            <textarea
+                              value={stdinInput}
+                              onChange={e => setStdinInput(e.target.value)}
+                              placeholder="Enter custom input values here (e.g. 5 10)..."
+                              className="flex-1 w-full p-2.5 rounded-lg bg-black/30 border border-white/5 text-gray-200 font-mono outline-none resize-none focus:border-cyan-500/40 transition-colors"
+                            />
+                          </div>
+                        ) : (
+                          <div className="h-full flex flex-col space-y-3">
+                            {isRunningCode ? (
+                              <div className="flex-1 flex flex-col items-center justify-center gap-4 text-gray-400 py-6">
+                                {/* Sleek Glowing Compiler Ring & Laser Scanner */}
+                                <div className="relative flex items-center justify-center">
+                                  <motion.div
+                                    className="absolute w-16 h-16 rounded-full bg-cyan-500/20 blur-md"
+                                    animate={{ scale: [1, 1.3, 1], opacity: [0.3, 0.7, 0.3] }}
+                                    transition={{ repeat: Infinity, duration: 1.5 }}
+                                  />
+                                  <motion.div
+                                    className="w-12 h-12 rounded-full border-2 border-transparent border-t-cyan-400 border-r-emerald-400 p-1"
+                                    animate={{ rotate: 360 }}
+                                    transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}
+                                  >
+                                    <div className="w-full h-full rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center">
+                                      <Sparkles className="w-5 h-5 text-cyan-300 animate-pulse" />
+                                    </div>
+                                  </motion.div>
+                                </div>
+
+                                <div className="w-48 h-1 rounded-full bg-white/5 overflow-hidden relative border border-white/10">
+                                  <motion.div
+                                    className="h-full bg-gradient-to-r from-cyan-500 via-emerald-400 to-purple-500 rounded-full w-20"
+                                    animate={{ x: [-80, 200] }}
+                                    transition={{ repeat: Infinity, duration: 1.2, ease: 'easeInOut' }}
+                                  />
+                                </div>
+
+                                <div className="flex flex-col items-center gap-1 font-mono text-xs text-center">
+                                  <span className="font-bold text-cyan-300 tracking-wide flex items-center gap-2">
+                                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+                                    Executing Code...
+                                  </span>
+                                  <span className="text-[10px] text-gray-500">
+                                    Evaluating test cases & memory
+                                  </span>
+                                </div>
+                              </div>
+                            ) : executionResult ? (
+                              <div className="space-y-3 h-full flex flex-col">
+                                {/* Status Header */}
+                                <div className="flex items-center justify-between border-b border-white/5 pb-2">
+                                  {executionResult.status?.id === 3 ? (
+                                    <span className="px-2.5 py-1 rounded-md text-xs font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 flex items-center gap-1.5">
+                                      <CheckCircle2 className="w-4 h-4"/>
+                                      {executionResult.status?.description || 'Accepted'}
+                                    </span>
+                                  ) : (
+                                    <span className="px-2.5 py-1 rounded-md text-xs font-bold bg-red-500/15 text-red-400 border border-red-500/30 flex items-center gap-1.5">
+                                      <AlertCircle className="w-4 h-4"/>
+                                      {executionResult.status?.description || 'Error'}
+                                    </span>
+                                  )}
+
+                                  <div className="flex items-center gap-2 text-[11px] text-gray-400">
+                                    <span className="bg-white/5 px-2 py-0.5 rounded border border-white/5">
+                                      ⚡ <strong className="text-emerald-400">{executionResult.timeMs || 0} ms</strong>
+                                    </span>
+                                    <span className="bg-white/5 px-2 py-0.5 rounded border border-white/5">
+                                      💾 <strong className="text-cyan-400">{executionResult.memoryMb || 0} MB</strong>
+                                    </span>
+                                  </div>
+                                </div>
+
+                                {/* Stdout */}
+                                {executionResult.stdout && (
+                                  <div className="flex-1 flex flex-col min-h-0">
+                                    <div className="text-[10px] text-gray-500 uppercase font-semibold mb-1">Standard Output (stdout)</div>
+                                    <div className="flex-1 rounded-lg bg-black/40 border border-white/5 overflow-auto">
+                                      <div className="flex font-mono text-xs">
+                                        <div className="select-none py-2 px-2 text-right border-r border-white/5 bg-white/[0.02] flex-shrink-0">
+                                          {executionResult.stdout.split('\n').filter((_, i, arr) => i < arr.length - 1 || arr[i] !== '').map((_, i) => (
+                                            <div key={i} className="text-[10px] text-gray-600 leading-[18px]">{i + 1}</div>
+                                          ))}
+                                        </div>
+                                        <pre className="py-2 px-3 text-emerald-300 whitespace-pre-wrap flex-1 leading-[18px]">
+                                          {executionResult.stdout}
+                                        </pre>
+                                      </div>
+                                    </div>
+                                  </div>
+                                )}
+
+                                {/* Error Output */}
+                                {(executionResult.compile_output || executionResult.stderr) && (
+                                  <div className={executionResult.stdout ? 'h-40 flex flex-col' : 'flex-1 flex flex-col min-h-0'}>
+                                    <div className="text-[10px] text-red-400 uppercase font-semibold mb-1 flex items-center gap-1">
+                                      <AlertTriangle className="w-3 h-3"/> Error Output
+                                    </div>
+                                    <div className="flex-1 rounded-lg bg-red-950/30 border border-red-500/20 overflow-auto">
+                                      <div className="flex font-mono text-xs">
+                                        <div className="select-none py-2 px-2 text-right border-r border-red-500/10 bg-red-950/20 flex-shrink-0">
+                                          {(executionResult.compile_output || executionResult.stderr).split('\n').filter((_, i, arr) => i < arr.length - 1 || arr[i] !== '').map((_, i) => (
+                                            <div key={i} className="text-[10px] text-red-700 leading-[18px]">{i + 1}</div>
+                                          ))}
+                                        </div>
+                                        <pre className="py-2 px-3 text-red-300 whitespace-pre-wrap flex-1 leading-[18px]">
+                                          {executionResult.compile_output || executionResult.stderr}
+                                        </pre>
+                                      </div>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            ) : (
+                              <div className="flex-1 flex flex-col items-center justify-center text-gray-500 text-xs gap-2 text-center p-4">
+                                <Terminal className="w-8 h-8 text-gray-600 stroke-[1.5]" />
+                                <span>Click <strong>Run Code</strong> to execute your code & view stdout / errors!</span>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
               </div>
 
               {/* ══ Footer ═══════════════════════════════════════════════════ */}
@@ -787,7 +1026,33 @@ const CodeViewer = ({ isOpen, onClose, problem: problemProp, onSave }) => {
                 className="flex items-center justify-between px-4 py-3 border-t"
                 style={{ background:'rgba(255,255,255,0.02)', borderColor:'rgba(255,255,255,0.06)' }}
               >
-                <div className="flex items-center gap-3 flex-shrink-0 ml-auto">
+                {/* Left: Run Code & Toggle Console */}
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={handleRunCode}
+                    disabled={isRunningCode}
+                    className="px-4 py-1.5 bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-300 font-bold rounded-lg border border-cyan-500/30 transition-all flex items-center gap-2 text-xs shadow-lg shadow-cyan-500/10 disabled:opacity-50"
+                  >
+                    {isRunningCode ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin text-cyan-300"/>
+                    ) : (
+                      <Play className="w-3.5 h-3.5 text-cyan-300 fill-cyan-300"/>
+                    )}
+                    <span>{isRunningCode ? 'Running...' : 'Run Code'}</span>
+                  </button>
+
+                  <button
+                    onClick={() => setShowConsole(p => !p)}
+                    className="px-3 py-1.5 bg-white/5 hover:bg-white/10 text-gray-300 rounded-lg text-xs font-semibold border border-white/10 transition-all flex items-center gap-1.5"
+                  >
+                    <Terminal className="w-3.5 h-3.5 text-gray-400"/>
+                    <span>Console</span>
+                    {showConsole ? <ChevronDown className="w-3 h-3"/> : <ChevronUp className="w-3 h-3"/>}
+                  </button>
+                </div>
+
+                {/* Right: Metadata & Save */}
+                <div className="flex items-center gap-3 flex-shrink-0">
                   {problem.source === 'track-ex' && problem.leetcodeSlug && (
                     <a href={`https://leetcode.com/problems/${problem.leetcodeSlug}/`} target="_blank" rel="noopener noreferrer" className="text-[10px] text-gray-600 hover:text-[#8B5CF6] transition-colors">
                       View on LeetCode →
