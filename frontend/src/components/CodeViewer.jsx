@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { motion, AnimatePresence, useMotionValue, useSpring } from 'framer-motion';
+import { motion, AnimatePresence, useMotionValue, useSpring, useDragControls } from 'framer-motion';
 import {
   Copy, Check, ExternalLink, Clock, Zap, HardDrive, RotateCcw,
   Edit2, Save, X, Plus, ChevronDown,
@@ -7,6 +7,16 @@ import {
 import toast from 'react-hot-toast';
 import useProblemStore from '../store/problemStore';
 import sheetProblemService from '../services/sheetProblemService';
+
+import Prism from 'prismjs';
+import 'prismjs/components/prism-clike';
+import 'prismjs/components/prism-c';
+import 'prismjs/components/prism-cpp';
+import 'prismjs/components/prism-java';
+import 'prismjs/components/prism-python';
+import 'prismjs/components/prism-javascript';
+import 'prismjs/components/prism-go';
+import 'prismjs/components/prism-rust';
 
 // ── Constants ──────────────────────────────────────────────────────────────
 const DIFFICULTY_COLORS = {
@@ -25,9 +35,32 @@ const LANG_OPTIONS = [
 ];
 const LANG_MAP = Object.fromEntries(LANG_OPTIONS.map(l => [l.value, l]));
 
-// ── Helpers ────────────────────────────────────────────────────────────────
+const PRISM_LANG_MAP = {
+  cpp: 'cpp',
+  java: 'java',
+  python: 'python',
+  javascript: 'javascript',
+  c: 'c',
+  go: 'go',
+  rust: 'rust',
+  other: 'clike',
+};
 
-// Build { label → { language → code } } map from solutions[]
+function highlightCode(code, lang) {
+  if (!code) return '';
+  const prismLang = PRISM_LANG_MAP[lang] || 'clike';
+  const grammar = Prism.languages[prismLang] || Prism.languages.clike;
+  try {
+    return Prism.highlight(code, grammar, prismLang);
+  } catch {
+    return code
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+  }
+}
+
+// ── Helpers ────────────────────────────────────────────────────────────────
 function buildCodeMap(solutions) {
   if (!solutions || solutions.length === 0) return {};
   const map = {};
@@ -39,7 +72,6 @@ function buildCodeMap(solutions) {
   return map;
 }
 
-// Flatten { label → { language → code } } back to solutions[]
 function flattenCodeMap(codeMap) {
   const out = [];
   for (const [label, langs] of Object.entries(codeMap)) {
@@ -50,7 +82,6 @@ function flattenCodeMap(codeMap) {
   return out;
 }
 
-// Get solutions from problem (handles legacy code/language too)
 function getSolutions(problem) {
   if (problem?.solutions?.length > 0) return problem.solutions;
   if (problem?.code) {
@@ -64,6 +95,8 @@ const CodeViewer = ({ isOpen, onClose, problem: problemProp, onSave }) => {
   const { updateProblem } = useProblemStore();
   const storeProblem = useProblemStore(s => s.problems.find(p => p._id === problemProp?._id));
   const problem = storeProblem || problemProp;
+
+  const dragControls = useDragControls();
 
   // ── Window state
   const [minimized, setMinimized] = useState(false);
@@ -87,6 +120,7 @@ const CodeViewer = ({ isOpen, onClose, problem: problemProp, onSave }) => {
 
   const constraintsRef = useRef(null);
   const textareaRef = useRef(null);
+  const preRef = useRef(null);
   const newApproachRef = useRef(null);
 
   // ── Unsaved prompt state
@@ -147,19 +181,16 @@ const CodeViewer = ({ isOpen, onClose, problem: problemProp, onSave }) => {
     setIsDirty(true);
   }, [activeLabel, activeLang]);
 
-  // ── Approach switching — NO POPUPS, smooth default behavior
   const switchApproach = (label) => {
     setActiveLabel(label);
     const langs = Object.keys(codeMap[label] || {});
     setActiveLang(langs[0] || 'cpp');
   };
 
-  // ── Language switching via dropdown — seamless independent code per language
   const switchLang = (newLang) => {
     setActiveLang(newLang);
   };
 
-  // ── Add a new approach
   const confirmAddApproach = () => {
     const label = newApproachInput.trim() || `Approach ${approaches.length + 1}`;
     if (codeMap[label]) {
@@ -175,7 +206,6 @@ const CodeViewer = ({ isOpen, onClose, problem: problemProp, onSave }) => {
     setIsDirty(true);
   };
 
-  // ── Delete approach
   const deleteApproach = (label) => {
     if (approaches.length <= 1) { toast.error("Can't delete the only approach"); return; }
     const newMap = { ...codeMap };
@@ -187,7 +217,6 @@ const CodeViewer = ({ isOpen, onClose, problem: problemProp, onSave }) => {
     setIsDirty(true);
   };
 
-  // ── Save all to DB
   const handleSave = async () => {
     if (!problem) return;
     setIsSaving(true);
@@ -217,7 +246,6 @@ const CodeViewer = ({ isOpen, onClose, problem: problemProp, onSave }) => {
     }
   };
 
-  // ── Tab key handler
   const handleKeyDown = (e) => {
     if (e.key === 'Tab') {
       e.preventDefault();
@@ -297,20 +325,27 @@ const CodeViewer = ({ isOpen, onClose, problem: problemProp, onSave }) => {
           }
           .cv-titlebar { cursor:grab; user-select:none; }
           .cv-titlebar:active { cursor:grabbing; }
-          .cv-textarea {
-            background:transparent; color:#a9b1d6;
-            font-family:'JetBrains Mono','Fira Code','Cascadia Code','Consolas',monospace;
-            font-size:13px; line-height:1.6; border:none; outline:none;
-            resize:none; width:100%; min-height:100%; padding:16px;
-            white-space:pre; overflow-x:auto; tab-size:4;
-          }
           .cv-approach-tab { transition:all 0.15s; white-space:nowrap; }
           .cv-approach-tab .cv-del { opacity:0; transition:opacity 0.12s; }
           .cv-approach-tab:hover .cv-del { opacity:1; }
+
+          /* Tokyo Night Syntax Coloring */
+          .token.comment, .token.prolog, .token.doctype, .token.cdata { color: #565f89; font-style: italic; }
+          .token.punctuation { color: #89ddff; }
+          .token.property, .token.tag, .token.boolean, .token.number, .token.constant, .token.symbol, .token.deleted { color: #ff9e64; }
+          .token.selector, .token.attr-name, .token.string, .token.char, .token.builtin, .token.inserted { color: #9ece6a; }
+          .token.operator, .token.entity, .token.url { color: #89ddff; }
+          .token.atrule, .token.attr-value, .token.keyword { color: #bb9af7; font-weight: 600; }
+          .token.function, .token.class-name { color: #7aa2f7; font-weight: 600; }
+          .token.regex, .token.important, .token.variable { color: #7dcfff; }
+          .token.type, .token.type-definition { color: #2ac3de; font-weight: 600; }
         `}</style>
 
         <motion.div
-          drag={!maximized} dragConstraints={constraintsRef}
+          drag={!maximized}
+          dragControls={dragControls}
+          dragListener={false}
+          dragConstraints={constraintsRef}
           dragElastic={0.08} dragMomentum dragTransition={{ bounceStiffness:300, bounceDamping:20 }}
           onDragStart={handleDragStart} onDrag={handleDrag} onDragEnd={handleDragEnd}
           initial={{ scale:0.88, opacity:0, y:40 }}
@@ -332,13 +367,16 @@ const CodeViewer = ({ isOpen, onClose, problem: problemProp, onSave }) => {
         >
           <div className="h-full flex flex-col" style={{ background:'#1a1b26' }}>
 
-            {/* ── Title Bar ── */}
+            {/* ── Title Bar (Only this area triggers dragging) ── */}
             <div
               className="cv-titlebar flex items-center justify-between px-4 py-3 border-b"
               style={{ background:'linear-gradient(180deg,#2a2b3d 0%,#1e1f31 100%)', borderColor:'rgba(255,255,255,0.06)' }}
+              onPointerDown={e => {
+                if (!maximized) dragControls.start(e);
+              }}
               onDoubleClick={handleMaximize}
             >
-              <div className="cv-traffic flex items-center gap-2" onMouseDown={e => e.stopPropagation()}>
+              <div className="cv-traffic flex items-center gap-2" onMouseDown={e => e.stopPropagation()} onPointerDown={e => e.stopPropagation()}>
                 <button onClick={handleCloseAttempt} className="w-3.5 h-3.5 rounded-full bg-[#FF5F57] hover:brightness-90 transition-all flex items-center justify-center relative" title="Close">
                   <svg className="cv-dot-icon w-[8px] h-[8px] absolute" viewBox="0 0 12 12" fill="none"><path d="M3 3L9 9M9 3L3 9" stroke="#4D0000" strokeWidth="1.8" strokeLinecap="round"/></svg>
                 </button>
@@ -367,7 +405,7 @@ const CodeViewer = ({ isOpen, onClose, problem: problemProp, onSave }) => {
                 )}
               </div>
 
-              <div className="flex items-center gap-1" onMouseDown={e => e.stopPropagation()}>
+              <div className="flex items-center gap-1" onMouseDown={e => e.stopPropagation()} onPointerDown={e => e.stopPropagation()}>
                 {problem.link && (
                   <a href={problem.link} target="_blank" rel="noopener noreferrer" className="p-1.5 text-gray-500 hover:text-[#8B5CF6] rounded-md hover:bg-white/5 transition-all" title="Open problem">
                     <ExternalLink className="w-3.5 h-3.5"/>
@@ -514,7 +552,7 @@ const CodeViewer = ({ isOpen, onClose, problem: problemProp, onSave }) => {
                 </div>
               </div>
 
-              {/* ══ Code Area ════════════════════════════════════════════════ */}
+              {/* ══ Code Area with Prism Syntax Highlighting Layer ═══════════ */}
               <div
                 className="flex-1 overflow-auto min-h-0"
                 style={{ background:'#1a1b26', minHeight: '380px', maxHeight: maximized ? 'calc(100vh - 220px)' : '55vh' }}
@@ -534,34 +572,57 @@ const CodeViewer = ({ isOpen, onClose, problem: problemProp, onSave }) => {
                     {Array.from({ length: displayLinesCount }).map((_, i) => <div key={i}>{i + 1}</div>)}
                   </div>
 
-                  <div className="flex-1 flex">
+                  {/* High-performance Overlay: Prism Syntax Highlighted Pre + Editable Textarea */}
+                  <div className="flex-1 relative min-h-full">
+                    {/* Prism Highlighted Layer */}
+                    <pre
+                      ref={preRef}
+                      className="absolute inset-0 m-0 p-4 font-mono text-[13px] leading-[1.6] pointer-events-none whitespace-pre overflow-hidden bg-transparent"
+                      aria-hidden="true"
+                      style={{
+                        fontFamily: "'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace",
+                        tabSize: 4,
+                      }}
+                    >
+                      <code
+                        className={`language-${PRISM_LANG_MAP[activeLang] || 'clike'}`}
+                        dangerouslySetInnerHTML={{
+                          __html: highlightCode(currentCode, activeLang) + (currentCode.endsWith('\n') ? '<br />' : ''),
+                        }}
+                      />
+                    </pre>
+
+                    {/* Transparent Editable Textarea Layer */}
                     <textarea
                       ref={textareaRef}
                       value={currentCode}
                       onChange={e => updateCode(e.target.value)}
                       onKeyDown={handleKeyDown}
+                      onScroll={e => {
+                        if (preRef.current) {
+                          preRef.current.scrollTop = e.target.scrollTop;
+                          preRef.current.scrollLeft = e.target.scrollLeft;
+                        }
+                      }}
                       spellCheck={false}
-                      className="cv-textarea"
+                      className="absolute inset-0 m-0 p-4 font-mono text-[13px] leading-[1.6] bg-transparent caret-white resize-none outline-none border-none whitespace-pre overflow-auto tab-size-4"
+                      style={{
+                        color: 'transparent',
+                        WebkitTextFillColor: 'transparent',
+                        fontFamily: "'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace",
+                      }}
                       placeholder={`Paste or type your ${langInfo.label} code for ${activeLabel}...`}
                     />
                   </div>
                 </div>
               </div>
 
-              {/* ══ Footer ═══════════════════════════════════════════════════ */}
+              {/* ══ Footer (Clean: Notes section removed as requested) ════════ */}
               <div
                 className="flex items-center justify-between px-4 py-3 border-t"
                 style={{ background:'rgba(255,255,255,0.02)', borderColor:'rgba(255,255,255,0.06)' }}
               >
-                <div className="flex-1 min-w-0 pr-4">
-                  {problem.notes && (
-                    <>
-                      <span className="text-[10px] text-gray-600 uppercase tracking-wider font-semibold">Notes: </span>
-                      <span className="text-xs text-gray-400 truncate">{problem.notes}</span>
-                    </>
-                  )}
-                </div>
-                <div className="flex items-center gap-3 flex-shrink-0">
+                <div className="flex items-center gap-3 flex-shrink-0 ml-auto">
                   {problem.source === 'track-ex' && problem.leetcodeSlug && (
                     <a href={`https://leetcode.com/problems/${problem.leetcodeSlug}/`} target="_blank" rel="noopener noreferrer" className="text-[10px] text-gray-600 hover:text-[#8B5CF6] transition-colors">
                       View on LeetCode →
