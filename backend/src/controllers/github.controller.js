@@ -432,10 +432,11 @@ export const syncToGitHub = async (req, res) => {
     );
 
     // Build file tree
-    const files = buildFileTree(
+    const { files, recentFilesCount, recentTitles } = buildFileTree(
       enrichedSheetProblems,
       filteredStandalone,
-      user.githubUsername
+      user.githubUsername,
+      user.lastGithubSync
     );
 
     if (files.length <= 1) {
@@ -445,12 +446,16 @@ export const syncToGitHub = async (req, res) => {
       });
     }
 
+    const recentMsg = recentTitles.length > 0
+      ? `sync: ${recentTitles.length} updated problem(s) (${recentTitles.slice(0, 2).join(', ')}${recentTitles.length > 2 ? '...' : ''})`
+      : `sync: ${files.length - 1} files from TrackAsap`;
+
     // Push to GitHub in a single commit
     const result = await pushFiles(
       githubToken,
       repoOwner,
       files,
-      `sync: ${files.length - 1} files from TrackAsap — ${new Date().toISOString().split('T')[0]}`,
+      `${recentMsg} — ${new Date().toISOString().split('T')[0]}`,
       repoName
     );
 
@@ -460,7 +465,12 @@ export const syncToGitHub = async (req, res) => {
 
     res.json({
       success: true,
+      message: recentTitles.length > 0
+        ? `Synced ${recentTitles.length} problem(s): ${recentTitles.join(', ')}`
+        : `Synced ${files.length - 1} total files`,
       filesCount: result.filesCount,
+      recentFilesCount,
+      recentTitles,
       commitSha: result.commitSha,
       repoUrl: `https://github.com/${repoOwner}/${repoName}`,
     });
