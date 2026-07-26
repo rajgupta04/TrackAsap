@@ -8,9 +8,7 @@ const LANGUAGE_ID_MAP = {
   java: 62,       // Java (OpenJDK 13.0.1)
   python: 71,     // Python (3.8.1)
   javascript: 63, // JavaScript (Node.js 12.14.0)
-  go: 60,         // Go (1.13.5)
-  rust: 73,       // Rust (1.40.0)
-  other: 71,      // Fallback Python
+  sql: 82,        // SQL (SQLite 3.27.2)
 };
 
 /**
@@ -26,7 +24,7 @@ export const runCode = async (req, res) => {
       return res.status(400).json({ message: 'Source code cannot be empty' });
     }
 
-    const language_id = LANGUAGE_ID_MAP[language] || LANGUAGE_ID_MAP.other;
+    const language_id = LANGUAGE_ID_MAP[language] || LANGUAGE_ID_MAP.cpp;
 
     const response = await fetch(`${JUDGE0_URL}/submissions?wait=true`, {
       method: 'POST',
@@ -49,14 +47,13 @@ export const runCode = async (req, res) => {
 
     const result = await response.json();
 
-    // Calculate memory in KB/MB and execution time in ms
     const timeMs = result.time ? Math.round(parseFloat(result.time) * 1000) : 0;
     const memoryKb = result.memory ? result.memory : 0;
     const memoryMb = memoryKb ? (memoryKb / 1024).toFixed(1) : 0;
 
     res.json({
       success: true,
-      status: result.status, // { id, description }
+      status: result.status,
       stdout: result.stdout || '',
       stderr: result.stderr || '',
       compile_output: result.compile_output || '',

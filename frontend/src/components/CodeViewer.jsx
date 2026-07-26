@@ -15,6 +15,7 @@ import { cpp } from '@codemirror/lang-cpp';
 import { java } from '@codemirror/lang-java';
 import { python } from '@codemirror/lang-python';
 import { javascript } from '@codemirror/lang-javascript';
+import { sql } from '@codemirror/lang-sql';
 import { EditorView } from '@codemirror/view';
 import { autocompletion } from '@codemirror/autocomplete';
 import { linter } from '@codemirror/lint';
@@ -36,9 +37,7 @@ const LANG_OPTIONS = [
   { value: 'python',     label: 'Python',     color: '#3B82F6' },
   { value: 'javascript', label: 'JavaScript', color: '#EAB308' },
   { value: 'c',          label: 'C',          color: '#5C6BC0' },
-  { value: 'go',         label: 'Go',         color: '#00ACD7' },
-  { value: 'rust',       label: 'Rust',       color: '#CE422B' },
-  { value: 'other',      label: 'Other',      color: '#6B7280' },
+  { value: 'sql',        label: 'SQL',        color: '#E38C00' },
 ];
 const LANG_MAP = Object.fromEntries(LANG_OPTIONS.map(l => [l.value, l]));
 
@@ -56,9 +55,7 @@ const COMMON_KEYWORDS = {
   python: ['print', 'def', 'class', 'return', 'self', 'import', 'from', 'as', 'range', 'len', 'append', 'extend', 'pop', 'split', 'join', 'sorted', 'sort', 'reverse', 'enumerate', 'zip', 'dict', 'list', 'set', 'tuple', 'lambda', 'map', 'filter', 'sum', 'min', 'max', 'abs'],
   javascript: ['console.log', 'const', 'let', 'var', 'function', 'return', 'async', 'await', 'import', 'export', 'default', 'class', 'constructor', 'prototype', 'map', 'filter', 'reduce', 'forEach', 'includes', 'indexOf', 'slice', 'splice', 'push', 'pop', 'shift', 'unshift', 'concat', 'Object.keys', 'Object.values', 'Math.max', 'Math.min'],
   c: ['printf', 'scanf', 'malloc', 'free', 'sizeof', 'strlen', 'strcpy', 'strcat', 'strcmp', 'memcpy', 'memset', 'struct', 'typedef', 'return', 'include', 'NULL', 'int', 'char', 'void', 'float', 'double'],
-  go: ['fmt.Println', 'fmt.Printf', 'make', 'append', 'len', 'cap', 'delete', 'package', 'import', 'func', 'type', 'struct', 'interface', 'return', 'range', 'map', 'slice', 'string', 'int'],
-  rust: ['println!', 'format!', 'vec!', 'String', 'Option', 'Result', 'Some', 'None', 'Ok', 'Err', 'pub', 'fn', 'let', 'mut', 'struct', 'enum', 'match', 'impl', 'use', 'mod', 'self', 'Self', 'return'],
-  other: ['return', 'function', 'class', 'struct', 'import', 'export', 'print', 'console'],
+  sql: ['SELECT', 'FROM', 'WHERE', 'JOIN', 'LEFT JOIN', 'RIGHT JOIN', 'INNER JOIN', 'GROUP BY', 'HAVING', 'ORDER BY', 'LIMIT', 'OFFSET', 'COUNT', 'SUM', 'AVG', 'MIN', 'MAX', 'AS', 'ON', 'AND', 'OR', 'NOT', 'IN', 'BETWEEN', 'LIKE', 'IS NULL', 'IS NOT NULL', 'UPDATE', 'INSERT INTO', 'DELETE FROM', 'CREATE TABLE'],
 };
 
 // ── Real-time Syntax Linter ──
@@ -172,7 +169,7 @@ function createDocumentCompletions(activeLang) {
 
     const docText = context.state.doc.toString();
     const docWords = docText.match(/\b[a-zA-Z_]\w*\b/g) || [];
-    const langExtra = COMMON_KEYWORDS[activeLang] || COMMON_KEYWORDS.other;
+    const langExtra = COMMON_KEYWORDS[activeLang] || COMMON_KEYWORDS.cpp;
 
     const allWords = Array.from(new Set([...langExtra, ...docWords]));
     const prefixLower = word.text.toLowerCase();
@@ -195,8 +192,6 @@ function getLanguageExtension(lang) {
   switch (lang) {
     case 'cpp':
     case 'c':
-    case 'go':
-    case 'rust':
       return cpp();
     case 'java':
       return java();
@@ -204,6 +199,8 @@ function getLanguageExtension(lang) {
       return python();
     case 'javascript':
       return javascript({ jsx: true, typescript: true });
+    case 'sql':
+      return sql();
     default:
       return cpp();
   }
@@ -325,7 +322,7 @@ const CodeViewer = ({ isOpen, onClose, problem: problemProp, onSave }) => {
   const approaches = Object.keys(codeMap);
   const langsForApproach = Object.keys(codeMap[activeLabel] || {});
   const currentCode = codeMap[activeLabel]?.[activeLang] ?? '';
-  const langInfo = LANG_MAP[activeLang] || LANG_MAP.other;
+  const langInfo = LANG_MAP[activeLang] || LANG_MAP.cpp;
   const currentTheme = THEME_MAP[activeTheme]?.theme || tokyoNight;
 
   // ── Code editing & formatting
@@ -751,7 +748,7 @@ const CodeViewer = ({ isOpen, onClose, problem: problemProp, onSave }) => {
                     {langsForApproach.map(l => {
                       const codeVal = codeMap[activeLabel]?.[l];
                       if (l === activeLang || !codeVal || codeVal.trim().length === 0) return null;
-                      const info = LANG_MAP[l] || LANG_MAP.other;
+                      const info = LANG_MAP[l] || LANG_MAP.cpp;
                       return (
                         <button
                           key={l}
