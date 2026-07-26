@@ -10,6 +10,7 @@ import PhysiqueTracker from './pages/PhysiqueTracker';
 import Profile from './pages/Profile';
 import Sheets from './pages/Sheets';
 import Problems from './pages/Problems';
+import Playground from './pages/Playground';
 import Discussion from './pages/Discussion';
 import Admin from './pages/Admin';
 import PrivacyPolicy from './pages/PrivacyPolicy';
@@ -94,6 +95,7 @@ function App() {
         <Route path="profile" element={<Profile />} />
         <Route path="sheets" element={<Sheets />} />
         <Route path="problems" element={<Problems />} />
+        <Route path="playground" element={<Playground />} />
         <Route path="discussion" element={<Discussion />} />
         <Route path="admin" element={<Admin />} />
         <Route path="leaderboard" element={<Leaderboard />} />

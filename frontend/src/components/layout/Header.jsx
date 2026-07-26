@@ -16,6 +16,7 @@ const pageTitles = {
   '/profile': 'Profile',
   '/sheets': 'Sheets & Roadmaps',
   '/problems': 'My Problems',
+  '/playground': 'Code Playground',
 };
 
 const Header = () => {
