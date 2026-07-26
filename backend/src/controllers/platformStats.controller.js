@@ -9,13 +9,8 @@ export const getLeetCodeStats = async (req, res) => {
   }
 
   try {
-    // Helper fetcher: queries self-hosted LeetCode API server-side
-    const safeFetch = async (endpoint) => {
-      return fetch(`${LEETCODE_API_URL}/${username}${endpoint}`);
-    };
-
     // Fetch solved problems count
-    const solvedResponse = await safeFetch('/solved');
+    const solvedResponse = await fetch(`${LEETCODE_API_URL}/${username}/solved`);
 
     if (!solvedResponse.ok) {
       throw new Error('Failed to fetch LeetCode data');
@@ -24,7 +19,7 @@ export const getLeetCodeStats = async (req, res) => {
     const solvedData = await solvedResponse.json();
 
     // Fetch user profile for additional details
-    const profileResponse = await safeFetch('');
+    const profileResponse = await fetch(`${LEETCODE_API_URL}/${username}`);
 
     let profileData = {};
     if (profileResponse.ok) {
@@ -32,7 +27,7 @@ export const getLeetCodeStats = async (req, res) => {
     }
 
     // Fetch submission calendar/streak data
-    const calendarResponse = await safeFetch('/calendar');
+    const calendarResponse = await fetch(`${LEETCODE_API_URL}/${username}/calendar`);
 
     let calendarData = {};
     if (calendarResponse.ok) {
@@ -40,7 +35,7 @@ export const getLeetCodeStats = async (req, res) => {
     }
 
     // Fetch contest data
-    const contestResponse = await safeFetch('/contest');
+    const contestResponse = await fetch(`${LEETCODE_API_URL}/${username}/contest`);
 
     let contestData = {};
     let contestsParticipated = 0;
