@@ -195,26 +195,37 @@ const CodeViewer = ({ isOpen, onClose, problem: problemProp, onSave }) => {
     if (!problem) return;
     setIsSaving(true);
     try {
+      // SheetProblems live in a different collection — can't use the solutions API.
+      // Fall back to the legacy onSave callback for them.
+      if (problem.isSheetProblem) {
+        if (onSave) {
+          await onSave(problem._id, editCode, editLang);
+          toast.success('Code saved!');
+          setIsEditing(false);
+        }
+        return;
+      }
+
       let updated;
       if (!activeSolution || activeSolution._id === '__legacy__') {
-        // No real solution yet → create via addSolution
+        // No real solution yet — create one
         updated = await addSolution(problem._id, { language: editLang, code: editCode, label: editLabel });
       } else {
+        // Update the existing solution
         updated = await updateSolution(problem._id, activeSolution._id, {
           language: editLang,
           code: editCode,
           label: editLabel,
         });
       }
-      // Also call legacy onSave if provided (e.g. for callers not yet using store)
-      if (onSave) await onSave(problem._id, editCode, editLang);
 
       const newSols = normalizeSolutions(updated);
       setSolutions(newSols);
       toast.success('Solution saved!');
       setIsEditing(false);
-    } catch {
-      toast.error('Failed to save solution');
+    } catch (err) {
+      console.error('Save solution error:', err?.response?.data || err);
+      toast.error(err?.response?.data?.message || 'Failed to save solution');
     } finally {
       setIsSaving(false);
     }
