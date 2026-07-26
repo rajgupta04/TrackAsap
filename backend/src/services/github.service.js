@@ -239,13 +239,14 @@ function sanitize(name) {
  * @param {Array} standaloneProblems - Problem docs that have no sheetProblem ref
  * @param {string} username - GitHub username (for README)
  */
-export function buildFileTree(sheetProblems, standaloneProblems, username) {
+export function buildFileTree(sheetProblems, standaloneProblems, username, lastSyncDate) {
   const files = [];
   const seen = new Set();
+  let recentFilesCount = 0;
+  const recentTitles = [];
 
-  const addFile = (path, content) => {
+  const addFile = (path, content, isRecent) => {
     if (!content || !content.trim()) return;
-    // Deduplicate paths
     let finalPath = path;
     let counter = 1;
     while (seen.has(finalPath)) {
@@ -258,6 +259,13 @@ export function buildFileTree(sheetProblems, standaloneProblems, username) {
     }
     seen.add(finalPath);
     files.push({ path: finalPath, content });
+    if (isRecent) recentFilesCount++;
+  };
+
+  const isDocRecent = (doc) => {
+    if (!lastSyncDate) return true;
+    const updateTime = new Date(doc.updatedAt || doc.solvedAt || doc.createdAt).getTime();
+    return updateTime > new Date(lastSyncDate).getTime();
   };
 
   // Sheet problems → sheets/{sheetName}/{topic}/{title}.ext
@@ -265,28 +273,52 @@ export function buildFileTree(sheetProblems, standaloneProblems, username) {
     const sheetName = sanitize(sp._sheetName || 'Unknown-Sheet');
     const topic = sanitize(sp.topic || 'General');
     const title = sanitize(sp.title);
-    const ext = EXT_MAP[sp.language] || '.txt';
     const base = `sheets/${sheetName}/${topic}/${title}`;
+    const isRecent = isDocRecent(sp);
+    if (isRecent) recentTitles.push(sp.title);
 
-    if (sp.code) addFile(`${base}${ext}`, sp.code);
-    if (sp.notes) addFile(`${base}.notes.md`, `# ${sp.title}\n\n${sp.notes}`);
+    if (sp.solutions && sp.solutions.length > 0) {
+      sp.solutions.forEach((sol, idx) => {
+        if (!sol.code) return;
+        const ext = EXT_MAP[sol.language] || '.txt';
+        const label = sp.solutions.length > 1 ? `_${sanitize(sol.label || `Approach-${idx + 1}`)}` : '';
+        addFile(`${base}${label}${ext}`, sol.code, isRecent);
+      });
+    } else if (sp.code) {
+      const ext = EXT_MAP[sp.language] || '.txt';
+      addFile(`${base}${ext}`, sp.code, isRecent);
+    }
+
+    if (sp.notes) addFile(`${base}.notes.md`, `# ${sp.title}\n\n${sp.notes}`, isRecent);
   }
 
   // Standalone problems → problems/{platform}/{title}.ext
   for (const p of standaloneProblems) {
     const platform = sanitize(p.platform || 'other');
     const title = sanitize(p.title);
-    const ext = EXT_MAP[p.language] || '.txt';
     const base = `problems/${platform}/${title}`;
+    const isRecent = isDocRecent(p);
+    if (isRecent) recentTitles.push(p.title);
 
-    if (p.code) addFile(`${base}${ext}`, p.code);
-    if (p.notes) addFile(`${base}.notes.md`, `# ${p.title}\n\n${p.notes}`);
+    if (p.solutions && p.solutions.length > 0) {
+      p.solutions.forEach((sol, idx) => {
+        if (!sol.code) return;
+        const ext = EXT_MAP[sol.language] || '.txt';
+        const label = p.solutions.length > 1 ? `_${sanitize(sol.label || `Approach-${idx + 1}`)}` : '';
+        addFile(`${base}${label}${ext}`, sol.code, isRecent);
+      });
+    } else if (p.code) {
+      const ext = EXT_MAP[p.language] || '.txt';
+      addFile(`${base}${ext}`, p.code, isRecent);
+    }
+
+    if (p.notes) addFile(`${base}.notes.md`, `# ${p.title}\n\n${p.notes}`, isRecent);
   }
 
   // README
   const totalCode =
-    sheetProblems.filter((p) => p.code).length +
-    standaloneProblems.filter((p) => p.code).length;
+    sheetProblems.filter((p) => p.code || (p.solutions && p.solutions.some(s => s.code))).length +
+    standaloneProblems.filter((p) => p.code || (p.solutions && p.solutions.some(s => s.code))).length;
   const totalNotes =
     sheetProblems.filter((p) => p.notes).length +
     standaloneProblems.filter((p) => p.notes).length;
@@ -309,9 +341,15 @@ export function buildFileTree(sheetProblems, standaloneProblems, username) {
     '*This repo is automatically managed by TrackAsap. Manual edits may be overwritten on next sync.*',
   ].join('\n');
 
-  addFile('README.md', readme);
+  addFile('README.md', readme, false);
 
-  return files;
+  const uniqueRecentTitles = Array.from(new Set(recentTitles));
+
+  return {
+    files,
+    recentFilesCount,
+    recentTitles: uniqueRecentTitles,
+  };
 }
 
 /**
