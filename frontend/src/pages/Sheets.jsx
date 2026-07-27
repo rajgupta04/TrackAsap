@@ -19,6 +19,7 @@ import {
   Building,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { useLocation } from 'react-router-dom';
 import useSheetStore from '../store/sheetStore';
 import GlassCard from '../components/ui/GlassCard';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
@@ -67,8 +68,11 @@ const Sheets = () => {
     clearCurrentSheet,
   } = useSheetStore();
 
+  const location = useLocation();
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showBucketPicker, setShowBucketPicker] = useState(false);
+  const [bucketInitialCategory, setBucketInitialCategory] = useState(null);
+  const [bucketInitialSearch, setBucketInitialSearch] = useState('');
   const [selectedSheet, setSelectedSheet] = useState(null);
   const [currentQuoteIndex, setCurrentQuoteIndex] = useState(0);
   const [sheetToDelete, setSheetToDelete] = useState(null);
@@ -85,6 +89,14 @@ const Sheets = () => {
     fetchSheets();
     fetchTemplates();
   }, []);
+
+  useEffect(() => {
+    if (location.state?.openBuckets) {
+      setBucketInitialCategory(location.state.category || null);
+      setBucketInitialSearch(location.state.search || '');
+      setShowBucketPicker(true);
+    }
+  }, [location.state]);
 
   // Rotate quotes every 5 minutes
   useEffect(() => {
@@ -758,8 +770,14 @@ const Sheets = () => {
       {/* Bucket Picker Modal */}
       <BucketPicker
         isOpen={showBucketPicker}
-        onClose={() => setShowBucketPicker(false)}
+        onClose={() => {
+          setShowBucketPicker(false);
+          setBucketInitialCategory(null);
+          setBucketInitialSearch('');
+        }}
         sheets={sheets}
+        initialCategory={bucketInitialCategory}
+        initialSearch={bucketInitialSearch}
         onImport={() => {
           fetchSheets();
           setShowBucketPicker(false);

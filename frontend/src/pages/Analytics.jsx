@@ -10,11 +10,21 @@ import {
   Target, Code, BookOpen, Zap, Globe, Clock,
   TrendingUp, CheckCircle2, AlertCircle, RotateCcw, ListTodo,
   Flame, Award, Timer, ArrowUpRight, ChevronRight,
-  BarChart3, PieChartIcon, Activity, Layers,
+  BarChart3, PieChartIcon, Activity, Layers, Trophy, ExternalLink, RefreshCw, Code2,
 } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import useProblemStore from '../store/problemStore';
 import useSheetStore from '../store/sheetStore';
 import { useAuthStore } from '../store/authStore';
+import { useAnalyticsStore } from '../store/analyticsStore';
+import {
+  LeetCodeStatsWidget,
+  CodeforcesStatsWidget,
+  CodeChefStatsWidget,
+  CodeChefRatingWidget,
+  LeetCodeRatingWidget,
+  CodeforcesRatingWidget,
+} from '../components/dashboard/Widgets';
 import GlassCard from '../components/ui/GlassCard';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
 
@@ -332,6 +342,16 @@ const Analytics = () => {
   const { sheets, fetchSheets, loading: sheetsLoading } = useSheetStore();
   const [isLoaded, setIsLoaded] = useState(false);
 
+  const {
+    leetcodeStats,
+    codeforcesStats,
+    codechefStats,
+    isPlatformLoading,
+    fetchLeetCodeStats,
+    fetchCodeforcesStats,
+    fetchCodechefStats,
+  } = useAnalyticsStore();
+
   useEffect(() => {
     const loadData = async () => {
       await Promise.all([
@@ -342,6 +362,12 @@ const Analytics = () => {
     };
     loadData();
   }, [fetchProblems, fetchSheets]);
+
+  useEffect(() => {
+    if (user?.leetcodeHandle) fetchLeetCodeStats(user.leetcodeHandle);
+    if (user?.codeforcesHandle) fetchCodeforcesStats(user.codeforcesHandle);
+    if (user?.codechefHandle) fetchCodechefStats(user.codechefHandle);
+  }, [user, fetchLeetCodeStats, fetchCodeforcesStats, fetchCodechefStats]);
 
   // ── Journey Stats ──
   const journeyStats = useMemo(() => {
@@ -898,6 +924,99 @@ const Analytics = () => {
             </div>
           )}
         </GlassCard>
+      </div>
+
+      {/* ═══ Section 7: Competitive Programming & Platform Integrations ═══ */}
+      <div className="space-y-4 pt-4 border-t border-white/10">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+          <div>
+            <h2 className="text-xl font-bold text-white flex items-center gap-2.5">
+              <Trophy className="w-6 h-6 text-yellow-400" />
+              Competitive Programming & Platform Integrations
+            </h2>
+            <p className="text-xs text-gray-400 mt-0.5">
+              Live statistics, rating trajectories, and activity heatmaps from LeetCode, CodeChef, and Codeforces
+            </p>
+          </div>
+          <Link
+            to="/profile"
+            className="text-xs font-semibold text-cyan-400 hover:text-cyan-300 flex items-center gap-1 transition-colors bg-cyan-400/10 hover:bg-cyan-400/20 px-3 py-1.5 rounded-lg border border-cyan-400/20"
+          >
+            Configure Handles <ExternalLink size={14} />
+          </Link>
+        </div>
+
+        {!user?.leetcodeHandle && !user?.codeforcesHandle && !user?.codechefHandle ? (
+          <GlassCard hover={false} padding="p-8">
+            <div className="flex flex-col items-center justify-center text-center max-w-md mx-auto space-y-4 py-4">
+              <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-yellow-500/20 via-orange-500/20 to-purple-500/20 border border-white/10 flex items-center justify-center">
+                <Code2 className="w-8 h-8 text-yellow-400" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-white">No Platforms Connected</h3>
+                <p className="text-xs text-gray-400 mt-1">
+                  Connect your LeetCode, CodeChef, and Codeforces handles in Profile Settings to unlock live stats, rating histories, and activity heatmaps here.
+                </p>
+              </div>
+              <Link
+                to="/profile"
+                className="px-5 py-2.5 bg-gradient-to-r from-neon-green to-emerald-500 text-dark-900 font-bold text-xs rounded-xl hover:brightness-110 active:scale-95 transition-all shadow-lg shadow-neon-green/20"
+              >
+                Connect Platform Handles
+              </Link>
+            </div>
+          </GlassCard>
+        ) : (
+          <div className="space-y-6">
+            {/* Row 1: LeetCode (Heatmap + Problem Count | Rating Graph) */}
+            {user?.leetcodeHandle && (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
+                <LeetCodeStatsWidget
+                  user={user}
+                  leetcodeStats={leetcodeStats}
+                  isPlatformLoading={isPlatformLoading}
+                  fetchLeetCodeStats={fetchLeetCodeStats}
+                />
+                <LeetCodeRatingWidget
+                  user={user}
+                  leetcodeStats={leetcodeStats}
+                />
+              </div>
+            )}
+
+            {/* Row 2: CodeChef (Heatmap + Solved Count | Rating Graph) */}
+            {user?.codechefHandle && (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
+                <CodeChefStatsWidget
+                  user={user}
+                  codechefStats={codechefStats}
+                  isPlatformLoading={isPlatformLoading}
+                  fetchCodechefStats={fetchCodechefStats}
+                />
+                <CodeChefRatingWidget
+                  user={user}
+                  codechefStats={codechefStats}
+                />
+              </div>
+            )}
+
+            {/* Row 3: Codeforces (Stats | Rating Graph) */}
+            {user?.codeforcesHandle && (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
+                <CodeforcesStatsWidget
+                  user={user}
+                  codeforcesStats={codeforcesStats}
+                  isPlatformLoading={isPlatformLoading}
+                  fetchCodeforcesStats={fetchCodeforcesStats}
+                />
+                <CodeforcesRatingWidget
+                  user={user}
+                  codeforcesStats={codeforcesStats}
+                />
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

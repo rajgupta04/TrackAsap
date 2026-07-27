@@ -1,6 +1,10 @@
-# TrackAsap - 75 Day Goal Tracking Application
+<p align="center">
+  <img src="frontend/public/logo.png" alt="TrackAsap Logo" width="180" />
+</p>
 
-A full-stack personal analytics dashboard to track your 75-day journey for competitive programming, internship preparation, and fitness goals.
+# TrackAsap — The Ultimate Developer Command Center & Interview Prep Platform
+
+The Ultimate Developer Command Center & Interview Prep Platform. Featuring extensive Company-Wise DSA Sheets (Google, Meta, Amazon & more), TakeUForward-style problem buckets, live CP analytics & heatmaps (LeetCode, CodeChef, Codeforces), automated time-tracking via Chrome Extension (TrackEx), instant GitHub repository sync, multi-language code playground, and a 75-Day coding & physique mastery tracker. Built with React + Vite + Node.js + MongoDB.
 
 ![Tech Stack](https://img.shields.io/badge/React-18-blue) ![Tailwind](https://img.shields.io/badge/Tailwind-3.4-cyan) ![Node.js](https://img.shields.io/badge/Node.js-18+-green) ![MongoDB](https://img.shields.io/badge/MongoDB-7+-brightgreen)
 
