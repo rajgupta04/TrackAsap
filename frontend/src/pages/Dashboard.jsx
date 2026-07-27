@@ -133,6 +133,16 @@ const COMPANY_SHEETS = [
 
 const QUICK_ACTIONS = [
   {
+    title: 'Start Your Challenge',
+    description: 'Flexible 14, 30, or 75+ day tracker',
+    icon: Flame,
+    color: '#ec4899',
+    bg: 'rgba(236, 72, 153, 0.1)',
+    border: 'rgba(236, 72, 153, 0.25)',
+    to: '/daily-tracker',
+    state: { openCreateChallenge: true },
+  },
+  {
     title: 'Continue Sheets',
     description: 'Resume active DSA & study plans',
     icon: BookOpen,
@@ -353,14 +363,15 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* ── 5 Quick Action Link Cards ── */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3.5">
+        {/* ── 6 Quick Action Link Cards ── */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3.5">
           {QUICK_ACTIONS.map((action, idx) => {
             const Icon = action.icon;
             return (
               <Link
                 key={idx}
                 to={action.to}
+                state={action.state || {}}
                 className="group flex flex-col justify-between p-4 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 transition-all active:scale-98"
                 style={{ borderColor: action.border }}
               >
@@ -557,7 +568,9 @@ const Dashboard = () => {
               ) : (
                 <div className="space-y-3">
                   {posts.slice(0, 4).map((post, index) => {
-                    const authorName = post.author?.name || post.author?.handle || 'Anonymous Developer';
+                    const author = post.user || post.author;
+                    const authorName = author?.name || author?.username || author?.handle || 'Anonymous Developer';
+                    const authorPic = author?.profilePicture || author?.googlePicture || author?.avatar || null;
                     const likeCount = post.likesCount || post.likes?.length || 0;
                     const commentCount = post.commentsCount || post.comments?.length || 0;
                     const contentSnippet = post.content
@@ -574,9 +587,17 @@ const Dashboard = () => {
                       >
                         <div className="flex items-center justify-between mb-1.5">
                           <div className="flex items-center gap-2">
-                            <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-cyan-500 to-purple-500 flex items-center justify-center text-[10px] font-bold text-white">
-                              {authorName.charAt(0).toUpperCase()}
-                            </div>
+                            {authorPic ? (
+                              <img
+                                src={authorPic}
+                                alt={authorName}
+                                className="w-6 h-6 rounded-full object-cover border border-white/20 shrink-0"
+                              />
+                            ) : (
+                              <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-cyan-500 to-purple-500 flex items-center justify-center text-[10px] font-bold text-white shrink-0">
+                                {authorName.charAt(0).toUpperCase()}
+                              </div>
+                            )}
                             <span className="text-xs font-bold text-white group-hover:text-cyan-400 transition-colors">
                               {authorName}
                             </span>

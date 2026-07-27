@@ -363,11 +363,19 @@ const Discussion = () => {
                 {/* Post Header */}
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-full bg-gradient-to-br from-neon-green/20 to-cyan-500/20 flex items-center justify-center border border-dark-600/50">
-                      <span className="text-neon-green font-bold text-xs">
-                        {post.user?.name?.charAt(0).toUpperCase() || 'U'}
-                      </span>
-                    </div>
+                    {post.user?.profilePicture || post.user?.googlePicture ? (
+                      <img
+                        src={post.user?.profilePicture || post.user?.googlePicture}
+                        alt={post.user?.name || 'User'}
+                        className="w-9 h-9 rounded-full object-cover border border-dark-600/50"
+                      />
+                    ) : (
+                      <div className="w-9 h-9 rounded-full bg-gradient-to-br from-neon-green/20 to-cyan-500/20 flex items-center justify-center border border-dark-600/50">
+                        <span className="text-neon-green font-bold text-xs">
+                          {post.user?.name?.charAt(0).toUpperCase() || 'U'}
+                        </span>
+                      </div>
+                    )}
                     <div>
                       <div className="flex items-center gap-2">
                         <span className="text-sm font-semibold text-white">{post.user?.name || 'Anonymous'}</span>

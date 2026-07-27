@@ -144,6 +144,18 @@ const userSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+    powerUpsRemaining: {
+      type: Number,
+      default: 3,
+    },
+    powerUpLastResetMonth: {
+      type: String,
+      default: '',
+    },
+    streakFreezeDates: {
+      type: [String],
+      default: [],
+    },
   },
   {
     timestamps: true,

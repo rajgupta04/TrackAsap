@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo } from 'react';
+import { useLocation } from 'react-router-dom';
 import { format, addDays, subDays, parseISO, startOfDay, isWithinInterval } from 'date-fns';
 import toast from 'react-hot-toast';
 import {
@@ -53,19 +54,43 @@ const PREMADE_TASKS = [
 ];
 
 const DailyTracker = () => {
-  const { tasks, taskLogs, streak, isLoading, fetchTasks, fetchTaskLogs, toggleTaskLog, deleteTask, createTask } = useTaskStore();
+  const location = useLocation();
+  const { tasks, taskLogs, streak, isLoading, fetchTasks, fetchTaskLogs, toggleTaskLog, deleteTask, createTask, usePowerUp } = useTaskStore();
   const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [chartRange, setChartRange] = useState(7);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [showStreakAnimation, setShowStreakAnimation] = useState(false);
   const [prevStreak, setPrevStreak] = useState(0);
-  
+  const [isPoweringUp, setIsPoweringUp] = useState(false);
+
+  const handleUsePowerUp = async () => {
+    try {
+      setIsPoweringUp(true);
+      const res = await usePowerUp(streak?.recoverableGapDate);
+      toast.success(res?.message || '⚡ Streak Recovered!');
+    } catch (err) {
+      toast.error(err.message || 'Failed to use Power-Up');
+    } finally {
+      setIsPoweringUp(false);
+    }
+  };
+
   // Modal state
   const [taskTitle, setTaskTitle] = useState('');
   const [taskType, setTaskType] = useState('recurring'); // 'recurring' or 'one_time'
   const [startDate, setStartDate] = useState(format(new Date(), 'yyyy-MM-dd'));
-  const [endDate, setEndDate] = useState(format(addDays(new Date(), 30), 'yyyy-MM-dd'));
+  const [endDate, setEndDate] = useState(format(addDays(new Date(), 75), 'yyyy-MM-dd'));
   const [specificDate, setSpecificDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+
+  useEffect(() => {
+    if (location.state?.openCreateChallenge) {
+      setTaskTitle('75-Day Coding Mastery Challenge');
+      setTaskType('recurring');
+      setStartDate(format(new Date(), 'yyyy-MM-dd'));
+      setEndDate(format(addDays(new Date(), 75), 'yyyy-MM-dd'));
+      setIsModalOpen(true);
+    }
+  }, [location.state]);
 
   // Filter out tasks that the user has already added
   const availablePremadeTasks = useMemo(() => {
@@ -390,10 +415,31 @@ const DailyTracker = () => {
                   <p className="text-sm text-orange-400">Current Streak</p>
                   <p className="text-2xl font-bold text-white mt-1">{streak?.currentStreak || 0} Days</p>
                 </div>
-                <div className="w-10 h-10 rounded-full bg-orange-500/20 flex items-center justify-center">
-                  <Flame className="w-5 h-5 text-orange-500" />
+                <div className="flex flex-col items-end">
+                  <div className="w-10 h-10 rounded-full bg-orange-500/20 flex items-center justify-center">
+                    <Flame className="w-5 h-5 text-orange-500" />
+                  </div>
+                  <span className="text-[10px] text-amber-400 font-bold mt-1.5 px-1.5 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/20">
+                    ⚡ {streak?.powerUpsRemaining ?? 3}/3 Power-Ups
+                  </span>
                 </div>
               </div>
+
+              {/* Streak Recovery Banner if user missed 1 day */}
+              {streak?.canRecoverStreak && (
+                <div className="mt-3.5 pt-3 border-t border-orange-500/20 animate-pulse">
+                  <p className="text-xs text-amber-300 font-medium mb-2 leading-relaxed">
+                    ⚠️ 1-day gap detected! Use 1 Power-Up to restore your <strong className="text-white font-bold">{streak.recoverableStreak}-Day Streak</strong>!
+                  </p>
+                  <button
+                    onClick={handleUsePowerUp}
+                    disabled={isPoweringUp}
+                    className="w-full py-2 px-3 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-black font-extrabold text-xs flex items-center justify-center gap-1.5 shadow-lg transition-all active:scale-95 disabled:opacity-50"
+                  >
+                    ⚡ Use Power-Up (Restore {streak.recoverableStreak} Days)
+                  </button>
+                </div>
+              )}
             </div>
             </div>
           </GlassCard>
@@ -474,26 +520,55 @@ const DailyTracker = () => {
               </div>
 
               {taskType === 'recurring' ? (
-                <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-3">
                   <div>
-                    <label className="block text-sm font-medium text-dark-300 mb-1.5">Start Date</label>
-                    <input
-                      type="date"
-                      value={startDate}
-                      onChange={(e) => setStartDate(e.target.value)}
-                      className="w-full bg-dark-800 border border-dark-600 rounded-xl px-3 py-2.5 text-white focus:outline-none focus:border-neon-green"
-                      required
-                    />
+                    <label className="block text-xs font-semibold text-dark-300 mb-1.5">
+                      Challenge Duration Preset (Days)
+                    </label>
+                    <div className="flex flex-wrap gap-1.5">
+                      {[14, 21, 30, 60, 75, 100].map((days) => (
+                        <button
+                          key={days}
+                          type="button"
+                          onClick={() => {
+                            const start = startDate ? parseISO(startDate) : new Date();
+                            setEndDate(format(addDays(start, days), 'yyyy-MM-dd'));
+                          }}
+                          className="px-2.5 py-1 rounded-lg text-xs font-bold bg-dark-800 border border-dark-600 text-dark-300 hover:text-neon-green hover:border-neon-green/50 active:scale-95 transition-all"
+                        >
+                          {days}d
+                        </button>
+                      ))}
+                      <button
+                        type="button"
+                        onClick={() => setEndDate('')}
+                        className="px-2.5 py-1 rounded-lg text-xs font-bold bg-dark-800 border border-dark-600 text-dark-400 hover:text-white transition-all"
+                      >
+                        Forever
+                      </button>
+                    </div>
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-dark-300 mb-1.5">End Date</label>
-                    <input
-                      type="date"
-                      value={endDate}
-                      onChange={(e) => setEndDate(e.target.value)}
-                      className="w-full bg-dark-800 border border-dark-600 rounded-xl px-3 py-2.5 text-white focus:outline-none focus:border-neon-green"
-                    />
-                    <p className="text-[10px] text-dark-400 mt-1">Leave empty for forever</p>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-dark-300 mb-1.5">Start Date</label>
+                      <input
+                        type="date"
+                        value={startDate}
+                        onChange={(e) => setStartDate(e.target.value)}
+                        className="w-full bg-dark-800 border border-dark-600 rounded-xl px-3 py-2.5 text-white focus:outline-none focus:border-neon-green"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-dark-300 mb-1.5">End Date</label>
+                      <input
+                        type="date"
+                        value={endDate}
+                        onChange={(e) => setEndDate(e.target.value)}
+                        className="w-full bg-dark-800 border border-dark-600 rounded-xl px-3 py-2.5 text-white focus:outline-none focus:border-neon-green"
+                      />
+                      <p className="text-[10px] text-dark-400 mt-1">Leave empty for forever</p>
+                    </div>
                   </div>
                 </div>
               ) : (

@@ -1,6 +1,7 @@
 import CustomTask from '../models/CustomTask.model.js';
 import TaskLog from '../models/TaskLog.model.js';
 import SheetProblem from '../models/SheetProblem.model.js';
+import User from '../models/User.model.js';
 
 // Create a new custom task
 export const createTask = async (req, res) => {
@@ -166,10 +167,31 @@ export const getTaskStreak = async (req, res) => {
       validDates.add(dateStr);
     });
 
+    // 4b. Monthly Power-Up reset & include streakFreezeDates
+    const currentMonth = new Date().toISOString().slice(0, 7);
+    const userDoc = await User.findById(req.user._id);
+    if (userDoc && userDoc.powerUpLastResetMonth !== currentMonth) {
+      userDoc.powerUpsRemaining = 3;
+      userDoc.powerUpLastResetMonth = currentMonth;
+      await userDoc.save();
+    }
+    const powerUpsRemaining = userDoc?.powerUpsRemaining || 0;
+    const freezeDates = userDoc?.streakFreezeDates || [];
+    freezeDates.forEach(dateStr => {
+      validDates.add(dateStr);
+    });
+
     const sortedDates = Array.from(validDates).sort((a, b) => new Date(b) - new Date(a));
 
     if (sortedDates.length === 0) {
-      return res.json({ currentStreak: 0, longestStreak: 0 });
+      return res.json({
+        currentStreak: 0,
+        longestStreak: 0,
+        powerUpsRemaining,
+        canRecoverStreak: false,
+        recoverableStreak: 0,
+        recoverableGapDate: null,
+      });
     }
 
     // 5. Calculate streak looking backwards from today or yesterday
@@ -212,9 +234,90 @@ export const getTaskStreak = async (req, res) => {
       }
     }
 
-    res.json({ currentStreak, longestStreak: currentStreak }); // Assuming longest streak could be tracked better later
+    // 6. Check if user has a 1-day gap (yesterday missed) and can use a Power-Up to recover streak
+    let canRecoverStreak = false;
+    let recoverableStreak = 0;
+    let recoverableGapDate = null;
+
+    if (powerUpsRemaining > 0 && !validDates.has(yesterdayStr)) {
+      const tempSet = new Set(validDates);
+      tempSet.add(yesterdayStr);
+      const tempSorted = Array.from(tempSet).sort((a, b) => new Date(b) - new Date(a));
+      let tempIndex = tempSorted.findIndex(d => d <= tomorrowStr);
+      if (tempIndex !== -1) {
+        const latestDate = tempSorted[tempIndex];
+        if (latestDate === tomorrowStr || latestDate === todayStr || latestDate === yesterdayStr) {
+          let testStreak = 1;
+          let testDateStr = latestDate;
+          for (let i = tempIndex + 1; i < tempSorted.length; i++) {
+            const expPrev = new Date(testDateStr);
+            expPrev.setDate(expPrev.getDate() - 1);
+            const expPrevStr = expPrev.toISOString().split('T')[0];
+            if (tempSorted[i] === expPrevStr) {
+              testStreak++;
+              testDateStr = expPrevStr;
+            } else {
+              break;
+            }
+          }
+          if (testStreak > currentStreak && testStreak >= 2) {
+            canRecoverStreak = true;
+            recoverableStreak = testStreak;
+            recoverableGapDate = yesterdayStr;
+          }
+        }
+      }
+    }
+
+    res.json({
+      currentStreak,
+      longestStreak: Math.max(currentStreak, recoverableStreak),
+      powerUpsRemaining,
+      canRecoverStreak,
+      recoverableStreak,
+      recoverableGapDate,
+    });
   } catch (error) {
     console.error('Error calculating streak:', error);
     res.status(500).json({ message: 'Error calculating streak', error: error.message });
+  }
+};
+
+// Use a Streak Recovery Power-Up to cover a 1-day gap
+export const usePowerUp = async (req, res) => {
+  try {
+    const { gapDate } = req.body;
+    const userDoc = await User.findById(req.user._id);
+    if (!userDoc) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    if ((userDoc.powerUpsRemaining || 0) <= 0) {
+      return res.status(400).json({ message: 'No Power-Ups remaining this month' });
+    }
+
+    const dateToCover = gapDate || new Date(Date.now() - 86400000).toISOString().split('T')[0];
+
+    if (!userDoc.streakFreezeDates) {
+      userDoc.streakFreezeDates = [];
+    }
+
+    if (userDoc.streakFreezeDates.includes(dateToCover)) {
+      return res.status(400).json({ message: 'Power-Up already used for this date' });
+    }
+
+    userDoc.streakFreezeDates.push(dateToCover);
+    userDoc.powerUpsRemaining = Math.max(0, userDoc.powerUpsRemaining - 1);
+    await userDoc.save();
+
+    res.json({
+      success: true,
+      message: '⚡ Streak Power-Up activated! Your streak has been recovered.',
+      powerUpsRemaining: userDoc.powerUpsRemaining,
+      streakFreezeDates: userDoc.streakFreezeDates,
+    });
+  } catch (error) {
+    console.error('Use Power-Up error:', error);
+    res.status(500).json({ message: 'Error activating Power-Up', error: error.message });
   }
 };
