@@ -8,4 +8,4 @@ Allow: /privacy-policy
 # Disallow private user admin/dashboard crawling if unauthenticated
 Disallow: /admin
 
-Sitemap: https://trackasap.com/sitemap.xml
+Sitemap: https://trackasap.in/sitemap.xml
