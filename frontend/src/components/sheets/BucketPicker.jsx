@@ -52,7 +52,7 @@ const SUBJECT_CATEGORIES = [
   { id: 'company-wise', label: 'Company Sheets', icon: Building, color: '#ef4444' },
 ];
 
-const BucketPicker = ({ isOpen, onClose, onImport, sheets = [] }) => {
+const BucketPicker = ({ isOpen, onClose, onImport, sheets = [], initialCategory = null, initialSearch = '' }) => {
   const [buckets, setBuckets] = useState([]);
   const [selectedBucket, setSelectedBucket] = useState(null);
   const [bucketDetails, setBucketDetails] = useState(null);
@@ -73,8 +73,20 @@ const BucketPicker = ({ isOpen, onClose, onImport, sheets = [] }) => {
   useEffect(() => {
     if (isOpen) {
       fetchBuckets();
+      if (initialCategory) {
+        setSelectedCategory(initialCategory);
+        setMode('list');
+      } else {
+        setSelectedCategory(null);
+        setMode('categories');
+      }
+      if (initialSearch) {
+        setSearchQuery(initialSearch);
+      } else {
+        setSearchQuery('');
+      }
     }
-  }, [isOpen]);
+  }, [isOpen, initialCategory, initialSearch]);
 
   const fetchBuckets = async () => {
     try {
