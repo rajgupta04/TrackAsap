@@ -82,10 +82,10 @@ const LeaderboardTable = () => {
 
                 {/* Max Streak */}
                 <td className="py-4 px-4 text-center">
-                  <div className="inline-flex items-center gap-1 bg-dark-800 px-2 py-1 rounded border border-dark-700 text-sm">
-                    <Flame className="w-4 h-4 text-orange-500" />
-                    <span className="font-semibold text-orange-400">
-                      {item.statsBreakdown?.currentStreak || 0}
+                  <div className="inline-flex items-center gap-1 bg-dark-800 px-2.5 py-1 rounded-lg border border-dark-700/80 text-sm shadow-inner">
+                    <Flame className="w-4 h-4 text-orange-500 animate-pulse" />
+                    <span className="font-bold text-orange-400">
+                      {item.statsBreakdown?.maxStreak ?? item.statsBreakdown?.currentStreak ?? 0}
                     </span>
                   </div>
                 </td>
