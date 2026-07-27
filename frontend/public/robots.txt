@@ -1,0 +1,11 @@
+# https://www.robotstxt.org/robotstxt.html
+User-agent: *
+Allow: /
+Allow: /login
+Allow: /register
+Allow: /privacy-policy
+
+# Disallow private user admin/dashboard crawling if unauthenticated
+Disallow: /admin
+
+Sitemap: https://trackasap.in/sitemap.xml
