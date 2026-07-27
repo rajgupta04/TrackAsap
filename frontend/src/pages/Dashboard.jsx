@@ -30,6 +30,7 @@ import { useAnalyticsStore } from '../store/analyticsStore';
 import useProblemStore from '../store/problemStore';
 import useSheetStore from '../store/sheetStore';
 import discussionService from '../services/discussionService';
+import { getAvatarSrc } from '../utils/avatar';
 import GlassCard from '../components/ui/GlassCard';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
 
@@ -570,7 +571,7 @@ const Dashboard = () => {
                   {posts.slice(0, 4).map((post, index) => {
                     const author = post.user || post.author;
                     const authorName = author?.name || author?.username || author?.handle || 'Anonymous Developer';
-                    const authorPic = author?.profilePicture || author?.googlePicture || author?.avatar || null;
+                    const authorPic = getAvatarSrc(author);
                     const likeCount = post.likesCount || post.likes?.length || 0;
                     const commentCount = post.commentsCount || post.comments?.length || 0;
                     const contentSnippet = post.content
@@ -587,17 +588,11 @@ const Dashboard = () => {
                       >
                         <div className="flex items-center justify-between mb-1.5">
                           <div className="flex items-center gap-2">
-                            {authorPic ? (
-                              <img
-                                src={authorPic}
-                                alt={authorName}
-                                className="w-6 h-6 rounded-full object-cover border border-white/20 shrink-0"
-                              />
-                            ) : (
-                              <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-cyan-500 to-purple-500 flex items-center justify-center text-[10px] font-bold text-white shrink-0">
-                                {authorName.charAt(0).toUpperCase()}
-                              </div>
-                            )}
+                            <img
+                              src={authorPic}
+                              alt={authorName}
+                              className="w-6 h-6 rounded-full object-cover border border-white/20 shrink-0 bg-dark-700"
+                            />
                             <span className="text-xs font-bold text-white group-hover:text-cyan-400 transition-colors">
                               {authorName}
                             </span>

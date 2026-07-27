@@ -32,6 +32,7 @@ const leaderboardProfileSchema = new mongoose.Schema(
       mediumSolved: { type: Number, default: 0 },
       hardSolved: { type: Number, default: 0 },
       currentStreak: { type: Number, default: 0 },
+      maxStreak: { type: Number, default: 0 },
       totalTasksCompleted: { type: Number, default: 0 },
     },
     lastUpdated: {

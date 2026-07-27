@@ -34,6 +34,9 @@ const getPaginatedLeaderboard = async (query, sortCriteria, page, limit) => {
  */
 export const getGlobalLeaderboard = async (req, res) => {
   try {
+    // Sync scores & maxStreak across all users
+    await leaderboardService.updateAllUsers();
+
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 50;
     const searchQuery = req.query.search;
@@ -59,6 +62,7 @@ export const getGlobalLeaderboard = async (req, res) => {
  */
 export const getWeeklyLeaderboard = async (req, res) => {
   try {
+    await leaderboardService.updateAllUsers();
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 50;
     
@@ -76,6 +80,7 @@ export const getWeeklyLeaderboard = async (req, res) => {
  */
 export const getMonthlyLeaderboard = async (req, res) => {
   try {
+    await leaderboardService.updateAllUsers();
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 50;
     

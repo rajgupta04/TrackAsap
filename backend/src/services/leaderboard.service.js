@@ -52,32 +52,36 @@ export const leaderboardService = {
       });
 
       // 3. Calculate Current Streak
-      // (>= 2 tasks OR >= 1 solved problem with code+notes)
       const completedLogs = await TaskLog.find({ user: user._id });
       let currentStreak = 0;
       
       const taskCountByDate = {};
       completedLogs.forEach(log => {
-        const targetDate = new Date(log.date);
-        const createdDate = new Date(log.createdAt);
-        const diffHours = (createdDate - targetDate) / (1000 * 60 * 60);
-
-        if (diffHours <= 36) {
-          const dateStr = targetDate.toISOString().split('T')[0];
+        if (log.date) {
+          const dateStr = new Date(log.date).toISOString().split('T')[0];
           taskCountByDate[dateStr] = (taskCountByDate[dateStr] || 0) + 1;
         }
       });
 
+      // Include solved SheetProblems and Problems
       const sheetProblems = await SheetProblem.find({ 
         user: user._id, 
-        status: 'solved',
-        code: { $exists: true, $ne: '' },
-        notes: { $exists: true, $ne: '' }
-      }).select('lastAttemptedAt updatedAt');
+        status: { $in: ['solved', 'Solved', 'revision', 'Revision', 'completed', 'Completed'] },
+      }).select('lastAttemptedAt updatedAt createdAt');
+
+      const generalProblems = await Problem.find({
+        user: user._id,
+        status: { $in: ['solved', 'Solved', 'revision', 'Revision', 'completed', 'Completed'] },
+      }).select('solvedAt updatedAt createdAt');
 
       const problemDates = new Set();
       sheetProblems.forEach(p => {
-        const d = new Date(p.lastAttemptedAt || p.updatedAt);
+        const d = new Date(p.lastAttemptedAt || p.updatedAt || p.createdAt || p._id.getTimestamp());
+        const dateStr = d.toISOString().split('T')[0];
+        problemDates.add(dateStr);
+      });
+      generalProblems.forEach(p => {
+        const d = new Date(p.solvedAt || p.updatedAt || p.createdAt || p._id.getTimestamp());
         const dateStr = d.toISOString().split('T')[0];
         problemDates.add(dateStr);
       });
@@ -85,7 +89,7 @@ export const leaderboardService = {
       const validDates = new Set();
       
       Object.keys(taskCountByDate).forEach(dateStr => {
-        if (taskCountByDate[dateStr] >= 2) validDates.add(dateStr);
+        if (taskCountByDate[dateStr] >= 1) validDates.add(dateStr);
       });
 
       problemDates.forEach(dateStr => validDates.add(dateStr));
@@ -127,12 +131,35 @@ export const leaderboardService = {
         }
       }
 
+      // Calculate maxStreak across all user activity dates
+      let maxStreak = sortedDates.length > 0 ? 1 : 0;
+      if (sortedDates.length > 1) {
+        let tempStreak = 1;
+        for (let i = 0; i < sortedDates.length - 1; i++) {
+          const currDate = new Date(sortedDates[i]);
+          const nextDate = new Date(sortedDates[i + 1]);
+          const diffDays = Math.round((currDate - nextDate) / (1000 * 60 * 60 * 24));
+          if (diffDays === 1) {
+            tempStreak++;
+            if (tempStreak > maxStreak) maxStreak = tempStreak;
+          } else if (diffDays > 1) {
+            tempStreak = 1;
+          }
+        }
+      }
+      if (currentStreak > maxStreak) {
+        maxStreak = currentStreak;
+      }
+
       // 4. Calculate Final Total Score
       const baseScore = (easy * SCORING.EASY) + (medium * SCORING.MEDIUM) + (hard * SCORING.HARD);
       const xpScore = tasksCompleted * SCORING.TASK_COMPLETED_XP;
       const streakScore = currentStreak * SCORING.STREAK_BONUS;
       
       const totalScore = baseScore + xpScore + streakScore;
+      if (maxStreak === 0 && totalScore > 0) {
+        maxStreak = 1;
+      }
 
       // 5. Update Leaderboard Profile (Upsert)
       const lbProfile = await LeaderboardProfile.findOneAndUpdate(
@@ -150,6 +177,7 @@ export const leaderboardService = {
               mediumSolved: medium,
               hardSolved: hard,
               currentStreak: currentStreak,
+              maxStreak: maxStreak,
               totalTasksCompleted: tasksCompleted,
             },
             lastUpdated: new Date()

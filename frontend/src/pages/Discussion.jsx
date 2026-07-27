@@ -18,6 +18,7 @@ import {
 import { useAuthStore } from '../store/authStore';
 import { useDiscussionStore } from '../store/discussionStore';
 import sheetService from '../services/sheetService';
+import { getAvatarSrc } from '../utils/avatar';
 import UserAgreementModal from '../components/discussion/UserAgreementModal';
 import toast from 'react-hot-toast';
 
@@ -363,19 +364,11 @@ const Discussion = () => {
                 {/* Post Header */}
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-3">
-                    {post.user?.profilePicture || post.user?.googlePicture ? (
-                      <img
-                        src={post.user?.profilePicture || post.user?.googlePicture}
-                        alt={post.user?.name || 'User'}
-                        className="w-9 h-9 rounded-full object-cover border border-dark-600/50"
-                      />
-                    ) : (
-                      <div className="w-9 h-9 rounded-full bg-gradient-to-br from-neon-green/20 to-cyan-500/20 flex items-center justify-center border border-dark-600/50">
-                        <span className="text-neon-green font-bold text-xs">
-                          {post.user?.name?.charAt(0).toUpperCase() || 'U'}
-                        </span>
-                      </div>
-                    )}
+                    <img
+                      src={getAvatarSrc(post.user)}
+                      alt={post.user?.name || 'User'}
+                      className="w-9 h-9 rounded-full object-cover border border-dark-600/50 bg-dark-700 shrink-0"
+                    />
                     <div>
                       <div className="flex items-center gap-2">
                         <span className="text-sm font-semibold text-white">{post.user?.name || 'Anonymous'}</span>
@@ -513,11 +506,11 @@ const Discussion = () => {
                         {/* Existing comments */}
                         {post.comments?.map((comment, idx) => (
                           <div key={idx} className="flex items-start gap-2">
-                            <div className="w-6 h-6 rounded-full bg-dark-700 flex items-center justify-center flex-shrink-0">
-                              <span className="text-dark-400 font-bold text-[10px]">
-                                {comment.user?.name?.charAt(0).toUpperCase() || 'U'}
-                              </span>
-                            </div>
+                            <img
+                              src={getAvatarSrc(comment.user)}
+                              alt={comment.user?.name || 'User'}
+                              className="w-6 h-6 rounded-full object-cover border border-dark-600/50 bg-dark-700 flex-shrink-0"
+                            />
                             <div className="flex-1">
                               <div className="flex items-center gap-2">
                                 <span className="text-xs font-semibold text-dark-300">{comment.user?.name || 'Anonymous'}</span>
