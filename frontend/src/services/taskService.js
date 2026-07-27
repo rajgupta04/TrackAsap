@@ -34,4 +34,9 @@ export const taskService = {
     const { data } = await api.get('/tasks/streak');
     return data;
   },
+
+  usePowerUp: async (gapDate) => {
+    const { data } = await api.post('/tasks/use-powerup', { gapDate });
+    return data;
+  },
 };

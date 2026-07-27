@@ -12,8 +12,8 @@ export const getPosts = async (req, res) => {
     const skip = (page - 1) * limit;
 
     const posts = await DiscussionPost.find({ isDeleted: false })
-      .populate('user', 'name email role')
-      .populate('comments.user', 'name email role')
+      .populate('user', 'name email role profilePicture googlePicture')
+      .populate('comments.user', 'name email role profilePicture googlePicture')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit);
@@ -86,7 +86,7 @@ export const createPost = async (req, res) => {
     const post = await DiscussionPost.create(postData);
 
     // Populate user details for response
-    await post.populate('user', 'name email role');
+    await post.populate('user', 'name email role profilePicture googlePicture');
 
     res.status(201).json(post);
   } catch (error) {
@@ -152,7 +152,7 @@ export const commentPost = async (req, res) => {
     await post.save();
 
     // Populate user info in the new comment
-    await post.populate('comments.user', 'name email role');
+    await post.populate('comments.user', 'name email role profilePicture googlePicture');
 
     res.json(post);
   } catch (error) {

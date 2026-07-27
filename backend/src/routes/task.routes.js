@@ -7,6 +7,7 @@ import {
   getTaskLogs,
   deleteTask,
   getTaskStreak,
+  usePowerUp,
 } from '../controllers/task.controller.js';
 
 const router = express.Router();
@@ -20,6 +21,7 @@ router
   .post(createTask);
 
 router.post('/toggle', toggleTaskLog);
+router.post('/use-powerup', usePowerUp);
 router.get('/logs', getTaskLogs);
 router.get('/streak', getTaskStreak);
 

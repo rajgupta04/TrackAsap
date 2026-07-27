@@ -88,4 +88,15 @@ export const useTaskStore = create((set, get) => ({
       return get().streak;
     }
   },
+
+  usePowerUp: async (gapDate) => {
+    try {
+      const res = await taskService.usePowerUp(gapDate);
+      await get().fetchStreak();
+      return res;
+    } catch (error) {
+      const msg = error.response?.data?.message || error.message;
+      throw new Error(msg);
+    }
+  },
 }));
