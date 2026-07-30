@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, Reorder } from 'framer-motion';
 import {
   Upload,
   Download,
@@ -25,6 +25,10 @@ import {
   Copy,
   Check,
   Sparkles,
+  GripVertical,
+  Move,
+  FolderInput,
+  Sliders,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import CodeViewer from '../CodeViewer';
@@ -70,6 +74,17 @@ const SheetProblemsView = ({ sheet, onStatsUpdate, onDelete }) => {
   const fileInputRef = useRef(null);
   const expandedTopicsRef = useRef({});
   const lastSheetIdRef = useRef(null);
+
+  // Edit mode & management state
+  const [editMode, setEditMode] = useState(false);
+  const [showDeleteProblemModal, setShowDeleteProblemModal] = useState(false);
+  const [problemToDelete, setProblemToDelete] = useState(null);
+  const [showDeleteTopicModal, setShowDeleteTopicModal] = useState(false);
+  const [topicToDelete, setTopicToDelete] = useState(null);
+  const [showMoveTopicModal, setShowMoveTopicModal] = useState(false);
+  const [problemToMove, setProblemToMove] = useState(null);
+  const [targetTopic, setTargetTopic] = useState('');
+  const [isManaging, setIsManaging] = useState(false);
 
   useEffect(() => {
     if (sheet?._id) {
@@ -266,6 +281,89 @@ const SheetProblemsView = ({ sheet, onStatsUpdate, onDelete }) => {
     }
   };
 
+  const handleDeleteProblemConfirm = async () => {
+    if (!problemToDelete) return;
+    setIsManaging(true);
+    try {
+      await sheetProblemService.deleteProblem(problemToDelete._id);
+      toast.success('Problem deleted');
+      await fetchProblems(true);
+      setShowDeleteProblemModal(false);
+      setProblemToDelete(null);
+    } catch (error) {
+      toast.error(error.message || 'Failed to delete problem');
+    } finally {
+      setIsManaging(false);
+    }
+  };
+
+  const handleDeleteTopicConfirm = async () => {
+    if (!topicToDelete) return;
+    setIsManaging(true);
+    try {
+      await sheetProblemService.deleteTopic(sheet._id, topicToDelete);
+      toast.success(`Deleted section "${topicToDelete}"`);
+      await fetchProblems(true);
+      setShowDeleteTopicModal(false);
+      setTopicToDelete(null);
+    } catch (error) {
+      toast.error(error.message || 'Failed to delete section');
+    } finally {
+      setIsManaging(false);
+    }
+  };
+
+  const handleMoveProblemConfirm = async () => {
+    if (!problemToMove || !targetTopic.trim()) return;
+    if (targetTopic.trim() === problemToMove.topic) {
+      toast.error('Please select a different section');
+      return;
+    }
+    setIsManaging(true);
+    try {
+      await sheetProblemService.updateProblem(problemToMove._id, { topic: targetTopic.trim() });
+      toast.success(`Moved problem to "${targetTopic.trim()}"`);
+      await fetchProblems(true);
+      setShowMoveTopicModal(false);
+      setProblemToMove(null);
+      setTargetTopic('');
+    } catch (error) {
+      toast.error(error.message || 'Failed to move problem');
+    } finally {
+      setIsManaging(false);
+    }
+  };
+
+  const handleReorderTopicProblems = async (topic, newOrderedProblems) => {
+    setProblems(prev => ({
+      ...prev,
+      [topic]: newOrderedProblems,
+    }));
+    try {
+      const orderedIds = newOrderedProblems.map(p => p._id);
+      await sheetProblemService.reorderProblems(sheet._id, { orderedIds });
+      toast.success('Order saved', { id: 'reorder-toast', duration: 1500 });
+    } catch (error) {
+      toast.error('Failed to save order');
+      fetchProblems(true);
+    }
+  };
+
+  const handleReorderTopics = async (newTopicOrder) => {
+    const reorderedProblems = {};
+    newTopicOrder.forEach(t => {
+      if (problems[t]) reorderedProblems[t] = problems[t];
+    });
+    setProblems(reorderedProblems);
+    try {
+      await sheetProblemService.reorderProblems(sheet._id, { topicOrder: newTopicOrder });
+      toast.success('Section order saved', { id: 'reorder-topic-toast', duration: 1500 });
+    } catch (error) {
+      toast.error('Failed to save section order');
+      fetchProblems(true);
+    }
+  };
+
   // Filter problems
   const getFilteredProblems = () => {
     const filtered = {};
@@ -356,6 +454,18 @@ const SheetProblemsView = ({ sheet, onStatsUpdate, onDelete }) => {
           </button>
 
           <button
+            onClick={() => setEditMode(!editMode)}
+            className={`flex items-center justify-center gap-1.5 py-2.5 px-2 border rounded-xl transition-all text-xs font-medium min-w-0 ${
+              editMode
+                ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+                : 'bg-white/5 hover:bg-white/10 border-white/10 text-white'
+            }`}
+          >
+            <Sliders className="w-4 h-4 shrink-0" />
+            <span className="truncate">{editMode ? 'Exit Edit' : 'Edit Mode'}</span>
+          </button>
+
+          <button
             onClick={() => {
               setDeleteConfirmText('');
               setShowDeleteModal(true);
@@ -405,6 +515,17 @@ const SheetProblemsView = ({ sheet, onStatsUpdate, onDelete }) => {
           >
             <Download className="w-4 h-4" />
             <span>Export</span>
+          </button>
+          <button
+            onClick={() => setEditMode(!editMode)}
+            className={`flex items-center gap-2 px-3.5 py-2 border rounded-lg transition-all text-sm font-medium ${
+              editMode
+                ? 'bg-amber-500/20 text-amber-300 border-amber-500/40 shadow-sm'
+                : 'bg-white/5 hover:bg-white/10 border-white/10 text-gray-300'
+            }`}
+          >
+            <Sliders className="w-4 h-4" />
+            <span>{editMode ? 'Exit Edit Mode' : 'Edit Mode'}</span>
           </button>
           <button
             onClick={() => setShowAddModal(true)}
@@ -579,54 +700,98 @@ const SheetProblemsView = ({ sheet, onStatsUpdate, onDelete }) => {
         </GlassCard>
       ) : (
         <div className="space-y-4">
-          {Object.entries(filteredProblems).map(([topic, topicProblems]) => {
-            const topicSolved = topicProblems.filter(p => p.status === 'solved').length;
-            const isExpanded = expandedTopics[topic];
+          {editMode && (
+            <div className="p-3.5 bg-amber-500/10 border border-amber-500/20 rounded-xl text-amber-300 text-xs sm:text-sm flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <Sliders className="w-4 h-4 shrink-0 text-amber-400" />
+                <span>
+                  <strong>Edit Mode Active:</strong> Drag handles to reorder sections or problems. You can also delete problems/sections or move problems between sections.
+                </span>
+              </div>
+              <button
+                onClick={() => setEditMode(false)}
+                className="px-2.5 py-1 bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 font-semibold rounded-lg text-xs transition-colors shrink-0"
+              >
+                Done
+              </button>
+            </div>
+          )}
+          <Reorder.Group axis="y" values={Object.keys(filteredProblems)} onReorder={handleReorderTopics} className="space-y-4">
+            {Object.entries(filteredProblems).map(([topic, topicProblems]) => {
+              const topicSolved = topicProblems.filter(p => p.status === 'solved').length;
+              const isExpanded = expandedTopics[topic];
 
-            return (
-              <GlassCard key={topic} className="overflow-hidden min-w-0 max-w-full">
-                {/* Topic Header */}
-                <button
-                  onClick={() => toggleTopic(topic)}
-                  className="w-full p-3.5 sm:p-4 flex items-center justify-between gap-2.5 hover:bg-white/5 transition-colors min-w-0 text-left"
-                >
-                  <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
-                    {isExpanded ? (
-                      <ChevronDown className="w-5 h-5 text-neon-green shrink-0" />
-                    ) : (
-                      <ChevronRight className="w-5 h-5 text-gray-400 shrink-0" />
-                    )}
-                    <h3 className="text-sm sm:text-lg font-bold text-white truncate min-w-0">{topic}</h3>
-                    <span className="px-2 py-0.5 text-[10px] sm:text-xs bg-white/10 rounded-full text-gray-300 font-semibold shrink-0">
-                      {topicSolved}/{topicProblems.length}
-                    </span>
-                  </div>
-                  <div className="w-16 sm:w-24 h-1.5 bg-white/10 rounded-full overflow-hidden shrink-0 hidden xs:block">
-                    <div
-                      className="h-full bg-neon-green rounded-full transition-all"
-                      style={{ width: `${(topicSolved / topicProblems.length) * 100}%` }}
-                    />
-                  </div>
-                </button>
+              return (
+                <Reorder.Item key={topic} value={topic} dragListener={editMode} className="list-none">
+                  <GlassCard className="overflow-hidden min-w-0 max-w-full">
+                    {/* Topic Header */}
+                    <button
+                      onClick={() => toggleTopic(topic)}
+                      className="w-full p-3.5 sm:p-4 flex items-center justify-between gap-2.5 hover:bg-white/5 transition-colors min-w-0 text-left"
+                    >
+                      <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
+                        {editMode && (
+                          <div
+                            className="p-1 text-gray-400 hover:text-white cursor-grab active:cursor-grabbing shrink-0"
+                            title="Drag section to reorder"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <GripVertical className="w-5 h-5" />
+                          </div>
+                        )}
+                        {isExpanded ? (
+                          <ChevronDown className="w-5 h-5 text-neon-green shrink-0" />
+                        ) : (
+                          <ChevronRight className="w-5 h-5 text-gray-400 shrink-0" />
+                        )}
+                        <h3 className="text-sm sm:text-lg font-bold text-white truncate min-w-0">{topic}</h3>
+                        <span className="px-2 py-0.5 text-[10px] sm:text-xs bg-white/10 rounded-full text-gray-300 font-semibold shrink-0">
+                          {topicSolved}/{topicProblems.length}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-3 shrink-0">
+                        <div className="w-16 sm:w-24 h-1.5 bg-white/10 rounded-full overflow-hidden hidden xs:block">
+                          <div
+                            className="h-full bg-neon-green rounded-full transition-all"
+                            style={{ width: `${(topicSolved / topicProblems.length) * 100}%` }}
+                          />
+                        </div>
+                        {editMode && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setTopicToDelete(topic);
+                              setShowDeleteTopicModal(true);
+                            }}
+                            className="p-1.5 text-red-400 hover:text-red-300 hover:bg-red-500/20 rounded-lg transition-colors"
+                            title="Delete section & its problems"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
+                    </button>
 
-                {/* Problems Table */}
-                <AnimatePresence>
-                  {isExpanded && (
+                    {/* Problems Table */}
+                    <AnimatePresence>
+                      {isExpanded && (
                     <motion.div
                       initial={{ height: 0, opacity: 0 }}
                       animate={{ height: 'auto', opacity: 1 }}
                       exit={{ height: 0, opacity: 0 }}
                       transition={{ duration: 0.2 }}
                     >
-                      <div className="md:hidden border-t border-white/10 p-2.5 space-y-2.5">
+                      <Reorder.Group axis="y" values={topicProblems} onReorder={(newOrder) => handleReorderTopicProblems(topic, newOrder)} className="md:hidden border-t border-white/10 p-2.5 space-y-2.5">
                         {topicProblems.map((problem, idx) => {
                           const StatusIcon = STATUS_ICONS[problem.status];
                           const diffColors = DIFFICULTY_COLORS[problem.difficulty];
 
                           return (
-                            <div
+                            <Reorder.Item
                               key={problem._id}
-                              className={`p-3.5 rounded-xl border border-white/10 transition-all ${
+                              value={problem}
+                              dragListener={editMode}
+                              className={`p-3.5 rounded-xl border border-white/10 transition-all list-none ${
                                 problem.status === 'solved' ? 'bg-green-500/[0.07] border-green-500/20' : 'bg-white/[0.03]'
                               }`}
                             >
@@ -651,11 +816,41 @@ const SheetProblemsView = ({ sheet, onStatsUpdate, onDelete }) => {
                                     <p className={`text-sm font-bold leading-snug break-words ${problem.status === 'solved' ? 'text-green-300/90' : 'text-white'}`}>
                                       {idx + 1}. {problem.title}
                                     </p>
-                                    <span
-                                      className={`shrink-0 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider ${diffColors.bg} ${diffColors.text}`}
-                                    >
-                                      {problem.difficulty}
-                                    </span>
+                                    <div className="flex items-center gap-1.5 shrink-0">
+                                      {editMode && (
+                                        <>
+                                          <div className="p-1 text-gray-400 hover:text-white cursor-grab active:cursor-grabbing" title="Drag to reorder">
+                                            <GripVertical className="w-4 h-4" />
+                                          </div>
+                                          <button
+                                            onClick={() => {
+                                              setProblemToMove(problem);
+                                              setTargetTopic(problem.topic);
+                                              setShowMoveTopicModal(true);
+                                            }}
+                                            className="p-1 text-cyan-400 hover:bg-cyan-500/10 rounded"
+                                            title="Move section"
+                                          >
+                                            <FolderInput className="w-4 h-4" />
+                                          </button>
+                                          <button
+                                            onClick={() => {
+                                              setProblemToDelete(problem);
+                                              setShowDeleteProblemModal(true);
+                                            }}
+                                            className="p-1 text-red-400 hover:bg-red-500/10 rounded"
+                                            title="Delete problem"
+                                          >
+                                            <Trash2 className="w-4 h-4" />
+                                          </button>
+                                        </>
+                                      )}
+                                      <span
+                                        className={`shrink-0 px-2.5 py-1 rounded-full text-xs font-medium capitalize ${diffColors.bg} ${diffColors.text}`}
+                                      >
+                                        {problem.difficulty}
+                                      </span>
+                                    </div>
                                   </div>
 
                                   {problem.tags.length > 0 && (
@@ -738,15 +933,20 @@ const SheetProblemsView = ({ sheet, onStatsUpdate, onDelete }) => {
                                   </div>
                                 </div>
                               </div>
-                            </div>
+                            </Reorder.Item>
                           );
                         })}
-                      </div>
+                      </Reorder.Group>
 
                       <div className="hidden md:block overflow-x-auto">
                         <table className="w-full min-w-[760px] lg:min-w-0">
                           <thead>
                             <tr className="border-t border-white/10 bg-white/5">
+                              {editMode && (
+                                <th className="px-3 py-3 text-center text-xs font-medium text-amber-400 uppercase tracking-wider w-24">
+                                  Manage
+                                </th>
+                              )}
                               <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider w-12">
                                 Status
                               </th>
@@ -770,18 +970,57 @@ const SheetProblemsView = ({ sheet, onStatsUpdate, onDelete }) => {
                               </th>
                             </tr>
                           </thead>
-                          <tbody className="divide-y divide-white/5">
+                          <Reorder.Group
+                            as="tbody"
+                            axis="y"
+                            values={topicProblems}
+                            onReorder={(newOrder) => handleReorderTopicProblems(topic, newOrder)}
+                            className="divide-y divide-white/5"
+                          >
                             {topicProblems.map((problem, idx) => {
                               const StatusIcon = STATUS_ICONS[problem.status];
                               const diffColors = DIFFICULTY_COLORS[problem.difficulty];
 
                               return (
-                                <tr
+                                <Reorder.Item
+                                  as="tr"
                                   key={problem._id}
+                                  value={problem}
+                                  dragListener={editMode}
                                   className={`hover:bg-white/5 transition-colors ${
                                     problem.status === 'solved' ? 'bg-green-500/5' : ''
                                   }`}
                                 >
+                                  {editMode && (
+                                    <td className="px-3 py-3 text-center">
+                                      <div className="flex items-center justify-center gap-1.5">
+                                        <div className="p-1 cursor-grab active:cursor-grabbing text-gray-400 hover:text-white" title="Drag to reorder">
+                                          <GripVertical className="w-4 h-4" />
+                                        </div>
+                                        <button
+                                          onClick={() => {
+                                            setProblemToMove(problem);
+                                            setTargetTopic(problem.topic);
+                                            setShowMoveTopicModal(true);
+                                          }}
+                                          className="p-1 text-cyan-400 hover:bg-cyan-500/10 rounded transition-colors"
+                                          title="Move to different section"
+                                        >
+                                          <FolderInput className="w-4 h-4" />
+                                        </button>
+                                        <button
+                                          onClick={() => {
+                                            setProblemToDelete(problem);
+                                            setShowDeleteProblemModal(true);
+                                          }}
+                                          className="p-1 text-red-400 hover:bg-red-500/10 rounded transition-colors"
+                                          title="Delete problem"
+                                        >
+                                          <Trash2 className="w-4 h-4" />
+                                        </button>
+                                      </div>
+                                    </td>
+                                  )}
                                   <td className="px-4 py-3">
                                     <button
                                       onClick={() => handleStatusChange(problem._id, problem.status)}
@@ -813,10 +1052,10 @@ const SheetProblemsView = ({ sheet, onStatsUpdate, onDelete }) => {
                                     </div>
                                     {problem.tags.length > 0 && (
                                       <div className="flex flex-wrap gap-1 mt-1">
-                                        {problem.tags.slice(0, 3).map((tag, i) => (
+                                        {problem.tags.slice(0, 4).map((tag, i) => (
                                           <span
                                             key={i}
-                                            className="px-1.5 py-0.5 text-[10px] bg-white/10 rounded text-gray-400"
+                                            className="px-1.5 py-0.5 text-[10px] bg-white/5 border border-white/10 rounded font-medium text-gray-400"
                                           >
                                             {tag}
                                           </span>
@@ -831,17 +1070,17 @@ const SheetProblemsView = ({ sheet, onStatsUpdate, onDelete }) => {
                                       {problem.difficulty}
                                     </span>
                                   </td>
-                                  <td className="px-4 py-3">
-                                    <div className="flex items-center justify-center gap-2">
+                                  <td className="px-4 py-3 text-center">
+                                    <div className="flex items-center justify-center gap-1.5">
                                       {problem.problemLink && (
                                         <a
                                           href={problem.problemLink}
                                           target="_blank"
                                           rel="noopener noreferrer"
-                                          className="p-1.5 hover:bg-white/10 rounded transition-colors"
+                                          className="p-1.5 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 rounded-lg transition-colors"
                                           title="Problem"
                                         >
-                                          <Code2 className="w-4 h-4 text-blue-400" />
+                                          <Code2 className="w-4 h-4" />
                                         </a>
                                       )}
                                       {problem.articleLink && (
@@ -849,10 +1088,10 @@ const SheetProblemsView = ({ sheet, onStatsUpdate, onDelete }) => {
                                           href={problem.articleLink}
                                           target="_blank"
                                           rel="noopener noreferrer"
-                                          className="p-1.5 hover:bg-white/10 rounded transition-colors"
+                                          className="p-1.5 bg-orange-500/10 hover:bg-orange-500/20 text-orange-400 rounded-lg transition-colors"
                                           title="Article"
                                         >
-                                          <FileText className="w-4 h-4 text-orange-400" />
+                                          <FileText className="w-4 h-4" />
                                         </a>
                                       )}
                                       {problem.youtubeLink && (
@@ -860,10 +1099,10 @@ const SheetProblemsView = ({ sheet, onStatsUpdate, onDelete }) => {
                                           href={problem.youtubeLink}
                                           target="_blank"
                                           rel="noopener noreferrer"
-                                          className="p-1.5 hover:bg-white/10 rounded transition-colors"
+                                          className="p-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-lg transition-colors"
                                           title="YouTube"
                                         >
-                                          <Youtube className="w-4 h-4 text-red-400" />
+                                          <Youtube className="w-4 h-4" />
                                         </a>
                                       )}
                                     </div>
@@ -871,7 +1110,11 @@ const SheetProblemsView = ({ sheet, onStatsUpdate, onDelete }) => {
                                   <td className="px-4 py-3 text-center">
                                     <button
                                       onClick={() => handleOpenNotes(problem)}
-                                      className={`p-1.5 hover:bg-white/10 rounded transition-colors ${problem.notes ? 'text-purple-400' : 'text-gray-500 hover:text-purple-400'}`}
+                                      className={`p-1.5 rounded-lg transition-all ${
+                                        problem.notes
+                                          ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30'
+                                          : 'bg-white/5 text-gray-400 hover:text-white'
+                                      }`}
                                       title={problem.notes ? 'View notes' : 'Add notes'}
                                     >
                                       <StickyNote className="w-4 h-4" />
@@ -880,7 +1123,11 @@ const SheetProblemsView = ({ sheet, onStatsUpdate, onDelete }) => {
                                   <td className="px-4 py-3 text-center">
                                     <button
                                       onClick={() => handleOpenCode(problem)}
-                                      className={`p-1.5 hover:bg-white/10 rounded transition-colors ${(problem.code || problem.solutions?.some(s => s.code?.trim())) ? 'text-neon-green' : 'text-gray-500 hover:text-neon-green'}`}
+                                      className={`p-1.5 rounded-lg transition-all ${
+                                        (problem.code || problem.solutions?.some(s => s.code?.trim()))
+                                          ? 'bg-neon-green/20 text-neon-green border border-neon-green/30'
+                                          : 'bg-white/5 text-gray-400 hover:text-white'
+                                      }`}
                                       title={problem.code ? 'View code' : 'Add code'}
                                     >
                                       <Terminal className="w-4 h-4" />
@@ -891,20 +1138,202 @@ const SheetProblemsView = ({ sheet, onStatsUpdate, onDelete }) => {
                                       {problem.revisionCount}
                                     </span>
                                   </td>
-                                </tr>
+                                </Reorder.Item>
                               );
                             })}
-                          </tbody>
+                          </Reorder.Group>
                         </table>
                       </div>
                     </motion.div>
                   )}
                 </AnimatePresence>
               </GlassCard>
+            </Reorder.Item>
             );
           })}
+          </Reorder.Group>
         </div>
       )}
+
+      {/* Delete Problem Confirmation Modal */}
+      <AnimatePresence>
+        {showDeleteProblemModal && problemToDelete && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            onClick={() => setShowDeleteProblemModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="w-full max-w-md"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <GlassCard className="p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <Trash2 className="w-5 h-5 text-red-400" />
+                    <h2 className="text-lg font-bold text-white">Delete Problem</h2>
+                  </div>
+                  <button
+                    onClick={() => setShowDeleteProblemModal(false)}
+                    className="p-1.5 text-gray-400 hover:text-white rounded-lg hover:bg-white/10"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+                <p className="text-gray-300 text-sm mb-6">
+                  Are you sure you want to delete <span className="text-white font-semibold">"{problemToDelete.title}"</span>? This action cannot be undone.
+                </p>
+                <div className="flex items-center justify-end gap-3">
+                  <button
+                    onClick={() => setShowDeleteProblemModal(false)}
+                    className="px-4 py-2 bg-white/5 hover:bg-white/10 text-gray-300 rounded-lg text-sm font-medium transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleDeleteProblemConfirm}
+                    disabled={isManaging}
+                    className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm font-semibold transition-colors disabled:opacity-50"
+                  >
+                    {isManaging ? 'Deleting...' : 'Delete'}
+                  </button>
+                </div>
+              </GlassCard>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Delete Section Confirmation Modal */}
+      <AnimatePresence>
+        {showDeleteTopicModal && topicToDelete && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            onClick={() => setShowDeleteTopicModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="w-full max-w-md"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <GlassCard className="p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <Trash2 className="w-5 h-5 text-red-400" />
+                    <h2 className="text-lg font-bold text-white">Delete Section</h2>
+                  </div>
+                  <button
+                    onClick={() => setShowDeleteTopicModal(false)}
+                    className="p-1.5 text-gray-400 hover:text-white rounded-lg hover:bg-white/10"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+                <p className="text-gray-300 text-sm mb-6">
+                  Are you sure you want to delete section <span className="text-white font-semibold">"{topicToDelete}"</span> and all <span className="text-red-400 font-semibold">{problems[topicToDelete]?.length || 0} problems</span> in it? This action cannot be undone.
+                </p>
+                <div className="flex items-center justify-end gap-3">
+                  <button
+                    onClick={() => setShowDeleteTopicModal(false)}
+                    className="px-4 py-2 bg-white/5 hover:bg-white/10 text-gray-300 rounded-lg text-sm font-medium transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleDeleteTopicConfirm}
+                    disabled={isManaging}
+                    className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm font-semibold transition-colors disabled:opacity-50"
+                  >
+                    {isManaging ? 'Deleting Section...' : 'Delete Section'}
+                  </button>
+                </div>
+              </GlassCard>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Move Problem Confirmation Modal */}
+      <AnimatePresence>
+        {showMoveTopicModal && problemToMove && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            onClick={() => setShowMoveTopicModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="w-full max-w-md"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <GlassCard className="p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <FolderInput className="w-5 h-5 text-cyan-400" />
+                    <h2 className="text-lg font-bold text-white">Move Problem to Section</h2>
+                  </div>
+                  <button
+                    onClick={() => setShowMoveTopicModal(false)}
+                    className="p-1.5 text-gray-400 hover:text-white rounded-lg hover:bg-white/10"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+                <div className="space-y-4 mb-6">
+                  <p className="text-gray-300 text-sm">
+                    Move <span className="text-white font-semibold">"{problemToMove.title}"</span> from <span className="text-gray-400">"{problemToMove.topic}"</span> to:
+                  </p>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-400 mb-1.5">Select Target Section</label>
+                    <select
+                      value={targetTopic}
+                      onChange={(e) => setTargetTopic(e.target.value)}
+                      className="w-full p-2.5 bg-black/40 border border-white/10 rounded-lg text-white text-sm outline-none focus:border-cyan-400"
+                    >
+                      {Object.keys(problems).map(t => (
+                        <option key={t} value={t}>{t}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg text-amber-300 text-xs flex items-start gap-2">
+                    <span className="font-semibold shrink-0">⚠️ Notice:</span>
+                    <span>Are you sure? This will move the problem to a different section of the sheet.</span>
+                  </div>
+                </div>
+                <div className="flex items-center justify-end gap-3">
+                  <button
+                    onClick={() => setShowMoveTopicModal(false)}
+                    className="px-4 py-2 bg-white/5 hover:bg-white/10 text-gray-300 rounded-lg text-sm font-medium transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleMoveProblemConfirm}
+                    disabled={isManaging || !targetTopic.trim() || targetTopic.trim() === problemToMove.topic}
+                    className="px-4 py-2 bg-cyan-500 hover:bg-cyan-600 text-black font-semibold rounded-lg text-sm transition-colors disabled:opacity-50"
+                  >
+                    {isManaging ? 'Moving...' : 'Move Problem'}
+                  </button>
+                </div>
+              </GlassCard>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Delete Confirmation Modal */}
       <AnimatePresence>

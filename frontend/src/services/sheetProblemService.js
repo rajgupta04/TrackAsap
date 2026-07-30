@@ -31,6 +31,20 @@ const sheetProblemService = {
     return response.data;
   },
 
+  // Reorder problems or topics
+  reorderProblems: async (sheetId, payload) => {
+    const response = await api.patch(`/sheet-problems/${sheetId}/reorder`, payload);
+    return response.data;
+  },
+
+  // Delete an entire topic/section
+  deleteTopic: async (sheetId, topic) => {
+    const response = await api.delete(`/sheet-problems/${sheetId}/topic`, {
+      params: { topic },
+    });
+    return response.data;
+  },
+
   // Import from Excel
   importFromExcel: async (sheetId, file) => {
     const formData = new FormData();
