@@ -254,9 +254,9 @@ const SheetProblemsView = ({ sheet, onStatsUpdate, onDelete }) => {
     setShowCodeModal(true);
   };
 
-  const handleSaveCode = async (problemId, code, language) => {
+  const handleSaveCode = async (problemId, code, language, solutions = []) => {
     try {
-      await sheetProblemService.updateProblem(problemId, { code, language });
+      await sheetProblemService.updateProblem(problemId, { code, language, solutions });
       toast.success('Code saved! 🎉');
       await fetchProblems(true);
       setShowCodeModal(false);
@@ -725,14 +725,14 @@ const SheetProblemsView = ({ sheet, onStatsUpdate, onDelete }) => {
                                       <button
                                         onClick={() => handleOpenCode(problem)}
                                         className={`p-1.5 rounded-lg transition-all flex items-center gap-1 text-[11px] font-medium ${
-                                          problem.code
+                                          (problem.code || problem.solutions?.some(s => s.code?.trim()))
                                             ? 'bg-neon-green/20 text-neon-green border border-neon-green/30'
                                             : 'bg-white/5 text-gray-400 hover:text-white'
                                         }`}
                                         title={problem.code ? 'View code' : 'Add code'}
                                       >
                                         <Terminal className="w-3.5 h-3.5" />
-                                        {problem.code && <span>Code</span>}
+                                        {(problem.code || problem.solutions?.some(s => s.code?.trim())) && <span>Code</span>}
                                       </button>
                                     </div>
                                   </div>
@@ -880,7 +880,7 @@ const SheetProblemsView = ({ sheet, onStatsUpdate, onDelete }) => {
                                   <td className="px-4 py-3 text-center">
                                     <button
                                       onClick={() => handleOpenCode(problem)}
-                                      className={`p-1.5 hover:bg-white/10 rounded transition-colors ${problem.code ? 'text-neon-green' : 'text-gray-500 hover:text-neon-green'}`}
+                                      className={`p-1.5 hover:bg-white/10 rounded transition-colors ${(problem.code || problem.solutions?.some(s => s.code?.trim())) ? 'text-neon-green' : 'text-gray-500 hover:text-neon-green'}`}
                                       title={problem.code ? 'View code' : 'Add code'}
                                     >
                                       <Terminal className="w-4 h-4" />

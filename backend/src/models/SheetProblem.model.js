@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 
-const LANG_ENUM = ['cpp', 'java', 'python', 'javascript', 'c', 'go', 'rust', 'other'];
+const LANG_ENUM = ['cpp', 'java', 'python', 'javascript', 'c', 'go', 'rust', 'sql', 'other'];
 
 const solutionSchema = new mongoose.Schema(
   {
