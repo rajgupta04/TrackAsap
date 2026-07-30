@@ -329,6 +329,92 @@ export const getExcelTemplate = async (req, res) => {
   }
 };
 
+// @desc    Reorder sheet problems or topics, or move problems between topics
+// @route   PATCH /api/sheet-problems/:sheetId/reorder
+// @access  Private
+export const reorderSheetProblems = async (req, res) => {
+  try {
+    const { sheetId } = req.params;
+    const { orderedIds, topicOrder, items } = req.body;
+
+    if (items && Array.isArray(items)) {
+      // Update order and optionally topic for each item
+      const bulkOps = items.map((item, idx) => ({
+        updateOne: {
+          filter: { _id: item.id, sheet: sheetId, user: req.user._id },
+          update: {
+            $set: {
+              order: item.order !== undefined ? item.order : idx,
+              ...(item.topic ? { topic: item.topic } : {}),
+            },
+          },
+        },
+      }));
+      if (bulkOps.length > 0) {
+        await SheetProblem.bulkWrite(bulkOps);
+      }
+    } else if (orderedIds && Array.isArray(orderedIds)) {
+      const bulkOps = orderedIds.map((id, idx) => ({
+        updateOne: {
+          filter: { _id: id, sheet: sheetId, user: req.user._id },
+          update: { $set: { order: idx } },
+        },
+      }));
+      if (bulkOps.length > 0) {
+        await SheetProblem.bulkWrite(bulkOps);
+      }
+    } else if (topicOrder && Array.isArray(topicOrder)) {
+      const allProblems = await SheetProblem.find({ sheet: sheetId, user: req.user._id }).sort({ order: 1 });
+      let currentOrder = 0;
+      const bulkOps = [];
+      for (const topic of topicOrder) {
+        const topicProblems = allProblems.filter(p => p.topic === topic);
+        for (const prob of topicProblems) {
+          bulkOps.push({
+            updateOne: {
+              filter: { _id: prob._id },
+              update: { $set: { order: currentOrder++ } },
+            },
+          });
+        }
+      }
+      if (bulkOps.length > 0) {
+        await SheetProblem.bulkWrite(bulkOps);
+      }
+    }
+
+    res.json({ message: 'Order updated successfully' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Delete all problems in a topic/section
+// @route   DELETE /api/sheet-problems/:sheetId/topic
+// @access  Private
+export const deleteTopicProblems = async (req, res) => {
+  try {
+    const { sheetId } = req.params;
+    const topic = req.query.topic || req.body.topic;
+
+    if (!topic) {
+      return res.status(400).json({ message: 'Topic is required' });
+    }
+
+    const result = await SheetProblem.deleteMany({
+      sheet: sheetId,
+      user: req.user._id,
+      topic: topic,
+    });
+
+    await updateSheetTotals(sheetId);
+
+    res.json({ message: `Deleted topic "${topic}" and ${result.deletedCount} problems`, deletedCount: result.deletedCount });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 // Helper function to update sheet totals
 const updateSheetTotals = async (sheetId) => {
   const stats = await SheetProblem.aggregate([

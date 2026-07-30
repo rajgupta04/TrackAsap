@@ -10,6 +10,8 @@ import {
   importFromExcel,
   exportToExcel,
   getExcelTemplate,
+  reorderSheetProblems,
+  deleteTopicProblems,
 } from '../controllers/sheetProblem.controller.js';
 
 const router = express.Router();
@@ -44,6 +46,9 @@ router.get('/template', getExcelTemplate);
 router.route('/:sheetId')
   .get(getSheetProblems)
   .post(addSheetProblem);
+
+router.patch('/:sheetId/reorder', reorderSheetProblems);
+router.delete('/:sheetId/topic', deleteTopicProblems);
 
 // Import/Export
 router.post('/:sheetId/import', upload.single('file'), importFromExcel);
