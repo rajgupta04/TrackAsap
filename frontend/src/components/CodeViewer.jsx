@@ -295,17 +295,25 @@ const CodeViewer = ({ isOpen, onClose, problem: problemProp, onSave }) => {
     const map = buildCodeMap(solutions);
     const isEmpty = Object.keys(map).length === 0;
 
+    // Determine the preferred language: use problem.language (last saved) if available
+    const savedLang = problem.language || '';
+
     if (isEmpty) {
-      const initMap = { 'Approach 1': { cpp: '' } };
+      const defaultLang = savedLang || 'cpp';
+      const initMap = { 'Approach 1': { [defaultLang]: '' } };
       setCodeMap(initMap);
       setActiveLabel('Approach 1');
-      setActiveLang('cpp');
+      setActiveLang(defaultLang);
     } else {
       setCodeMap(map);
       const firstLabel = Object.keys(map)[0];
-      const firstLang = Object.keys(map[firstLabel])[0] || 'cpp';
+      const langsInApproach = Object.keys(map[firstLabel]);
+      // Prefer savedLang if it exists in this approach, else pick the first available
+      const preferredLang = (savedLang && langsInApproach.includes(savedLang))
+        ? savedLang
+        : langsInApproach[0] || 'cpp';
       setActiveLabel(firstLabel);
-      setActiveLang(firstLang);
+      setActiveLang(preferredLang);
     }
     setIsDirty(false);
     setAddingApproach(false);
@@ -420,10 +428,12 @@ const CodeViewer = ({ isOpen, onClose, problem: problemProp, onSave }) => {
       toast.error('An approach with this name already exists');
       return;
     }
-    const newMap = { ...codeMap, [label]: { cpp: '' } };
+    // Inherit the currently active language for new approaches instead of always defaulting to cpp
+    const inheritLang = activeLang || 'cpp';
+    const newMap = { ...codeMap, [label]: { [inheritLang]: '' } };
     setCodeMap(newMap);
     setActiveLabel(label);
-    setActiveLang('cpp');
+    setActiveLang(inheritLang);
     setAddingApproach(false);
     setNewApproachInput('');
     setIsDirty(true);
@@ -446,16 +456,17 @@ const CodeViewer = ({ isOpen, onClose, problem: problemProp, onSave }) => {
     try {
       const flatSolutions = flattenCodeMap(codeMap);
       const firstSol = flatSolutions[0];
+      const activeCode = codeMap[activeLabel]?.[activeLang] || '';
 
       if (problem.isSheetProblem) {
-        const activeCode = codeMap[activeLabel]?.[activeLang] || '';
-        if (onSave) await onSave(problem._id, activeCode, activeLang);
+        // Always save solutions + code + language together so data is never lost
+        if (onSave) await onSave(problem._id, activeCode, activeLang, flatSolutions);
         else await sheetProblemService.updateProblem(problem._id, { code: activeCode, language: activeLang, solutions: flatSolutions });
       } else {
         await updateProblem(problem._id, {
           solutions: flatSolutions,
-          code: firstSol?.code || '',
-          language: firstSol?.language || 'cpp',
+          code: activeCode || firstSol?.code || '',
+          language: activeLang || firstSol?.language || 'cpp',
         });
       }
 
