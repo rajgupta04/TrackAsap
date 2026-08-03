@@ -1,6 +1,8 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import morgan from 'morgan';
+import logger from './utils/logger.js';
 import connectDB from './config/db.js';
 import authRoutes from './routes/auth.routes.js';
 import taskRoutes from './routes/task.routes.js';
@@ -50,7 +52,13 @@ app.use(cors({
 }));
 app.use(express.json());
 
-// System Request Logging Middleware
+// ── HTTP request logging via Morgan → Winston ───────────────────────────────
+const morganFormat = process.env.NODE_ENV === 'production'
+  ? 'combined'
+  : ':method :url :status :response-time ms';
+app.use(morgan(morganFormat, { stream: logger.morganStream }));
+
+// System Request Logging Middleware (analytics tracker)
 app.use(requestLogger);
 
 // Routes
@@ -106,5 +114,8 @@ app.use(notFound);
 app.use(errorHandler);
 
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`🚀 Server running on port ${PORT}`);
+  logger.info(`Server running on port ${PORT}`, {
+    env: process.env.NODE_ENV || 'development',
+    port: PORT,
+  });
 });

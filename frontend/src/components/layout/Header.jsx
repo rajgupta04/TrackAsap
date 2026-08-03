@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Flame, Trophy, Target, RefreshCw, X, Info, Sparkles, Timer, Clock } from 'lucide-react';
@@ -7,6 +7,12 @@ import { useAuthStore } from '../../store/authStore';
 import { useTimerStore } from '../../store/timerStore';
 import StreakModal from './StreakModal';
 import StopwatchModal from './StopwatchModal';
+
+// ── Streak fetch TTL cache (module-level: survives re-renders) ─────────────
+// Only fetches from the API once every 5 minutes to avoid hammering on every
+// route change. Manual refresh via the button always bypasses the cache.
+const STREAK_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+let lastStreakFetch = 0;
 
 const pageTitles = {
   '/dashboard': 'Dashboard',
@@ -71,13 +77,18 @@ const Header = () => {
 
   const randomQuote = quotes[Math.floor(Math.random() * quotes.length)];
 
-  // Fetch streak on mount and when location changes (user might have saved a log)
+  // Fetch streak on mount and on route change — but at most once every 5 min
   useEffect(() => {
-    fetchStreak();
+    const now = Date.now();
+    if (now - lastStreakFetch > STREAK_CACHE_TTL) {
+      lastStreakFetch = now;
+      fetchStreak();
+    }
   }, [location.pathname]);
 
   const handleRefreshStats = async () => {
     setIsRefreshing(true);
+    lastStreakFetch = Date.now(); // reset cache on manual refresh
     await fetchStreak();
     setTimeout(() => setIsRefreshing(false), 500);
   };

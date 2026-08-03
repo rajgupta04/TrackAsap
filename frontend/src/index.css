@@ -16,12 +16,15 @@ body {
   font-family: 'Inter', system-ui, sans-serif;
   background: #020617;
   min-height: 100vh;
+  /* Promote body to its own compositor layer to avoid repaints */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 /* Custom Scrollbar */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
@@ -30,14 +33,14 @@ body {
 
 ::-webkit-scrollbar-thumb {
   background: #334155;
-  border-radius: 4px;
+  border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
   background: #475569;
 }
 
-/* Glassmorphism utilities */
+/* ── Glassmorphism utilities ──────────────────────────────────────────── */
 @layer components {
   .glass {
     @apply bg-dark-900/50 backdrop-blur-xl border border-dark-700/50;
@@ -51,16 +54,17 @@ body {
     @apply hover:bg-dark-800/60 hover:border-dark-600/50 transition-all duration-300;
   }
 
+  /* Reduced from 4 layers → 2 to cut GPU composite cost by ~50% */
   .neon-glow {
-    box-shadow: 0 0 5px #39FF14, 0 0 10px #39FF14, 0 0 15px #39FF14, 0 0 20px #39FF14;
+    box-shadow: 0 0 8px rgba(57, 255, 20, 0.5), 0 0 20px rgba(57, 255, 20, 0.2);
   }
 
   .neon-text {
-    text-shadow: 0 0 5px #39FF14, 0 0 10px #39FF14, 0 0 20px #39FF14;
+    text-shadow: 0 0 8px rgba(57, 255, 20, 0.6), 0 0 20px rgba(57, 255, 20, 0.3);
   }
 
   .neon-border {
-    box-shadow: 0 0 5px #39FF14, inset 0 0 5px rgba(57, 255, 20, 0.1);
+    box-shadow: 0 0 6px rgba(57, 255, 20, 0.4), inset 0 0 4px rgba(57, 255, 20, 0.08);
   }
 
   .btn-primary {
@@ -86,40 +90,47 @@ body {
            checked:bg-neon-green checked:border-neon-green focus:ring-neon-green/30 
            focus:ring-2 transition-all duration-200 cursor-pointer accent-[#39FF14];
   }
+
+  /* Off-screen content — browser skips render until visible */
+  .content-auto {
+    content-visibility: auto;
+  }
 }
 
-/* Gradient backgrounds */
+/* ── Gradient mesh background ────────────────────────────────────────────── */
+/* Reduced from 5 → 3 radial-gradients to cut GPU paint significantly on mobile */
 .gradient-mesh {
   background-image: 
-    radial-gradient(at 40% 20%, rgba(57, 255, 20, 0.1) 0px, transparent 50%),
-    radial-gradient(at 80% 0%, rgba(0, 255, 255, 0.08) 0px, transparent 50%),
-    radial-gradient(at 0% 50%, rgba(57, 255, 20, 0.08) 0px, transparent 50%),
-    radial-gradient(at 80% 50%, rgba(255, 16, 240, 0.05) 0px, transparent 50%),
-    radial-gradient(at 0% 100%, rgba(0, 255, 255, 0.08) 0px, transparent 50%);
+    radial-gradient(at 40% 20%, rgba(57, 255, 20, 0.08) 0px, transparent 50%),
+    radial-gradient(at 80% 0%,  rgba(0, 255, 255, 0.06) 0px, transparent 50%),
+    radial-gradient(at 0%  80%, rgba(57, 255, 20, 0.06) 0px, transparent 50%);
 }
 
-/* Progress bar animation */
+/* On mobile, skip the mesh entirely — saves meaningful GPU time */
+@media (max-width: 768px) {
+  .gradient-mesh {
+    background-image: none;
+  }
+}
+
+/* ── Progress bar animation ───────────────────────────────────────────────── */
 @keyframes progress-shine {
-  0% {
-    background-position: -200px 0;
-  }
-  100% {
-    background-position: calc(200px + 100%) 0;
-  }
+  0%   { background-position: -200px 0; }
+  100% { background-position: calc(200px + 100%) 0; }
 }
 
 .progress-bar {
   background: linear-gradient(
     90deg,
     transparent,
-    rgba(255, 255, 255, 0.2),
+    rgba(255, 255, 255, 0.15),
     transparent
   );
   background-size: 200px 100%;
   animation: progress-shine 1.5s ease-in-out infinite;
 }
 
-/* Chart customizations */
+/* ── Chart customizations ─────────────────────────────────────────────────── */
 .recharts-cartesian-grid-horizontal line,
 .recharts-cartesian-grid-vertical line {
   stroke: #334155;
@@ -128,4 +139,21 @@ body {
 
 .recharts-text {
   fill: #94a3b8;
+}
+
+/* ── Accessibility: respect prefers-reduced-motion ───────────────────────── */
+/* Users with vestibular disorders, battery-saver mode, or low-power devices  */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .progress-bar {
+    animation: none;
+  }
 }

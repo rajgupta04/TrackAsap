@@ -1,0 +1,4 @@
+can you check this whole webisite and check what causing it slowness its too laggy in  some devices
+make it performance optmisied
+add lenis for smooth scroll and better ux 
+i think backend also doesnt have good logging system add chalk winston morgan to make logging better and there should be logging for every api call
