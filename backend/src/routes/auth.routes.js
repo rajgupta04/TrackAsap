@@ -10,6 +10,8 @@ import {
   updateProfile,
   acceptAgreement,
   uploadProfilePicture,
+  forgotPassword,
+  resetPassword,
 } from '../controllers/auth.controller.js';
 import upload from '../middleware/upload.js';
 
@@ -37,6 +39,8 @@ const googleValidation = [
 router.post('/register', registerValidation, validate, register);
 router.post('/login', loginValidation, validate, login);
 router.post('/google', googleValidation, validate, googleLogin);
+router.post('/forgot-password', forgotPassword);
+router.post('/reset-password/:token', resetPassword);
 router.get('/me', protect, getMe);
 router.put('/profile', protect, updateProfile);
 router.put('/profile/picture', protect, upload.single('image'), uploadProfilePicture);

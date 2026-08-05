@@ -18,6 +18,7 @@ import adminRoutes from './routes/admin.routes.js';
 import extensionRoutes from './routes/extension.routes.js';
 import aiRoutes from './routes/ai.routes.js';
 import compilerRoutes from './routes/compiler.routes.js';
+import emailRoutes from './routes/email.routes.js';
 import { initLeaderboardCron } from './cron/leaderboard.cron.js';
 import { requestLogger } from './analytics/middlewares/requestLogger.js';
 import { startAnalyticsCronJobs } from './analytics/cron/aggregateDaily.js';
@@ -70,6 +71,7 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/extension', extensionRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/compiler', compilerRoutes);
+app.use('/api/email', emailRoutes);
 
 // System Analytics (Admin only)
 app.use('/api/system-analytics', systemAnalyticsRoutes);

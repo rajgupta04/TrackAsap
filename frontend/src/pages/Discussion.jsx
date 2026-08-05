@@ -185,7 +185,13 @@ const Discussion = () => {
               {user?.name?.charAt(0).toUpperCase() || 'U'}
             </span>
           </div>
-          <div className="flex-1 space-y-3">
+          <div className="flex-1 space-y-3 relative">
+            {!user?.isEmailVerified && (
+              <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-dark-900/80 rounded-xl backdrop-blur-sm border border-dark-600/50">
+                <p className="text-sm font-medium text-white mb-2">Verify your email to post in discussions</p>
+                <a href="/profile" className="text-xs text-neon-green hover:underline">Go to Profile →</a>
+              </div>
+            )}
             <textarea
               value={content}
               onChange={(e) => setContent(e.target.value)}
@@ -417,8 +423,20 @@ const Discussion = () => {
                         </span>
                       </div>
                       <button
-                        onClick={() => handleCloneSheet(post._id)}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-neon-green/10 text-neon-green border border-neon-green/20 hover:bg-neon-green/20 transition-all"
+                        onClick={() => {
+                          if (!user?.isEmailVerified) {
+                            toast.error('Verify your email to clone sheets');
+                            return;
+                          }
+                          handleCloneSheet(post._id);
+                        }}
+                        disabled={!user?.isEmailVerified}
+                        title={!user?.isEmailVerified ? 'Verify your email to clone sheets' : ''}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                          !user?.isEmailVerified 
+                            ? 'bg-dark-800 text-dark-500 border border-dark-700 cursor-not-allowed' 
+                            : 'bg-neon-green/10 text-neon-green border border-neon-green/20 hover:bg-neon-green/20'
+                        }`}
                       >
                         <Copy size={12} />
                         Clone Sheet
@@ -525,7 +543,12 @@ const Discussion = () => {
                         ))}
 
                         {/* Comment input */}
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 relative">
+                          {!user?.isEmailVerified && (
+                            <div className="absolute inset-0 z-10 flex items-center justify-center bg-dark-900/80 rounded-lg backdrop-blur-sm border border-dark-600/50">
+                               <span className="text-xs text-amber-400" title="Verify email to comment">Verify email to comment</span>
+                            </div>
+                          )}
                           <input
                             type="text"
                             value={commentInputs[post._id] || ''}

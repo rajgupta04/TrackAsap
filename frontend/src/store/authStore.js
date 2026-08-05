@@ -130,6 +130,52 @@ export const useAuthStore = create((set, get) => ({
     }
   },
 
+  sendVerificationEmail: async () => {
+    try {
+      const response = await authService.sendVerificationEmail();
+      return { success: true, data: response.data };
+    } catch (error) {
+      return { success: false, error: error.response?.data?.message || 'Failed to send verification email' };
+    }
+  },
+
+  forgotPassword: async (email) => {
+    set({ isLoading: true, error: null });
+    try {
+      await authService.forgotPassword(email);
+      set({ isLoading: false });
+      return { success: true };
+    } catch (error) {
+      const message = error.response?.data?.message || 'Failed to send reset link';
+      set({ error: message, isLoading: false });
+      return { success: false, error: message };
+    }
+  },
+
+  resetPassword: async (token, password) => {
+    set({ isLoading: true, error: null });
+    try {
+      await authService.resetPassword(token, password);
+      set({ isLoading: false });
+      return { success: true };
+    } catch (error) {
+      const message = error.response?.data?.message || 'Failed to reset password';
+      set({ error: message, isLoading: false });
+      return { success: false, error: message };
+    }
+  },
+
+  checkAuth: async () => {
+    try {
+      const data = await authService.getMe();
+      localStorage.setItem('user', JSON.stringify(data));
+      set({ user: data, isAuthenticated: true });
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: error.response?.data?.message || 'Failed to check auth' };
+    }
+  },
+
   // GitHub integration
   fetchGitHubStatus: async () => {
     try {

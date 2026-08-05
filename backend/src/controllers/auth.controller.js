@@ -1,6 +1,8 @@
 import User from '../models/User.model.js';
 import { generateToken } from '../middleware/auth.middleware.js';
 import { OAuth2Client } from 'google-auth-library';
+import { sendWelcomeEmail, sendResetPasswordEmail } from '../utils/mailer.js';
+import crypto from 'crypto';
 
 const getGoogleClientId = () => process.env.GOOGLE_CLIENT_ID || process.env.GOOGLE_OAUTH_CLIENT_ID;
 
@@ -23,6 +25,8 @@ export const register = async (req, res) => {
       email,
       password,
       startDate: startDate || new Date(),
+      authProvider: 'local',
+      isEmailVerified: false,
     });
 
     res.status(201).json({
@@ -36,6 +40,8 @@ export const register = async (req, res) => {
       enablePhysique: Boolean(user.enablePhysique),
       profilePicture: user.profilePicture,
       googlePicture: user.googlePicture,
+      isEmailVerified: user.isEmailVerified,
+      authProvider: user.authProvider,
       token: generateToken(user._id),
     });
   } catch (error) {
@@ -78,6 +84,8 @@ export const login = async (req, res) => {
       acceptedDiscussionAgreement: user.acceptedDiscussionAgreement,
       profilePicture: user.profilePicture,
       googlePicture: user.googlePicture,
+      isEmailVerified: user.isEmailVerified,
+      authProvider: user.authProvider,
       token: generateToken(user._id),
     });
   } catch (error) {
@@ -126,13 +134,32 @@ export const googleLogin = async (req, res) => {
         password: randomPassword,
         startDate: new Date(),
         googlePicture: avatarUrl,
+        authProvider: 'google',
+        isEmailVerified: true,
+        welcomeEmailSent: true,
       });
+      
+      try {
+        await sendWelcomeEmail(user);
+      } catch (err) {
+        console.error('Welcome email failed:', err);
+      }
     } else {
       // Update googlePicture if missing or changed
       if (avatarUrl && user.googlePicture !== avatarUrl) {
         user.googlePicture = avatarUrl;
-        await user.save();
       }
+      
+      if (!user.welcomeEmailSent) {
+        try {
+          await sendWelcomeEmail(user);
+          user.welcomeEmailSent = true;
+        } catch (err) {
+          console.error('Welcome email failed:', err);
+        }
+      }
+      
+      await user.save();
     }
 
     return res.json({
@@ -150,6 +177,8 @@ export const googleLogin = async (req, res) => {
       enablePhysique: Boolean(user.enablePhysique),
       isBanned: user.isBanned,
       acceptedDiscussionAgreement: user.acceptedDiscussionAgreement,
+      isEmailVerified: user.isEmailVerified,
+      authProvider: user.authProvider,
       token: generateToken(user._id),
     });
   } catch (error) {
@@ -182,6 +211,8 @@ export const getMe = async (req, res) => {
       acceptedDiscussionAgreement: user.acceptedDiscussionAgreement,
       profilePicture: user.profilePicture,
       googlePicture: user.googlePicture,
+      isEmailVerified: user.isEmailVerified,
+      authProvider: user.authProvider,
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -232,6 +263,8 @@ export const updateProfile = async (req, res) => {
       acceptedDiscussionAgreement: user.acceptedDiscussionAgreement,
       profilePicture: user.profilePicture,
       googlePicture: user.googlePicture,
+      isEmailVerified: user.isEmailVerified,
+      authProvider: user.authProvider,
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -284,6 +317,59 @@ export const uploadProfilePicture = async (req, res) => {
       message: 'Profile picture updated successfully',
       profilePicture: user.profilePicture,
     });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+export const forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+    const user = await User.findOne({ email });
+
+    if (!user) {
+      return res.status(404).json({ message: 'No user registered with this email address.' });
+    }
+
+    if (user.authProvider === 'google') {
+      return res.status(400).json({ message: 'Google accounts do not have a password to reset. Please sign in via Google.' });
+    }
+
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    user.passwordResetToken = crypto.createHash('sha256').update(resetToken).digest('hex');
+    user.passwordResetExpires = Date.now() + 15 * 60 * 1000;
+    
+    await user.save({ validateBeforeSave: false });
+
+    await sendResetPasswordEmail(user, resetToken);
+
+    res.json({ message: 'Password reset link sent to your email.' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+export const resetPassword = async (req, res) => {
+  try {
+    const { password } = req.body;
+    const hashedToken = crypto.createHash('sha256').update(req.params.token).digest('hex');
+
+    const user = await User.findOne({
+      passwordResetToken: hashedToken,
+      passwordResetExpires: { $gt: Date.now() }
+    }).select('+passwordResetToken +passwordResetExpires');
+
+    if (!user) {
+      return res.status(400).json({ message: 'Password reset link is invalid or has expired.' });
+    }
+
+    user.password = password;
+    user.passwordResetToken = undefined;
+    user.passwordResetExpires = undefined;
+
+    await user.save();
+
+    res.json({ message: 'Password reset successful. You can now login with your new password.' });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

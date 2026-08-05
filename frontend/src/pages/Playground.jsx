@@ -406,7 +406,7 @@ const Playground = () => {
           </div>
 
           {/* Center: File name & Status */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 hidden md:flex">
             <span className="w-2 h-2 rounded-full bg-neon-green animate-pulse shadow-[0_0_8px_rgba(57,255,20,0.6)]" />
             <span className="text-sm font-semibold text-gray-300 tracking-wide font-mono">
               {activeLangObj.filename}
@@ -448,7 +448,7 @@ const Playground = () => {
             <button
               onClick={handleFormatCode}
               title="Format Code (Alt+Shift+F)"
-              className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-all border border-white/5"
+              className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-all border border-white/5 hidden sm:inline-block"
             >
               <AlignLeft size={15} />
             </button>
@@ -457,7 +457,7 @@ const Playground = () => {
             <button
               onClick={handleCopyCode}
               title="Copy source code"
-              className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-all border border-white/5"
+              className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-all border border-white/5 hidden sm:inline-block"
             >
               {copied ? <Check size={15} className="text-neon-green" /> : <Copy size={15} />}
             </button>
@@ -466,7 +466,7 @@ const Playground = () => {
             <button
               onClick={handleResetTemplate}
               title="Reset to starter template"
-              className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-all border border-white/5"
+              className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-all border border-white/5 hidden sm:inline-block"
             >
               <RotateCcw size={15} />
             </button>

@@ -15,6 +15,9 @@ import Discussion from './pages/Discussion';
 import Admin from './pages/Admin';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import Leaderboard from './pages/Leaderboard';
+import LandingPage from './pages/LandingPage';
+import EmailVerified from './pages/EmailVerified';
+import ResetPassword from './pages/ResetPassword';
 
 // Protected Route wrapper
 const ProtectedRoute = ({ children }) => {
@@ -59,6 +62,8 @@ function App() {
     <Routes>
       {/* Fully public — no auth required */}
       <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+      <Route path="/verify-email/:token" element={<EmailVerified />} />
+      <Route path="/reset-password/:token" element={<ResetPassword />} />
 
       {/* Public Routes */}
       <Route
@@ -74,6 +79,14 @@ function App() {
         element={
           <PublicRoute>
             <Register />
+          </PublicRoute>
+        }
+      />
+      <Route
+        path="/home"
+        element={
+          <PublicRoute>
+            <LandingPage />
           </PublicRoute>
         }
       />
