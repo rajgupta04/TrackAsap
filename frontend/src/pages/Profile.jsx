@@ -30,6 +30,7 @@ import {
   Share2,
   Star,
   Trophy,
+  LogOut,
 } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { useAnalyticsStore } from '../store/analyticsStore';
@@ -73,7 +74,7 @@ const SETUP_STEPS = [
 ];
 
 const Profile = () => {
-  const { user, updateUser, isLoading, githubStatus, fetchGitHubStatus, setGitHubStatus, uploadProfilePicture } = useAuthStore();
+  const { user, updateUser, isLoading, githubStatus, fetchGitHubStatus, setGitHubStatus, uploadProfilePicture, checkAuth, logout } = useAuthStore();
   const { leetcodeStats, codeforcesStats, codechefStats, dashboard } = useAnalyticsStore();
   const { streak } = useTaskStore();
   const { sheets, fetchSheets } = useSheetStore();
@@ -91,6 +92,19 @@ const Profile = () => {
       : '');
   const [creatingRepo, setCreatingRepo] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [verificationCooldown, setVerificationCooldown] = useState(0);
+  const [sendingVerification, setSendingVerification] = useState(false);
+
+  // Timer for verification cooldown
+  useEffect(() => {
+    let timer;
+    if (verificationCooldown > 0) {
+      timer = setInterval(() => {
+        setVerificationCooldown((prev) => prev - 1);
+      }, 1000);
+    }
+    return () => clearInterval(timer);
+  }, [verificationCooldown]);
 
   const [formData, setFormData] = useState({
     name: user?.name || '',
@@ -110,6 +124,7 @@ const Profile = () => {
 
   // Handle hash scrolling
   useEffect(() => {
+    checkAuth();
     fetchSheets(true);
     fetchCurrentUserRank();
     if (window.location.hash) {
@@ -123,7 +138,7 @@ const Profile = () => {
         }, 100);
       }
     }
-  }, [fetchSheets, fetchCurrentUserRank]);
+  }, [checkAuth, fetchSheets, fetchCurrentUserRank]);
 
   // Compute stats for the ElectricBorder card
   const totalSolved = (dashboard?.totalProblems || 0) + (leetcodeStats?.totalSolved || 0) + (codeforcesStats?.problemsSolved || 0) + (codechefStats?.totalSolved || 0);
@@ -299,22 +314,92 @@ const Profile = () => {
               )}
             </label>
           </div>
-          <div className="text-center sm:text-left flex-1">
-            <h2 className="text-xl sm:text-2xl font-bold text-white">{user?.name || 'User'}</h2>
-            <p className="text-dark-400 text-sm sm:text-base break-all">{user?.email}</p>
-            <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3 sm:gap-4 mt-3">
-              <div className="flex items-center gap-2 bg-neon-green/10 px-3 py-1.5 rounded-full">
-                <span className="text-xs sm:text-sm text-neon-green font-semibold">Day {currentDay}</span>
-                <span className="text-xs text-dark-400">of 75</span>
-              </div>
-              <div className="flex items-center gap-2 bg-cyan-500/10 px-3 py-1.5 rounded-full">
-                <span className="text-xs sm:text-sm text-cyan-400 font-semibold">{75 - currentDay}</span>
-                <span className="text-xs text-dark-400">days left</span>
+          <div className="text-center sm:text-left flex-1 flex flex-col sm:flex-row sm:items-start justify-between w-full">
+            <div>
+              <h2 className="text-xl sm:text-2xl font-bold text-white">{user?.name || 'User'}</h2>
+              <p className="text-dark-400 text-sm sm:text-base break-all">{user?.email}</p>
+              <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3 sm:gap-4 mt-3">
+                <div className="flex items-center gap-2 bg-neon-green/10 px-3 py-1.5 rounded-full">
+                  <span className="text-xs sm:text-sm text-neon-green font-semibold">Day {currentDay}</span>
+                  <span className="text-xs text-dark-400">of 75</span>
+                </div>
+                <div className="flex items-center gap-2 bg-cyan-500/10 px-3 py-1.5 rounded-full">
+                  <span className="text-xs sm:text-sm text-cyan-400 font-semibold">{75 - currentDay}</span>
+                  <span className="text-xs text-dark-400">days left</span>
+                </div>
               </div>
             </div>
+            <button
+              onClick={logout}
+              className="mt-4 sm:mt-0 px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 border border-red-500/20 hover:border-red-500/40 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center justify-center gap-2 w-full sm:w-auto shrink-0"
+            >
+              <LogOut size={16} />
+              Logout
+            </button>
           </div>
         </div>
       </GlassCard>
+
+      {/* Email Verification Banner */}
+      {user?.authProvider !== 'google' && !user?.isEmailVerified && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="relative overflow-hidden bg-amber-500/10 border border-amber-500/20 rounded-2xl p-4 sm:p-5 backdrop-blur-md group"
+        >
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 relative z-10">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-amber-500/20 flex items-center justify-center shrink-0 border border-amber-500/30">
+                <Mail className="w-5 h-5 text-amber-400" />
+              </div>
+              <div>
+                <h3 className="text-white font-semibold flex items-center gap-2 text-sm sm:text-base">
+                  ✉️ Verify your email
+                </h3>
+                <p className="text-dark-400 text-xs sm:text-sm mt-0.5 line-clamp-1 group-hover:line-clamp-none transition-all">
+                  Verify your email in case you forget your password. It also unlocks Discussions & Sheet Cloning.
+                </p>
+              </div>
+            </div>
+            
+            <button
+              onClick={async () => {
+                setSendingVerification(true);
+                const { sendVerificationEmail } = useAuthStore.getState();
+                const result = await sendVerificationEmail();
+                if (result.success) {
+                  toast.success('Verification email sent!');
+                  setVerificationCooldown(60);
+                } else {
+                  toast.error(result.error || 'Failed to send email');
+                }
+                setSendingVerification(false);
+              }}
+              disabled={verificationCooldown > 0 || sendingVerification}
+              className={`shrink-0 px-4 py-2 rounded-xl text-sm font-semibold transition-all w-full sm:w-auto flex justify-center ${
+                verificationCooldown > 0
+                  ? 'bg-dark-700 text-dark-400 cursor-not-allowed border border-dark-600'
+                  : 'bg-neon-green/10 hover:bg-neon-green/20 text-neon-green border border-neon-green/30'
+              }`}
+            >
+              {sendingVerification ? (
+                <div className="flex items-center gap-2">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Sending...
+                </div>
+              ) : verificationCooldown > 0 ? (
+                `✓ Link Sent — Check Your Inbox (${verificationCooldown}s)`
+              ) : (
+                'Send Verification Link'
+              )}
+            </button>
+          </div>
+          
+          {/* Decorative gradients */}
+          <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/5 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute bottom-0 left-0 w-24 h-24 bg-amber-500/5 rounded-full blur-2xl pointer-events-none" />
+        </motion.div>
+      )}
 
       {/* Profile Form */}
       <form onSubmit={handleSubmit}>

@@ -21,6 +21,7 @@ import {
 import toast from 'react-hot-toast';
 import { useLocation } from 'react-router-dom';
 import useSheetStore from '../store/sheetStore';
+import { useAuthStore } from '../store/authStore';
 import GlassCard from '../components/ui/GlassCard';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
 import SheetProblemsView from '../components/sheets/SheetProblemsView';
@@ -55,6 +56,7 @@ const PROGRAMMER_QUOTES = [
 ];
 
 const Sheets = () => {
+  const { user } = useAuthStore();
   const {
     sheets,
     templates,
@@ -182,8 +184,19 @@ const Sheets = () => {
               {/* Action Buttons */}
               <div className="flex gap-2 mb-4">
                 <button
-                  onClick={() => setShowBucketPicker(true)}
-                  className="flex-1 flex items-center justify-center gap-1.5 px-2 py-2 text-xs bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-gray-300 transition-all"
+                  onClick={() => {
+                    if (!user?.isEmailVerified) {
+                      toast.error('Verify your email to import sheets');
+                      return;
+                    }
+                    setShowBucketPicker(true);
+                  }}
+                  title={!user?.isEmailVerified ? 'Verify your email to import sheets' : ''}
+                  className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-2 text-xs border rounded-lg transition-all ${
+                    !user?.isEmailVerified 
+                      ? 'bg-white/5 border-white/5 text-gray-600 cursor-not-allowed' 
+                      : 'bg-white/5 hover:bg-white/10 border-white/10 text-gray-300'
+                  }`}
                 >
                   <FolderOpen className="w-3.5 h-3.5" />
                   Buckets
@@ -278,9 +291,19 @@ const Sheets = () => {
               <div className="p-2.5 sm:p-3 flex items-center gap-2 min-w-0 max-w-full">
                 {/* Action buttons */}
                 <button
-                  onClick={() => setShowBucketPicker(true)}
-                  className="p-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-gray-400 hover:text-white transition-all shrink-0"
-                  title="Buckets"
+                  onClick={() => {
+                    if (!user?.isEmailVerified) {
+                      toast.error('Verify your email to import sheets');
+                      return;
+                    }
+                    setShowBucketPicker(true);
+                  }}
+                  title={!user?.isEmailVerified ? 'Verify your email to import sheets' : 'Buckets'}
+                  className={`p-2 border rounded-lg transition-all shrink-0 ${
+                    !user?.isEmailVerified 
+                      ? 'bg-white/5 border-white/5 text-gray-600 cursor-not-allowed' 
+                      : 'bg-white/5 hover:bg-white/10 border-white/10 text-gray-400 hover:text-white'
+                  }`}
                 >
                   <FolderOpen className="w-4 h-4" />
                 </button>
@@ -390,8 +413,19 @@ const Sheets = () => {
                 {/* Mobile Quick Action Tiles */}
                 <div className="grid grid-cols-2 gap-3">
                   <button
-                    onClick={() => setShowBucketPicker(true)}
-                    className="flex flex-col items-center justify-center p-3.5 bg-white/5 hover:bg-white/10 active:scale-95 border border-white/10 rounded-xl transition-all text-center group"
+                    onClick={() => {
+                      if (!user?.isEmailVerified) {
+                        toast.error('Verify your email to import sheets');
+                        return;
+                      }
+                      setShowBucketPicker(true);
+                    }}
+                    title={!user?.isEmailVerified ? 'Verify your email to import sheets' : ''}
+                    className={`flex flex-col items-center justify-center p-3.5 border rounded-xl transition-all text-center group ${
+                      !user?.isEmailVerified 
+                        ? 'bg-white/5 border-white/5 cursor-not-allowed opacity-50' 
+                        : 'bg-white/5 hover:bg-white/10 active:scale-95 border-white/10'
+                    }`}
                   >
                     <div className="w-10 h-10 rounded-xl bg-blue-500/15 border border-blue-500/30 flex items-center justify-center mb-2 group-hover:scale-105 transition-transform">
                       <FolderOpen className="w-5 h-5 text-blue-400" />

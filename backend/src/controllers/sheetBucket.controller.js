@@ -77,6 +77,10 @@ export const importBucketToSheet = async (req, res) => {
     const { bucketId, sheetId } = req.body;
     const userId = req.user._id;
 
+    if (!req.user.isEmailVerified) {
+      return res.status(403).json({ message: 'Please verify your email to import sheets.' });
+    }
+
     // Verify bucket exists
     const bucket = await SheetBucket.findById(bucketId);
     if (!bucket) {
@@ -153,6 +157,10 @@ export const createSheetFromBucket = async (req, res) => {
   try {
     const { bucketId, sheetName } = req.body;
     const userId = req.user._id;
+
+    if (!req.user.isEmailVerified) {
+      return res.status(403).json({ message: 'Please verify your email to import sheets.' });
+    }
 
     // Verify bucket exists
     const bucket = await SheetBucket.findById(bucketId);

@@ -54,6 +54,10 @@ export const createPost = async (req, res) => {
       });
     }
 
+    if (!req.user.isEmailVerified) {
+      return res.status(403).json({ message: 'Please verify your email before posting in discussions.' });
+    }
+
     const postData = {
       user: req.user._id,
       content: content.trim(),
@@ -135,6 +139,10 @@ export const commentPost = async (req, res) => {
   try {
     const { content } = req.body;
 
+    if (!req.user.isEmailVerified) {
+      return res.status(403).json({ message: 'Please verify your email before posting in discussions.' });
+    }
+
     if (!content || !content.trim()) {
       return res.status(400).json({ message: 'Comment content is required' });
     }
@@ -196,6 +204,10 @@ export const cloneSheet = async (req, res) => {
   try {
     const { postId } = req.body;
     const userId = req.user._id;
+
+    if (!req.user.isEmailVerified) {
+      return res.status(403).json({ message: 'Please verify your email before posting in discussions.' });
+    }
 
     const post = await DiscussionPost.findById(postId);
     if (!post || post.isDeleted || !post.sharedSheet) {

@@ -37,4 +37,10 @@ export const authService = {
     const response = await api.put('/auth/accept-agreement');
     return response.data;
   },
+
+  sendVerificationEmail: () => api.post('/email/send-verification'),
+
+  forgotPassword: (email) => api.post('/auth/forgot-password', { email }),
+  
+  resetPassword: (token, password) => api.post(`/auth/reset-password/${token}`, { password }),
 };

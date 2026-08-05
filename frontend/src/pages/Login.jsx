@@ -9,7 +9,11 @@ import GoogleSignInButton from '../components/auth/GoogleSignInButton';
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const { login, loginWithGoogle, isLoading, error } = useAuthStore();
+  const [isForgotPassword, setIsForgotPassword] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [isSendingForgot, setIsSendingForgot] = useState(false);
+  
+  const { login, loginWithGoogle, forgotPassword, isLoading, error } = useAuthStore();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -30,6 +34,19 @@ const Login = () => {
     }
   };
 
+  const handleForgotSubmit = async (e) => {
+    e.preventDefault();
+    setIsSendingForgot(true);
+    const result = await forgotPassword(forgotEmail);
+    setIsSendingForgot(false);
+    if (result.success) {
+      toast.success('Reset link sent!');
+      setIsForgotPassword(false);
+      setForgotEmail('');
+    } else {
+      toast.error(result.error);
+    }
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-dark-950 gradient-mesh p-4">
@@ -48,90 +65,149 @@ const Login = () => {
           <p className="text-dark-400 mt-1">75 Day Challenge Tracker</p>
         </div>
 
-        {/* Login Form */}
+        {/* Form Container */}
         <div className="glass-card p-8">
-          <h2 className="text-2xl font-bold text-white mb-6">Welcome Back</h2>
+          {isForgotPassword ? (
+            <>
+              <h2 className="text-2xl font-bold text-white mb-2">Reset Password</h2>
+              <p className="text-dark-300 text-sm mb-6">Enter your email to receive a password reset link.</p>
+              
+              <form onSubmit={handleForgotSubmit} className="space-y-5">
+                <div>
+                  <label className="block text-sm font-medium text-dark-300 mb-2">
+                    Email
+                  </label>
+                  <div className="relative">
+                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-dark-400" />
+                    <input
+                      type="email"
+                      value={forgotEmail}
+                      onChange={(e) => setForgotEmail(e.target.value)}
+                      className="input-field pl-12"
+                      placeholder="you@example.com"
+                      required
+                    />
+                  </div>
+                </div>
 
-          <form onSubmit={handleSubmit} className="space-y-5">
-            <div>
-              <label className="block text-sm font-medium text-dark-300 mb-2">
-                Email
-              </label>
-              <div className="relative">
-                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-dark-400" />
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="input-field pl-12"
-                  placeholder="you@example.com"
-                  required
-                />
+                <button
+                  type="submit"
+                  disabled={isSendingForgot}
+                  className="btn-primary w-full flex items-center justify-center gap-2"
+                >
+                  {isSendingForgot ? (
+                    <div className="w-5 h-5 border-2 border-dark-950 border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    'Send Reset Link'
+                  )}
+                </button>
+              </form>
+              
+              <div className="mt-6 text-center">
+                <button
+                  type="button"
+                  onClick={() => setIsForgotPassword(false)}
+                  className="text-sm text-neon-green hover:underline focus:outline-none"
+                >
+                  Back to Sign In
+                </button>
               </div>
-            </div>
+            </>
+          ) : (
+            <>
+              <h2 className="text-2xl font-bold text-white mb-6">Welcome Back</h2>
 
-            <div>
-              <label className="block text-sm font-medium text-dark-300 mb-2">
-                Password
-              </label>
-              <div className="relative">
-                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-dark-400" />
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="input-field pl-12"
-                  placeholder="••••••••"
-                  required
-                />
-              </div>
-            </div>
+              <form onSubmit={handleSubmit} className="space-y-5">
+                <div>
+                  <label className="block text-sm font-medium text-dark-300 mb-2">
+                    Email
+                  </label>
+                  <div className="relative">
+                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-dark-400" />
+                    <input
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="input-field pl-12"
+                      placeholder="you@example.com"
+                      required
+                    />
+                  </div>
+                </div>
 
-            {error && (
-              <p className="text-red-400 text-sm text-center">{error}</p>
-            )}
+                <div>
+                  <div className="flex justify-between items-center mb-2">
+                    <label className="block text-sm font-medium text-dark-300">
+                      Password
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setIsForgotPassword(true)}
+                      className="text-xs text-neon-green hover:underline focus:outline-none"
+                    >
+                      Forgot Password?
+                    </button>
+                  </div>
+                  <div className="relative">
+                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-dark-400" />
+                    <input
+                      type="password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="input-field pl-12"
+                      placeholder="••••••••"
+                      required
+                    />
+                  </div>
+                </div>
 
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="btn-primary w-full flex items-center justify-center gap-2"
-            >
-              {isLoading ? (
-                <div className="w-5 h-5 border-2 border-dark-950 border-t-transparent rounded-full animate-spin" />
-              ) : (
-                <>
-                  <LogIn size={20} />
-                  Sign In
-                </>
-              )}
-            </button>
+                {error && (
+                  <p className="text-red-400 text-sm text-center">{error}</p>
+                )}
 
-            <div className="relative py-1">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-dark-700" />
-              </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-dark-900 px-2 text-dark-400">Or continue with</span>
-              </div>
-            </div>
+                <button
+                  type="submit"
+                  disabled={isLoading}
+                  className="btn-primary w-full flex items-center justify-center gap-2"
+                >
+                  {isLoading ? (
+                    <div className="w-5 h-5 border-2 border-dark-950 border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <>
+                      <LogIn size={20} />
+                      Sign In
+                    </>
+                  )}
+                </button>
 
-            <div className="flex justify-center">
-              <GoogleSignInButton
-                onCredential={handleGoogleCredential}
-                onError={(err) => toast.error(err?.message || 'Google sign-in failed')}
-              />
-            </div>
-          </form>
+                <div className="relative py-1">
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t border-dark-700" />
+                  </div>
+                  <div className="relative flex justify-center text-xs uppercase">
+                    <span className="bg-dark-900 px-2 text-dark-400">Or continue with</span>
+                  </div>
+                </div>
 
-          <p className="text-center text-dark-400 mt-6">
-            Don't have an account?{' '}
-            <Link
-              to="/register"
-              className="text-neon-green hover:underline font-medium"
-            >
-              Sign Up
-            </Link>
-          </p>
+                <div className="flex justify-center">
+                  <GoogleSignInButton
+                    onCredential={handleGoogleCredential}
+                    onError={(err) => toast.error(err?.message || 'Google sign-in failed')}
+                  />
+                </div>
+              </form>
+
+              <p className="text-center text-dark-400 mt-6">
+                Don't have an account?{' '}
+                <Link
+                  to="/register"
+                  className="text-neon-green hover:underline font-medium"
+                >
+                  Sign Up
+                </Link>
+              </p>
+            </>
+          )}
         </div>
       </motion.div>
     </div>
