@@ -150,6 +150,10 @@ export const googleLogin = async (req, res) => {
         user.googlePicture = avatarUrl;
       }
       
+      // Ensure Google users are marked as verified and have correct auth provider
+      user.authProvider = 'google';
+      user.isEmailVerified = true;
+      
       if (!user.welcomeEmailSent) {
         try {
           await sendWelcomeEmail(user);
@@ -194,6 +198,14 @@ export const googleLogin = async (req, res) => {
 export const getMe = async (req, res) => {
   try {
     const user = await User.findById(req.user._id);
+    
+    // Auto-heal existing Google users who don't have authProvider/isEmailVerified set yet
+    if (user.googlePicture && (user.authProvider !== 'google' || !user.isEmailVerified)) {
+      user.authProvider = 'google';
+      user.isEmailVerified = true;
+      await user.save({ validateBeforeSave: false });
+    }
+
     res.json({
       _id: user._id,
       name: user.name,
