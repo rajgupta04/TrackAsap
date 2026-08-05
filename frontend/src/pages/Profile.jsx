@@ -331,7 +331,7 @@ const Profile = () => {
             </div>
             <button
               onClick={logout}
-              className="mt-4 sm:mt-0 px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 border border-red-500/20 hover:border-red-500/40 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center justify-center gap-2 w-full sm:w-auto shrink-0"
+              className="mt-4 sm:mt-0 px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 border border-red-500/20 hover:border-red-500/40 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center justify-center gap-2 w-full sm:w-auto shrink-0 md:hidden"
             >
               <LogOut size={16} />
               Logout
