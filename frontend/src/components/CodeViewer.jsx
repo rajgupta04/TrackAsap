@@ -458,7 +458,9 @@ const CodeViewer = ({ isOpen, onClose, problem: problemProp, onSave }) => {
       const firstSol = flatSolutions[0];
       const activeCode = codeMap[activeLabel]?.[activeLang] || '';
 
-      if (problem.isSheetProblem) {
+      if (problem.isRoadmapProblem) {
+        if (onSave) await onSave(problem._id, activeCode, activeLang, flatSolutions);
+      } else if (problem.isSheetProblem) {
         // Always save solutions + code + language together so data is never lost
         if (onSave) await onSave(problem._id, activeCode, activeLang, flatSolutions);
         else await sheetProblemService.updateProblem(problem._id, { code: activeCode, language: activeLang, solutions: flatSolutions });

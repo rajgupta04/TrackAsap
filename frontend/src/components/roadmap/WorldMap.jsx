@@ -4,10 +4,10 @@ import { WORLDS } from '../../data/roadmapData';
 import WorldNode from './WorldNode';
 import { Sparkles } from 'lucide-react';
 
-const WorldMap = ({ onSelectWorld }) => {
+const WorldMap = ({ onSelectWorld, onActiveWorldChange }) => {
   const { 
-    completedWorlds, 
-    unlockedWorlds, 
+    completedWorlds = [], 
+    unlockedWorlds = ['arrays'], 
     getWorldProgress, 
     justCompletedWorldId,
     clearJustCompletedWorld
@@ -50,6 +50,36 @@ const WorldMap = ({ onSelectWorld }) => {
     };
   }, []);
 
+  // IntersectionObserver to detect which world is currently in the middle of the viewport
+  useEffect(() => {
+    if (!onActiveWorldChange) return;
+
+    const observerOptions = {
+      root: null,
+      rootMargin: '-35% 0px -35% 0px', // focused around the center of the scroll container
+      threshold: 0.1
+    };
+
+    const observerCallback = (entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          const worldId = entry.target.getAttribute('data-world-id');
+          if (worldId) {
+            onActiveWorldChange(worldId);
+          }
+        }
+      });
+    };
+
+    const observer = new IntersectionObserver(observerCallback, observerOptions);
+    WORLDS.forEach((world) => {
+      const el = document.getElementById(`world-zone-${world.id}`);
+      if (el) observer.observe(el);
+    });
+
+    return () => observer.disconnect();
+  }, [onActiveWorldChange]);
+
   // Handle justCompletedWorldId animation trigger
   useEffect(() => {
     if (justCompletedWorldId) {
@@ -83,7 +113,7 @@ const WorldMap = ({ onSelectWorld }) => {
   return (
     <div 
       ref={containerRef}
-      className="relative flex flex-col items-center w-full max-w-3xl mx-auto py-12 px-6 min-h-[1600px] z-10 select-none"
+      className="relative flex flex-col items-center w-full max-w-3xl mx-auto py-12 px-6 min-h-screen pb-24 z-10 select-none"
     >
       {/* ── Background SVG Winding Path Overlay ── */}
       <svg className="absolute inset-0 w-full h-full pointer-events-none z-0">
@@ -176,7 +206,7 @@ const WorldMap = ({ onSelectWorld }) => {
       `}</style>
 
       {/* ── Rendering World Nodes ── */}
-      <div className="flex flex-col w-full relative z-10 gap-16">
+      <div className="flex flex-col w-full relative z-10 gap-1">
         {WORLDS.map((world, idx) => {
           const isUnlocked = unlockedWorlds.includes(world.id);
           const isCompleted = completedWorlds.includes(world.id);
@@ -185,8 +215,9 @@ const WorldMap = ({ onSelectWorld }) => {
           return (
             <div 
               key={world.id} 
-              id={`node-world-${world.id}`}
-              className="flex flex-col w-full"
+              id={`world-zone-${world.id}`} 
+              data-world-id={world.id}
+              className="flex flex-col w-full py-16 sm:py-28"
             >
               <WorldNode
                 world={world}

@@ -17,103 +17,63 @@ const WorldNode = ({
   const strokeWidth = 4;
   const circumference = 2 * Math.PI * radius;
   const strokeDashoffset = circumference - (percentage / 100) * circumference;
-
   // Animation variants
   const nodeVariants = {
-    locked: { scale: 0.95, opacity: 0.4 },
-    unlocked: { scale: 1, opacity: 1 },
+    locked: { scale: 0.95, filter: 'grayscale(1) opacity(0.35) contrast(0.8)' },
+    unlocked: { scale: 1, filter: 'grayscale(0) opacity(1) contrast(1)' },
     hover: { 
-      scale: 1.08,
-      boxShadow: `0 0 25px ${world.theme.glowColor}`,
+      scale: 1.12,
+      filter: 'grayscale(0) opacity(1) drop-shadow(0 0 15px rgba(255,255,255,0.25))',
       transition: { duration: 0.3, ease: 'easeOut' }
     }
   };
 
   return (
     <div 
-      className={`relative flex items-center justify-center my-6 select-none ${
-        isEven ? 'self-start sm:ml-[25%]' : 'self-end sm:mr-[25%]'
+      className={`relative flex flex-col items-center justify-center my-3 select-none ${
+        isEven ? 'self-start sm:ml-[10%]' : 'self-end sm:mr-[10%]'
       }`}
     >
-      {/* Interactive Node Wrapper */}
+      {/* Interactive Island Wrapper */}
       <motion.div
+        id={`node-world-${world.id}`}
         initial="locked"
         animate={isUnlocked ? 'unlocked' : 'locked'}
         whileHover={isUnlocked ? 'hover' : {}}
         variants={nodeVariants}
         onClick={isUnlocked ? onClick : undefined}
-        className={`relative w-28 h-28 rounded-full flex items-center justify-center border-2 transition-all duration-500 cursor-pointer ${
-          isCompleted 
-            ? 'border-yellow-400/90 shadow-[0_0_20px_rgba(251,191,36,0.35)]' 
-            : isUnlocked 
-              ? 'border-white/20' 
-              : 'border-white/5 cursor-not-allowed bg-black/40'
-        }`}
-        style={{
-          background: isUnlocked 
-            ? `radial-gradient(circle, ${world.theme.nodeColor}33 0%, #1e1f31dd 100%)`
-            : 'rgba(15, 23, 42, 0.6)'
-        }}
+        className="relative w-64 h-48 sm:w-80 sm:h-60 flex items-center justify-center transition-all duration-500 cursor-pointer"
       >
-        {/* Pulsing Active Highlight */}
-        {isUnlocked && !isCompleted && (
-          <div 
-            className="absolute -inset-2 rounded-full border border-dashed animate-spin" 
-            style={{ 
-              borderColor: world.theme.nodeColor,
-              animationDuration: '20s',
-              filter: `drop-shadow(0 0 6px ${world.theme.nodeColor})`
-            }}
-          />
-        )}
+        {/* Floating Island Image Asset */}
+        <img
+          src={`/assets/roadmap/${world.image || `island_${world.id}.png`}`}
+          alt={world.name}
+          className="max-w-full max-h-full object-contain pointer-events-none"
+        />
 
-        {/* SVG Progress Ring */}
-        {isUnlocked && (
-          <svg className="absolute w-full h-full transform -rotate-90 pointer-events-none">
-            <circle
-              cx="54"
-              cy="54"
-              r={radius}
-              className="stroke-white/5 fill-none"
-              strokeWidth={strokeWidth}
-            />
-            <circle
-              cx="54"
-              cy="54"
-              r={radius}
-              className="fill-none transition-all duration-1000 ease-out"
-              strokeWidth={strokeWidth}
-              strokeDasharray={circumference}
-              strokeDashoffset={strokeDashoffset}
-              strokeLinecap="round"
-              style={{
-                stroke: isCompleted ? '#fbbf24' : world.theme.nodeColor,
-                filter: isCompleted 
-                  ? 'drop-shadow(0 0 4px rgba(251,191,36,0.5))' 
-                  : `drop-shadow(0 0 4px ${world.theme.nodeColor})`
-              }}
-            />
-          </svg>
-        )}
-
-        {/* World Emoji or Lock Overlay */}
-        <div className="flex flex-col items-center justify-center text-center z-10">
-          {!isUnlocked ? (
-            <Lock className="w-7 h-7 text-dark-500 animate-pulse" />
-          ) : (
-            <span className="text-4xl animate-bounce" style={{ animationDuration: '3s' }}>
-              {world.emoji}
-            </span>
-          )}
-
-          {/* Miniature Completion Badge */}
-          {isCompleted && (
-            <div className="absolute -top-1 -right-1 bg-yellow-500 text-dark-950 font-bold p-1 rounded-full border border-yellow-300 shadow-md transform rotate-12 scale-90 animate-bounce">
-              <Check className="w-3 h-3 stroke-[3]" />
+        {/* Lock Overlay on top of the island */}
+        {!isUnlocked && (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="bg-black/60 border border-white/10 p-2.5 rounded-2xl backdrop-blur-sm shadow-xl">
+              <Lock className="w-5 h-5 text-dark-400 animate-pulse" />
             </div>
-          )}
-        </div>
+          </div>
+        )}
+
+        {/* Completion Checkmark Badge floating in the air */}
+        {isCompleted && (
+          <div className="absolute top-4 right-12 bg-yellow-500 text-dark-950 font-bold p-1 rounded-full border border-yellow-300 shadow-md transform rotate-12 scale-90 animate-bounce z-20">
+            <Check className="w-3.5 h-3.5 stroke-[3]" />
+          </div>
+        )}
       </motion.div>
+
+      {/* World Name Label Below the Island */}
+      <div className={`mt-1 bg-black/40 border border-white/5 px-3 py-1 rounded-xl text-xs font-bold text-center z-10 backdrop-blur-sm transition-all ${
+        isCompleted ? 'text-yellow-400 border-yellow-500/20' : isUnlocked ? 'text-white font-medium' : 'text-dark-500 font-medium'
+      }`}>
+        {world.name}
+      </div>
 
       {/* Floating Info Tooltip on Hover */}
       {isUnlocked && (

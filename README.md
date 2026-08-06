@@ -31,6 +31,13 @@ The Ultimate Developer Command Center & Interview Prep Platform. Featuring exten
 - **Visual Progress** - See completion percentage per topic
 - **Link Problems to Sheets** - Organize problems by sheet/topic
 
+### 🗺️ Interactive Gamified DSA Roadmap (NEW!)
+- **11 Thematic Kingdoms** - Arrays, Two Pointers, Sliding Window, Stacks, Binary Search, Linked Lists, Trees, Heaps, Graphs, DP, and Advanced Citadel.
+- **Dynamic Mode Selector** - Toggle instantly between **Blind 75**, **Rabbit 150**, and **Running Rabbit 175** question counts.
+- **Ambient backdrops & Visualizers** - Features dynamic equalizer bars, falling leaves with depth blur, and storm lightning strikes.
+- **Notes & Code Editors** - Attach reflection text and multi-language solutions directly onto standard/boss levels.
+- **Gold Coin Economy** - Defeat boss levels and clear standard paths to earn coins and unlock custom soundtracks.
+
 ### 🔥 Streak Animation (NEW!)
 - **Confetti Celebration** - Animated celebration on completing daily goals
 - **Streak Counter** - Visual streak display with fire animation
@@ -119,6 +126,11 @@ TrackAsap/
 │   │   │   │   ├── NumberInput.jsx
 │   │   │   │   ├── Select.jsx
 │   │   │   │   └── LoadingSpinner.jsx
+│   │   │   ├── roadmap/              # Gamified Roadmap components (NEW)
+│   │   │   │   ├── WorldMap.jsx
+│   │   │   │   ├── WorldModal.jsx
+│   │   │   │   ├── ProblemTile.jsx
+│   │   │   │   └── BossLevel.jsx
 │   │   │   ├── ProblemModal.jsx      # Problem input form (NEW)
 │   │   │   ├── CodeViewer.jsx        # Monaco editor view (NEW)
 │   │   │   └── StreakAnimation.jsx   # Streak celebration (NEW)
@@ -133,7 +145,8 @@ TrackAsap/
 │   │   │   ├── PhysiqueTracker.jsx
 │   │   │   ├── Profile.jsx
 │   │   │   ├── Sheets.jsx            # Sheets/Roadmaps page (NEW)
-│   │   │   └── Problems.jsx          # Problems list page (NEW)
+│   │   │   ├── Problems.jsx          # Problems list page (NEW)
+│   │   │   └── Roadmap.jsx           # Gamified DSA Roadmap Page (NEW)
 │   │   ├── services/
 │   │   │   ├── authService.js
 │   │   │   ├── dailyLogService.js
@@ -147,7 +160,8 @@ TrackAsap/
 │   │   │   ├── analyticsStore.js     # Analytics data
 │   │   │   ├── physiqueStore.js      # Weight tracking
 │   │   │   ├── problemStore.js       # Problems state (NEW)
-│   │   │   └── sheetStore.js         # Sheets state (NEW)
+│   │   │   ├── sheetStore.js         # Sheets state (NEW)
+│   │   │   └── roadmapStore.js       # Roadmap state & audio progress (NEW)
 │   │   ├── App.jsx
 │   │   ├── main.jsx
 │   │   └── index.css                 # Tailwind + custom styles

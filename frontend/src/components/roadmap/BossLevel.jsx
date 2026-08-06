@@ -1,16 +1,20 @@
 import { motion } from 'framer-motion';
-import { ShieldAlert, Trophy, ExternalLink, Check, Lock } from 'lucide-react';
+import { ShieldAlert, Trophy, ExternalLink, Check, Lock, FileText, Code } from 'lucide-react';
 import confetti from 'canvas-confetti';
+import { useRoadmapStore } from '../../store/roadmapStore';
 
 const BossLevel = ({ 
   bossLevel, 
   isUnlocked, 
   isCompleted, 
-  completedProblems, 
+  completedProblems = [], 
   onSolveProblem,
-  onCompleteBoss 
+  onCompleteBoss,
+  onOpenNotes,
+  onOpenCode
 }) => {
   const bossProblems = bossLevel.problems;
+  const { problemNotes = {}, problemCode = {} } = useRoadmapStore();
   
   // Check how many boss problems are completed
   const solvedCount = bossProblems.filter((p) => completedProblems.includes(p.id)).length;
@@ -114,8 +118,10 @@ const BossLevel = ({
           {/* List of Boss Problems */}
           {isUnlocked && (
             <div className="space-y-2">
-              {bossProblems.map((prob) => {
+               {bossProblems.map((prob) => {
                 const isProbSolved = completedProblems.includes(prob.id);
+                const hasNotes = !!problemNotes[prob.id];
+                const hasCode = !!problemCode[prob.id]?.code;
                 return (
                   <div 
                     key={prob.id}
@@ -137,6 +143,36 @@ const BossLevel = ({
                         title="Solve on LeetCode"
                       >
                         <ExternalLink size={12} />
+                      </button>
+
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onOpenNotes(prob);
+                        }}
+                        className={`p-1.5 rounded-lg border transition-colors ${
+                          hasNotes 
+                            ? 'bg-purple-500/10 text-purple-400 border-purple-500/30'
+                            : 'bg-white/5 text-dark-400 hover:text-white border-white/5'
+                        }`}
+                        title="Write notes"
+                      >
+                        <FileText size={12} />
+                      </button>
+
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onOpenCode(prob);
+                        }}
+                        className={`p-1.5 rounded-lg border transition-colors ${
+                          hasCode 
+                            ? 'bg-blue-500/10 text-blue-400 border-blue-500/30'
+                            : 'bg-white/5 text-dark-400 hover:text-white border-white/5'
+                        }`}
+                        title="Write code"
+                      >
+                        <Code size={12} />
                       </button>
 
                       {!isProbSolved && !isCompleted && (

@@ -8,13 +8,13 @@ import {
   Calendar,
   MessageSquare,
   Code2,
-  Map
+  Compass
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 const navPiles = [
   { path: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-  { path: '/roadmap', icon: Map, label: 'Roadmap' },
+  { path: '/roadmap', icon: Compass, label: 'Roadmap' },
   { path: '/sheets', icon: BookOpen, label: 'Sheets' },
   { path: '/problems', icon: Code, label: 'Problems' },
   { path: '/playground', icon: Code2, label: 'Playground' },

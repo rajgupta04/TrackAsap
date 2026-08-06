@@ -1,16 +1,28 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Lock, Check, ExternalLink } from 'lucide-react';
+import { Lock, Check, ExternalLink, FileText, Code } from 'lucide-react';
 import confetti from 'canvas-confetti';
+import { useRoadmapStore } from '../../store/roadmapStore';
 
 const ProblemTile = ({ 
   problem, 
   levelNumber, 
+  gridIndex = 0,
   isUnlocked, 
   isCompleted, 
-  onComplete 
+  onComplete,
+  onOpenNotes,
+  onOpenCode
 }) => {
   const [showTooltip, setShowTooltip] = useState(false);
+  const { problemNotes = {}, problemCode = {} } = useRoadmapStore();
+  const hasNotes = !!problemNotes[problem.id];
+  const hasCode = !!problemCode[problem.id]?.code;
+
+  // Adjust tooltip positioning to prevent viewport clipping
+  // For a 4-column grid: leftmost column aligns left, rightmost column aligns right, middle columns centered
+  const col = gridIndex % 4;
+  const alignClass = col === 0 ? 'left-0' : col === 3 ? 'right-0' : 'left-1/2 -translate-x-1/2';
 
   const getDifficultyColor = () => {
     switch (problem.difficulty) {
@@ -75,7 +87,7 @@ const ProblemTile = ({
 
       {/* Interactive Tooltip Card */}
       {showTooltip && (
-        <div className="absolute bottom-16 bg-dark-900/95 border border-white/10 rounded-2xl p-4 shadow-2xl z-50 w-64 text-left backdrop-blur-xl animate-fade-in pointer-events-auto">
+        <div className={`absolute bottom-16 bg-dark-900/95 border border-white/10 rounded-2xl p-4 shadow-2xl z-50 w-56 sm:w-64 text-left backdrop-blur-xl animate-fade-in pointer-events-auto ${alignClass}`}>
           <div className="flex justify-between items-start mb-2">
             <span className={`text-[10px] uppercase font-bold px-1.5 py-0.5 rounded ${
               problem.difficulty === 'easy' ? 'bg-emerald-500/10 text-emerald-400' :
@@ -110,6 +122,40 @@ const ProblemTile = ({
                 <ExternalLink size={12} />
                 <span>Solve on LeetCode</span>
               </button>
+
+              <div className="grid grid-cols-2 gap-1.5">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onOpenNotes(problem);
+                  }}
+                  className={`flex items-center justify-center gap-1.5 w-full py-1.5 text-xs font-semibold rounded-lg border transition-colors ${
+                    hasNotes 
+                      ? 'bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 border-purple-500/30'
+                      : 'bg-white/5 hover:bg-white/10 text-white border-white/10'
+                  }`}
+                  title="Write notes"
+                >
+                  <FileText size={12} />
+                  <span>Notes</span>
+                </button>
+
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onOpenCode(problem);
+                  }}
+                  className={`flex items-center justify-center gap-1.5 w-full py-1.5 text-xs font-semibold rounded-lg border transition-colors ${
+                    hasCode 
+                      ? 'bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border-blue-500/30'
+                      : 'bg-white/5 hover:bg-white/10 text-white border-white/10'
+                  }`}
+                  title="Write code"
+                >
+                  <Code size={12} />
+                  <span>Code</span>
+                </button>
+              </div>
 
               {!isCompleted && (
                 <button
