@@ -18,6 +18,7 @@ import Leaderboard from './pages/Leaderboard';
 import LandingPage from './pages/LandingPage';
 import EmailVerified from './pages/EmailVerified';
 import ResetPassword from './pages/ResetPassword';
+import Roadmap from './pages/Roadmap';
 
 // Protected Route wrapper
 const ProtectedRoute = ({ children }) => {
@@ -110,6 +111,7 @@ function App() {
         <Route path="problems" element={<Problems />} />
         <Route path="playground" element={<Playground />} />
         <Route path="discussion" element={<Discussion />} />
+        <Route path="roadmap" element={<Roadmap />} />
         <Route path="admin" element={<Admin />} />
         <Route path="leaderboard" element={<Leaderboard />} />
       </Route>

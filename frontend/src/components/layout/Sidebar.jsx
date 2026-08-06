@@ -19,11 +19,13 @@ import {
   Trophy,
   PanelLeftOpen,
   Code2,
+  Map,
 } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 
 const navItems = [
   { path: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+  { path: '/roadmap', icon: Map, label: 'Roadmap' },
   { path: '/daily-tracker', icon: Calendar, label: 'Daily Tracker' },
   { path: '/leaderboard', icon: Trophy, label: 'Leaderboard' },
   { path: '/analytics', icon: BarChart3, label: 'Analytics' },
