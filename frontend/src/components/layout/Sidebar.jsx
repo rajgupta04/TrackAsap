@@ -19,11 +19,13 @@ import {
   Trophy,
   PanelLeftOpen,
   Code2,
+  Compass,
 } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 
 const navItems = [
   { path: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+  { path: '/roadmap', icon: Compass, label: 'Roadmap', badge: 'Beta' },
   { path: '/daily-tracker', icon: Calendar, label: 'Daily Tracker' },
   { path: '/leaderboard', icon: Trophy, label: 'Leaderboard' },
   { path: '/analytics', icon: BarChart3, label: 'Analytics' },
@@ -136,8 +138,24 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
                   size={20}
                   className={`flex-shrink-0 ${isActive ? 'text-neon-green' : ''}`}
                 />
-                {!isCollapsed && <span className="font-medium hidden md:inline">{item.label}</span>}
-                <span className="font-medium md:hidden">{item.label}</span>
+                {!isCollapsed && (
+                  <span className="font-medium hidden md:inline-flex items-center gap-1.5">
+                    {item.label}
+                    {item.badge && (
+                      <span className="text-[8px] uppercase tracking-wider font-black px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20 shadow-sm leading-none flex-shrink-0 select-none">
+                        {item.badge}
+                      </span>
+                    )}
+                  </span>
+                )}
+                <span className="font-medium md:inline-flex items-center gap-1.5 md:hidden">
+                  {item.label}
+                  {item.badge && (
+                    <span className="text-[8px] uppercase tracking-wider font-black px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20 shadow-sm leading-none flex-shrink-0 select-none">
+                      {item.badge}
+                    </span>
+                  )}
+                </span>
                 {isActive && !isCollapsed && (
                   <motion.div
                     layoutId="activeNav"
