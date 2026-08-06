@@ -16,7 +16,9 @@ const Roadmap = () => {
     setActiveWorldId, 
     unlockedWorlds = ['arrays'],
     isAudioMuted = false,
+    toggleAudioMute,
     selectedAudioTrack,
+    setSelectedAudioTrack,
     unlockedAudioTracks = []
   } = useRoadmapStore();
 
@@ -25,8 +27,45 @@ const Roadmap = () => {
   
   const AVAILABLE_AUDIO_KEYS = ['arrays', 'two-pointers', 'sliding-window', 'stacks', 'linked-lists', 'trees', 'graphs'];
 
-  // Track currently scrolled/visible world zone
+  // Build list of unlocked audio tracks for keyboard navigation
   const safeUnlocked = unlockedWorlds || ['arrays'];
+  const unlockedAudioList = AVAILABLE_AUDIO_KEYS.filter(
+    key => safeUnlocked.includes(key) || unlockedAudioTracks.includes(key)
+  );
+
+  // Keyboard shortcuts for music control
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      // Skip if user is typing in an input/textarea or a modal is open
+      const tag = e.target.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || e.target.isContentEditable) return;
+      if (selectedWorldId) return; // modal open, skip shortcuts
+
+      const key = e.key.toLowerCase();
+
+      if (key === 'm') {
+        e.preventDefault();
+        toggleAudioMute();
+      } else if (key === 'arrowright' || key === 'n') {
+        e.preventDefault();
+        if (unlockedAudioList.length === 0) return;
+        const currentTrack = selectedAudioTrack || unlockedAudioList[0];
+        const currentIdx = unlockedAudioList.indexOf(currentTrack);
+        const nextIdx = (currentIdx + 1) % unlockedAudioList.length;
+        setSelectedAudioTrack(unlockedAudioList[nextIdx]);
+      } else if (key === 'arrowleft' || key === 'p') {
+        e.preventDefault();
+        if (unlockedAudioList.length === 0) return;
+        const currentTrack = selectedAudioTrack || unlockedAudioList[0];
+        const currentIdx = unlockedAudioList.indexOf(currentTrack);
+        const prevIdx = (currentIdx - 1 + unlockedAudioList.length) % unlockedAudioList.length;
+        setSelectedAudioTrack(unlockedAudioList[prevIdx]);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [toggleAudioMute, selectedAudioTrack, setSelectedAudioTrack, unlockedAudioList, selectedWorldId]);
   const highestUnlocked = safeUnlocked.length > 0 ? safeUnlocked[safeUnlocked.length - 1] : 'arrays';
   const [visibleWorldId, setVisibleWorldId] = useState(highestUnlocked);
 
@@ -98,7 +137,7 @@ const Roadmap = () => {
 
   return (
     <div 
-      className="relative flex-1 overflow-hidden flex flex-col transition-all duration-1000 -mx-2.5 -mt-2.5 -mb-24 sm:-mx-4 sm:-mt-4 sm:-mb-24 md:-mx-6 md:-mt-6 md:-mb-6 lg:-mx-8 lg:-mt-8 lg:-mb-8"
+      className="relative h-full flex-1 overflow-hidden flex flex-col transition-all duration-1000 -mx-2.5 -mt-2.5 -mb-24 sm:-mx-4 sm:-mt-4 sm:-mb-24 md:-mx-6 md:-mt-6 md:-mb-6 lg:-mx-8 lg:-mt-8 lg:-mb-8"
       style={{
         background: `linear-gradient(180deg, ${activeTheme.bgColor || '#0f172a'} 0%, #020617 100%)`
       }}
@@ -122,15 +161,18 @@ const Roadmap = () => {
         activeWorldId={visibleWorldId || 'arrays'} 
       />
 
-      {/* Sticky Progress HUD Banner */}
-      <ProgressHUD />
+      {/* Main Scrollable Container */}
+      <div className="flex-1 overflow-y-auto custom-scrollbar relative z-10">
+        {/* Sticky Progress HUD Banner */}
+        <ProgressHUD />
 
-      {/* Main Winding Road Scrollable Container */}
-      <div className="flex-1 overflow-y-auto custom-scrollbar relative z-10 py-6">
-        <WorldMap 
-          onSelectWorld={handleSelectWorld} 
-          onActiveWorldChange={setVisibleWorldId}
-        />
+        {/* Winding Road World Map */}
+        <div className="py-6">
+          <WorldMap 
+            onSelectWorld={handleSelectWorld} 
+            onActiveWorldChange={setVisibleWorldId}
+          />
+        </div>
       </div>
 
       {/* ── Interactive World Node Modal Overlay ── */}

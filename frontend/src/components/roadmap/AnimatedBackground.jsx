@@ -69,7 +69,7 @@ const AnimatedBackground = ({ activeWorldId }) => {
     <div className="absolute inset-0 w-full h-full overflow-hidden pointer-events-none z-0">
       {/* ── Music Playing Bars (Equalizers) ── */}
       <div 
-        className="fixed bottom-6 left-6 flex items-end gap-0.5 h-16 transition-all duration-1000 z-10 select-none opacity-20 hidden md:flex"
+        className="fixed bottom-6 left-20 flex items-end gap-0.5 h-16 transition-all duration-1000 z-10 select-none opacity-20 hidden md:flex"
         style={{ opacity: isAudioMuted ? 0.02 : 0.22 }}
       >
         {Array.from({ length: 12 }).map((_, i) => {
