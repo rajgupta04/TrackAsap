@@ -5,6 +5,47 @@ import RankBadge from './RankBadge';
 import { RotateCcw, Volume2, VolumeX, Music, ChevronDown, Lock, Target } from 'lucide-react';
 import toast from 'react-hot-toast';
 
+const ProgressCircle = ({ percentage = 0, size = 30, strokeWidth = 2.5 }) => {
+  const radius = (size - strokeWidth) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const strokeDashoffset = circumference - (percentage / 100) * circumference;
+
+  return (
+    <div className="relative flex items-center justify-center shrink-0" style={{ width: size, height: size }}>
+      <svg width={size} height={size} className="transform -rotate-90">
+        {/* Dotted Background Track */}
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          stroke="currentColor"
+          strokeWidth={strokeWidth}
+          strokeDasharray="2 2"
+          className="text-emerald-500/25"
+          fill="transparent"
+        />
+        {/* Green Dotted/Dashed Progress Arc */}
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          stroke="currentColor"
+          strokeWidth={strokeWidth}
+          strokeDasharray={`${circumference} ${circumference}`}
+          strokeDashoffset={strokeDashoffset}
+          strokeLinecap="round"
+          className="text-neon-green transition-all duration-700 ease-out drop-shadow-[0_0_4px_rgba(57,255,20,0.5)]"
+          fill="transparent"
+        />
+      </svg>
+      {/* Number in Between */}
+      <span className="absolute text-[8px] font-bold font-mono text-neon-green leading-none">
+        {percentage}%
+      </span>
+    </div>
+  );
+};
+
 const ProgressHUD = () => {
   const { 
     totalXP = 0, 
@@ -47,9 +88,13 @@ const ProgressHUD = () => {
   const rabbit150Stats = getModeStats('rabbit150');
   const running175Stats = getModeStats('running175');
 
+  const blind75Pct = blind75Stats.total > 0 ? Math.round((blind75Stats.solved / blind75Stats.total) * 100) : 0;
+  const rabbit150Pct = rabbit150Stats.total > 0 ? Math.round((rabbit150Stats.solved / rabbit150Stats.total) * 100) : 0;
+  const running175Pct = running175Stats.total > 0 ? Math.round((running175Stats.solved / running175Stats.total) * 100) : 0;
+
   const currentModeStats = 
-    questionMode === 'blind75' ? blind75Stats :
-    questionMode === 'rabbit150' ? rabbit150Stats : running175Stats;
+    questionMode === 'blind75' ? { ...blind75Stats, pct: blind75Pct } :
+    questionMode === 'rabbit150' ? { ...rabbit150Stats, pct: rabbit150Pct } : { ...running175Stats, pct: running175Pct };
 
   const AVAILABLE_AUDIO_KEYS = ['arrays', 'two-pointers', 'sliding-window', 'stacks', 'linked-lists', 'trees', 'graphs'];
   const audioWorlds = WORLDS.filter(world => AVAILABLE_AUDIO_KEYS.includes(world.id));
@@ -129,7 +174,7 @@ const ProgressHUD = () => {
             <button
               onClick={() => setShowModeDropdown(!showModeDropdown)}
               title="Select Question Set"
-              className={`px-3 py-2 border rounded-2xl flex items-center gap-2 transition-all duration-300 ${
+              className={`px-3 py-2 border rounded-2xl flex items-center gap-2.5 transition-all duration-300 ${
                 questionMode !== 'blind75'
                   ? 'bg-neon-green/10 hover:bg-neon-green/20 text-neon-green border-neon-green/30' 
                   : 'bg-white/5 hover:bg-white/10 text-dark-300 border-white/10'
@@ -142,9 +187,10 @@ const ProgressHUD = () => {
                 </span>
                 <ChevronDown size={12} className={`opacity-60 transition-transform duration-300 ${showModeDropdown ? 'rotate-180' : ''}`} />
               </div>
-              <div className="flex items-center gap-1 text-xs font-mono font-semibold text-emerald-400 pl-1 border-l border-white/10">
+              <div className="flex items-center gap-2 text-xs font-mono font-semibold text-emerald-400 pl-2 border-l border-white/10">
                 <span className="text-[11px]">⚔️</span>
-                <span>{currentModeStats.solved} / {currentModeStats.total}</span>
+                <span>{currentModeStats.solved}/{currentModeStats.total}</span>
+                <ProgressCircle percentage={currentModeStats.pct} size={28} strokeWidth={2.5} />
               </div>
             </button>
 
@@ -152,7 +198,7 @@ const ProgressHUD = () => {
             {showModeDropdown && (
               <>
                 <div className="fixed inset-0 z-40" onClick={() => setShowModeDropdown(false)} />
-                <div className="absolute right-0 mt-2 w-64 bg-slate-900/95 border border-white/10 rounded-2xl p-1.5 shadow-2xl backdrop-blur-2xl z-50 flex flex-col gap-0.5 select-none">
+                <div className="absolute right-0 mt-2 w-72 bg-slate-900/95 border border-white/10 rounded-2xl p-1.5 shadow-2xl backdrop-blur-2xl z-50 flex flex-col gap-0.5 select-none">
                   <div className="px-2.5 py-1.5 text-[10px] uppercase font-bold text-dark-400 tracking-wider border-b border-white/5 mb-1 flex items-center justify-between">
                     <span>Question Set</span>
                     <span>Progress</span>
@@ -175,9 +221,9 @@ const ProgressHUD = () => {
                       <span>Blind 75</span>
                       <span className="text-[9px] text-dark-400 font-normal">75 high-yield questions</span>
                     </div>
-                    <div className="flex items-center gap-1 text-[11px] font-mono font-semibold text-emerald-400">
-                      <span>⚔️</span>
-                      <span>{blind75Stats.solved} / {blind75Stats.total}</span>
+                    <div className="flex items-center gap-2 text-[11px] font-mono font-semibold text-emerald-400">
+                      <span>⚔️ {blind75Stats.solved}/{blind75Stats.total}</span>
+                      <ProgressCircle percentage={blind75Pct} size={26} strokeWidth={2} />
                     </div>
                   </button>
 
@@ -198,9 +244,9 @@ const ProgressHUD = () => {
                       <span>Rabbit 150</span>
                       <span className="text-[9px] text-dark-400 font-normal">150 core pattern questions</span>
                     </div>
-                    <div className="flex items-center gap-1 text-[11px] font-mono font-semibold text-emerald-400">
-                      <span>⚔️</span>
-                      <span>{rabbit150Stats.solved} / {rabbit150Stats.total}</span>
+                    <div className="flex items-center gap-2 text-[11px] font-mono font-semibold text-emerald-400">
+                      <span>⚔️ {rabbit150Stats.solved}/{rabbit150Stats.total}</span>
+                      <ProgressCircle percentage={rabbit150Pct} size={26} strokeWidth={2} />
                     </div>
                   </button>
 
@@ -221,9 +267,9 @@ const ProgressHUD = () => {
                       <span>Running 175</span>
                       <span className="text-[9px] text-dark-400 font-normal">175 advanced DSA questions</span>
                     </div>
-                    <div className="flex items-center gap-1 text-[11px] font-mono font-semibold text-emerald-400">
-                      <span>⚔️</span>
-                      <span>{running175Stats.solved} / {running175Stats.total}</span>
+                    <div className="flex items-center gap-2 text-[11px] font-mono font-semibold text-emerald-400">
+                      <span>⚔️ {running175Stats.solved}/{running175Stats.total}</span>
+                      <ProgressCircle percentage={running175Pct} size={26} strokeWidth={2} />
                     </div>
                   </button>
                 </div>
