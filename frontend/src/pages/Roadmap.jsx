@@ -19,8 +19,14 @@ const Roadmap = () => {
     toggleAudioMute,
     selectedAudioTrack,
     setSelectedAudioTrack,
-    unlockedAudioTracks = []
+    unlockedAudioTracks = [],
+    loadFromServer
   } = useRoadmapStore();
+
+  // Sync progress from server on mount
+  useEffect(() => {
+    loadFromServer();
+  }, []);
 
   const [selectedWorldId, setSelectedWorldId] = useState(null);
   const [clearedWorld, setClearedWorld] = useState(null);

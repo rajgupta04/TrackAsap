@@ -1,6 +1,9 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { WORLDS } from '../data/roadmapData';
+import { roadmapService } from '../services/roadmapService';
+
+let syncTimeout = null;
 
 export const useRoadmapStore = create()(
   persist(
@@ -14,6 +17,64 @@ export const useRoadmapStore = create()(
       awardedCoinWorlds: [],   // Array of world IDs that already paid coins
       justCompletedWorldId: null, // Tracked for path completion animation
       activeWorldId: null, // Currently open world in modal
+
+      syncToServer: async () => {
+        if (syncTimeout) {
+          clearTimeout(syncTimeout);
+        }
+        syncTimeout = setTimeout(async () => {
+          try {
+            const state = get();
+            const payload = {
+              completedProblems: state.completedProblems || [],
+              completedWorlds: state.completedWorlds || [],
+              unlockedWorlds: state.unlockedWorlds || ['arrays'],
+              totalXP: state.totalXP || 0,
+              coins: state.coins || 0,
+              awardedCoinProblems: state.awardedCoinProblems || [],
+              awardedCoinWorlds: state.awardedCoinWorlds || [],
+              questionMode: state.questionMode || 'blind75',
+              unlockedAudioTracks: state.unlockedAudioTracks || [],
+              problemNotes: state.problemNotes || {},
+              problemCode: state.problemCode || {}
+            };
+            await roadmapService.saveProgress(payload);
+          } catch (error) {
+            console.error('Failed to sync roadmap progress to server', error);
+          }
+        }, 2000);
+      },
+
+      loadFromServer: async () => {
+        try {
+          const data = await roadmapService.getProgress();
+          if (data) {
+            set((state) => {
+              // Helper: union two arrays (no duplicates)
+              const union = (a = [], b = []) => [...new Set([...a, ...b])];
+              // Helper: merge two objects (shallow, prefer non-empty)
+              const mergeObj = (a = {}, b = {}) => ({ ...a, ...b });
+
+              return {
+                ...state,
+                completedProblems: union(state.completedProblems, data.completedProblems),
+                completedWorlds: union(state.completedWorlds, data.completedWorlds),
+                unlockedWorlds: union(state.unlockedWorlds, data.unlockedWorlds),
+                totalXP: Math.max(state.totalXP || 0, data.totalXP || 0),
+                coins: Math.max(state.coins || 0, data.coins || 0),
+                awardedCoinProblems: union(state.awardedCoinProblems, data.awardedCoinProblems),
+                awardedCoinWorlds: union(state.awardedCoinWorlds, data.awardedCoinWorlds),
+                questionMode: data.questionMode || state.questionMode,
+                unlockedAudioTracks: union(state.unlockedAudioTracks, data.unlockedAudioTracks),
+                problemNotes: mergeObj(state.problemNotes, data.problemNotes),
+                problemCode: mergeObj(state.problemCode, data.problemCode),
+              };
+            });
+          }
+        } catch (error) {
+          console.error('Failed to load roadmap progress from server', error);
+        }
+      },
 
       isProblemCompleted: (problemId) => {
         const completed = get().completedProblems || [];
@@ -67,6 +128,7 @@ export const useRoadmapStore = create()(
           coins: newCoins,
           awardedCoinProblems: newAwardedCoinProblems
         });
+        get().syncToServer();
       },
 
       completeBossLevel: (worldId) => {
@@ -114,6 +176,7 @@ export const useRoadmapStore = create()(
           awardedCoinWorlds: newAwardedCoinWorlds,
           justCompletedWorldId: worldId
         });
+        get().syncToServer();
       },
 
       setActiveWorldId: (worldId) => {
@@ -137,6 +200,7 @@ export const useRoadmapStore = create()(
       questionMode: 'blind75',
       setQuestionMode: (mode) => {
         set({ questionMode: mode });
+        get().syncToServer();
       },
 
       unlockedAudioTracks: [],
@@ -147,6 +211,7 @@ export const useRoadmapStore = create()(
           coins: coins - cost,
           unlockedAudioTracks: [...unlockedAudioTracks, worldId]
         });
+        get().syncToServer();
       },
 
       problemNotes: {},
@@ -158,6 +223,7 @@ export const useRoadmapStore = create()(
             [problemId]: notes
           }
         }));
+        get().syncToServer();
       },
       saveProblemCode: (problemId, code, language, solutions) => {
         set((state) => ({
@@ -166,6 +232,7 @@ export const useRoadmapStore = create()(
             [problemId]: { code, language, solutions }
           }
         }));
+        get().syncToServer();
       },
 
       resetProgress: () => {
@@ -179,6 +246,7 @@ export const useRoadmapStore = create()(
           selectedAudioTrack: null,
           questionMode: 'blind75'
         });
+        get().syncToServer();
       }
     }),
     {
