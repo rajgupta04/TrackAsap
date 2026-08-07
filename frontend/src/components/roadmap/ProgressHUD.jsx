@@ -9,6 +9,7 @@ const ProgressHUD = () => {
   const { 
     totalXP = 0, 
     coins = 0, 
+    completedProblems = [],
     completedWorlds = [], 
     unlockedWorlds = ['arrays'],
     resetProgress,
@@ -24,6 +25,31 @@ const ProgressHUD = () => {
   const [showConfirmReset, setShowConfirmReset] = useState(false);
   const [showMusicDropdown, setShowMusicDropdown] = useState(false);
   const [showModeDropdown, setShowModeDropdown] = useState(false);
+
+  // Helper to calculate total solved & total questions per mode
+  const getModeStats = (modeKey) => {
+    let total = 0;
+    let solved = 0;
+    WORLDS.forEach((w) => {
+      w.problems.forEach((p) => {
+        if (p[modeKey]) {
+          total += 1;
+          if (completedProblems.includes(p.id)) {
+            solved += 1;
+          }
+        }
+      });
+    });
+    return { solved, total };
+  };
+
+  const blind75Stats = getModeStats('blind75');
+  const rabbit150Stats = getModeStats('rabbit150');
+  const running175Stats = getModeStats('running175');
+
+  const currentModeStats = 
+    questionMode === 'blind75' ? blind75Stats :
+    questionMode === 'rabbit150' ? rabbit150Stats : running175Stats;
 
   const AVAILABLE_AUDIO_KEYS = ['arrays', 'two-pointers', 'sliding-window', 'stacks', 'linked-lists', 'trees', 'graphs'];
   const audioWorlds = WORLDS.filter(world => AVAILABLE_AUDIO_KEYS.includes(world.id));
@@ -103,26 +129,33 @@ const ProgressHUD = () => {
             <button
               onClick={() => setShowModeDropdown(!showModeDropdown)}
               title="Select Question Set"
-              className={`p-2 border rounded-2xl flex items-center gap-1.5 transition-all duration-300 ${
+              className={`px-3 py-2 border rounded-2xl flex items-center gap-2 transition-all duration-300 ${
                 questionMode !== 'blind75'
                   ? 'bg-neon-green/10 hover:bg-neon-green/20 text-neon-green border-neon-green/30' 
                   : 'bg-white/5 hover:bg-white/10 text-dark-300 border-white/10'
               }`}
             >
-              <Target size={16} />
-              <span className="text-xs font-bold hidden md:inline">
-                {questionMode === 'blind75' ? 'Blind 75' : questionMode === 'rabbit150' ? 'Rabbit 150' : 'Running Rabbit 175'}
-              </span>
-              <ChevronDown size={12} className={`opacity-60 transition-transform duration-300 ${showModeDropdown ? 'rotate-180' : ''}`} />
+              <Target size={16} className="text-neon-green shrink-0" />
+              <div className="flex items-center gap-1.5 text-xs font-bold">
+                <span>
+                  {questionMode === 'blind75' ? 'Blind 75' : questionMode === 'rabbit150' ? 'Rabbit 150' : 'Running 175'}
+                </span>
+                <ChevronDown size={12} className={`opacity-60 transition-transform duration-300 ${showModeDropdown ? 'rotate-180' : ''}`} />
+              </div>
+              <div className="flex items-center gap-1 text-xs font-mono font-semibold text-emerald-400 pl-1 border-l border-white/10">
+                <span className="text-[11px]">⚔️</span>
+                <span>{currentModeStats.solved} / {currentModeStats.total}</span>
+              </div>
             </button>
 
             {/* Dropdown List */}
             {showModeDropdown && (
               <>
                 <div className="fixed inset-0 z-40" onClick={() => setShowModeDropdown(false)} />
-                <div className="absolute right-0 mt-2 w-52 bg-slate-900/95 border border-white/10 rounded-2xl p-1.5 shadow-2xl backdrop-blur-2xl z-50 flex flex-col gap-0.5 select-none">
-                  <div className="px-2.5 py-1.5 text-[10px] uppercase font-bold text-dark-400 tracking-wider border-b border-white/5 mb-1">
-                    Question Set
+                <div className="absolute right-0 mt-2 w-64 bg-slate-900/95 border border-white/10 rounded-2xl p-1.5 shadow-2xl backdrop-blur-2xl z-50 flex flex-col gap-0.5 select-none">
+                  <div className="px-2.5 py-1.5 text-[10px] uppercase font-bold text-dark-400 tracking-wider border-b border-white/5 mb-1 flex items-center justify-between">
+                    <span>Question Set</span>
+                    <span>Progress</span>
                   </div>
 
                   {/* Blind 75 */}
@@ -142,7 +175,10 @@ const ProgressHUD = () => {
                       <span>Blind 75</span>
                       <span className="text-[9px] text-dark-400 font-normal">75 high-yield questions</span>
                     </div>
-                    {questionMode === 'blind75' && <div className="w-1.5 h-1.5 bg-neon-green rounded-full shadow-[0_0_6px_rgba(57,255,20,0.8)]" />}
+                    <div className="flex items-center gap-1 text-[11px] font-mono font-semibold text-emerald-400">
+                      <span>⚔️</span>
+                      <span>{blind75Stats.solved} / {blind75Stats.total}</span>
+                    </div>
                   </button>
 
                   {/* Rabbit 150 */}
@@ -162,7 +198,10 @@ const ProgressHUD = () => {
                       <span>Rabbit 150</span>
                       <span className="text-[9px] text-dark-400 font-normal">150 core pattern questions</span>
                     </div>
-                    {questionMode === 'rabbit150' && <div className="w-1.5 h-1.5 bg-neon-green rounded-full shadow-[0_0_6px_rgba(57,255,20,0.8)]" />}
+                    <div className="flex items-center gap-1 text-[11px] font-mono font-semibold text-emerald-400">
+                      <span>⚔️</span>
+                      <span>{rabbit150Stats.solved} / {rabbit150Stats.total}</span>
+                    </div>
                   </button>
 
                   {/* Running Rabbit 175 */}
@@ -179,10 +218,13 @@ const ProgressHUD = () => {
                     }`}
                   >
                     <div className="flex flex-col">
-                      <span>Running Rabbit 175</span>
+                      <span>Running 175</span>
                       <span className="text-[9px] text-dark-400 font-normal">175 advanced DSA questions</span>
                     </div>
-                    {questionMode === 'running175' && <div className="w-1.5 h-1.5 bg-neon-green rounded-full shadow-[0_0_6px_rgba(57,255,20,0.8)]" />}
+                    <div className="flex items-center gap-1 text-[11px] font-mono font-semibold text-emerald-400">
+                      <span>⚔️</span>
+                      <span>{running175Stats.solved} / {running175Stats.total}</span>
+                    </div>
                   </button>
                 </div>
               </>
