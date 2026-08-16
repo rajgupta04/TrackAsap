@@ -101,8 +101,11 @@ app.get('/', (req, res) => {
 });
 
 // Health check
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok', message: 'TrackAsap API is running' });
+});
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', message: '75-Day Tracker API is running' });
+  res.json({ status: 'ok', message: 'TrackAsap API is running' });
 });
 
 // Error handling
