@@ -574,7 +574,17 @@ const ProblemSolve = () => {
               <div className="space-y-6">
                 <div>
                   <h1 className="text-xl font-bold text-white mb-2">{problem.title}</h1>
-                  <div className="flex flex-wrap gap-2 mb-4">
+                  <div className="flex flex-wrap items-center gap-2 mb-4">
+                    <span
+                      className={`text-[10px] px-2 py-0.5 rounded font-bold uppercase tracking-wider ${
+                        problem.difficulty === 'easy' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' :
+                        problem.difficulty === 'medium' ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' :
+                        problem.difficulty === 'hard' ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20' :
+                        'bg-white/10 text-white'
+                      }`}
+                    >
+                      {problem.difficulty || 'Easy'}
+                    </span>
                     {problem.tags?.map((tag) => (
                       <span
                         key={tag}
