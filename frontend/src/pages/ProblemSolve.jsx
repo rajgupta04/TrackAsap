@@ -17,6 +17,7 @@ import {
   Code2,
   FileText,
   BookOpen,
+  Terminal,
   History,
   Sparkles,
   Layers,
@@ -101,6 +102,14 @@ const ProblemSolve = () => {
   const [isConsoleExpanded, setIsConsoleExpanded] = useState(true);
   const [isDraggingHorizontal, setIsDraggingHorizontal] = useState(false);
   const [isDraggingVertical, setIsDraggingVertical] = useState(false);
+
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const [mobileTab, setMobileTab] = useState('problem'); // 'problem' | 'code' | 'console'
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const containerRef = useRef(null);
   const rightPaneRef = useRef(null);
@@ -262,6 +271,9 @@ const ProblemSolve = () => {
 
     if (!code.trim() || !problem) return;
 
+    if (isMobile) setMobileTab('console');
+    setIsConsoleExpanded(true);
+
     setIsRunning(true);
     setConsoleTab('result');
     setIsConsoleExpanded(true);
@@ -299,6 +311,8 @@ const ProblemSolve = () => {
     }
 
     if (!code.trim() || !problem) return;
+
+    if (isMobile) setMobileTab('console');
 
     setIsSubmitting(true);
     setConsoleTab('result');
@@ -507,11 +521,15 @@ const ProblemSolve = () => {
       </header>
 
       {/* MAIN ADJUSTABLE SPLIT-PANE WORKSPACE */}
-      <div ref={containerRef} className="flex-1 flex flex-row min-h-0 overflow-hidden relative">
+      <div ref={containerRef} className="flex-1 flex flex-col md:flex-row min-h-0 overflow-hidden relative">
         {/* LEFT PANE: DESCRIPTION / EDITORIAL / SUBMISSIONS */}
         <div
-          style={{ width: `${leftWidthPercent}%` }}
-          className="flex flex-col border-r border-white/10 bg-dark-900/40 min-h-0 shrink-0"
+          style={{ 
+            width: isMobile ? '100%' : `${leftWidthPercent}%`,
+          }}
+          className={`flex flex-col border-r border-white/10 bg-dark-900/40 min-h-0 min-w-0 shrink-0 h-full ${
+            isMobile && mobileTab !== 'problem' ? 'hidden' : ''
+          }`}
         >
           {/* Left Pane Tabs Header */}
           <div className="flex items-center gap-2 border-b border-white/10 px-4 bg-dark-950/60 shrink-0">
@@ -690,7 +708,7 @@ const ProblemSolve = () => {
                 </div>
 
                 {problem.editorial ? (
-                  <div className="prose prose-invert max-w-none text-xs sm:text-sm leading-relaxed text-dark-200 [&>h1]:text-lg [&>h1]:font-bold [&>h1]:text-white [&>h1]:mt-4 [&>h1]:mb-2 [&>h2]:text-base [&>h2]:font-bold [&>h2]:text-white [&>h2]:mt-4 [&>h2]:mb-2 [&>h3]:text-sm [&>h3]:font-bold [&>h3]:text-neon-green [&>h3]:mt-4 [&>h3]:mb-2 [&>h4]:text-xs [&>h4]:font-bold [&>h4]:text-white [&>h4]:mt-4 [&>h4]:mb-2 [&>p]:mb-3 [&>ul]:list-disc [&>ul]:pl-5 [&>ul]:space-y-1.5 [&>ol]:list-decimal [&>ol]:pl-5 [&>ol]:space-y-1.5 [&>pre]:p-3.5 [&>pre]:rounded-xl [&>pre]:bg-dark-900 [&>pre]:border [&>pre]:border-white/10 [&>pre]:font-mono [&>code]:text-neon-green [&>code]:bg-white/5 [&>code]:px-1.5 [&>code]:py-0.5 [&>code]:rounded">
+                  <div className="prose prose-invert max-w-none text-xs sm:text-sm leading-relaxed text-dark-200 [&>h1]:text-lg [&>h1]:font-bold [&>h1]:text-white [&>h1]:mt-4 [&>h1]:mb-2 [&>h2]:text-base [&>h2]:font-bold [&>h2]:text-white [&>h2]:mt-4 [&>h2]:mb-2 [&>h3]:text-sm [&>h3]:font-bold [&>h3]:text-neon-green [&>h3]:mt-4 [&>h3]:mb-2 [&>h4]:text-xs [&>h4]:font-bold [&>h4]:text-white [&>h4]:mt-4 [&>h4]:mb-2 [&>p]:mb-3 [&>ul]:list-disc [&>ul]:pl-5 [&>ul]:space-y-1.5 [&>ol]:list-decimal [&>ol]:pl-5 [&>ol]:space-y-1.5 [&>pre]:p-3.5 [&>pre]:rounded-xl [&>pre]:bg-dark-900 [&>pre]:border [&>pre]:border-white/10 [&>pre]:font-mono [&>pre]:overflow-x-auto [&>code]:text-neon-green [&>code]:bg-white/5 [&>code]:px-1.5 [&>code]:py-0.5 [&>code]:rounded">
                     <ReactMarkdown remarkPlugins={[remarkGfm, remarkMath]} rehypePlugins={[rehypeKatex]}>
                       {problem.editorial}
                     </ReactMarkdown>
@@ -711,8 +729,8 @@ const ProblemSolve = () => {
                     </div>
 
                     {/* Language Switcher Tabs */}
-                    <div className="flex items-center justify-between bg-dark-900/90 p-1.5 rounded-xl border border-white/10">
-                      <div className="flex items-center gap-1">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between bg-dark-900/90 p-2 rounded-xl border border-white/10 gap-3">
+                      <div className="flex items-center gap-1 flex-wrap w-full">
                         {[
                           { id: 'python', label: 'Python' },
                           { id: 'java', label: 'Java' },
@@ -741,7 +759,7 @@ const ProblemSolve = () => {
                       </div>
 
                       {/* Code Actions: Copy & Load into Editor */}
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center justify-end w-full sm:w-auto gap-2">
                         <button
                           onClick={() => {
                             const activeSol = problem.solutions?.[editorialLang];
@@ -1035,7 +1053,7 @@ const ProblemSolve = () => {
         {/* DRAGGABLE HORIZONTAL SPLITTER HANDLE (Left <-> Right) */}
         <div
           onMouseDown={handleMouseDownHorizontal}
-          className={`w-1.5 bg-dark-800 hover:bg-neon-green/60 active:bg-neon-green transition-colors cursor-col-resize flex items-center justify-center shrink-0 z-10 group ${
+          className={`hidden md:flex w-1.5 bg-dark-800 hover:bg-neon-green/60 active:bg-neon-green transition-colors cursor-col-resize items-center justify-center shrink-0 z-10 group ${
             isDraggingHorizontal ? 'bg-neon-green' : ''
           }`}
         >
@@ -1045,11 +1063,17 @@ const ProblemSolve = () => {
         {/* RIGHT PANE: CODE EDITOR + EXPANDABLE / RESIZABLE BOTTOM CONSOLE */}
         <div
           ref={rightPaneRef}
-          style={{ width: `${100 - leftWidthPercent}%` }}
-          className="flex flex-col min-h-0 bg-dark-950 flex-1 relative"
+          style={{ 
+            width: isMobile ? '100%' : `${100 - leftWidthPercent}%`,
+          }}
+          className={`flex-col min-h-0 bg-dark-950 flex-1 relative h-full ${
+            isMobile && mobileTab === 'problem' ? 'hidden' : 'flex'
+          }`}
         >
           {/* CODE EDITOR CONTAINER */}
-          <div className="flex-1 min-h-0 p-2 overflow-hidden">
+          <div className={`flex-1 min-h-0 p-2 overflow-hidden ${
+            isMobile && mobileTab === 'console' ? 'hidden' : 'block'
+          }`}>
             <CodeEditor
               value={code}
               onChange={handleCodeChange}
@@ -1063,7 +1087,7 @@ const ProblemSolve = () => {
           {/* DRAGGABLE VERTICAL SPLITTER HANDLE (Top <-> Bottom) */}
           <div
             onMouseDown={handleMouseDownVertical}
-            className={`h-1.5 bg-dark-800 hover:bg-neon-green/60 active:bg-neon-green transition-colors cursor-row-resize flex items-center justify-center shrink-0 z-10 group ${
+            className={`hidden md:flex h-1.5 bg-dark-800 hover:bg-neon-green/60 active:bg-neon-green transition-colors cursor-row-resize items-center justify-center shrink-0 z-10 group ${
               isDraggingVertical ? 'bg-neon-green' : ''
             }`}
           >
@@ -1072,8 +1096,10 @@ const ProblemSolve = () => {
 
           {/* RESIZABLE BOTTOM CONSOLE DRAWER */}
           <div
-            style={{ height: isConsoleExpanded ? `${consoleHeightPx}px` : '40px' }}
-            className="border-t border-white/10 bg-dark-900 flex flex-col shrink-0 overflow-hidden"
+            style={{ height: isConsoleExpanded ? (isMobile ? '100%' : `${consoleHeightPx}px`) : '40px' }}
+            className={`border-t border-white/10 bg-dark-900 flex-col shrink-0 overflow-hidden ${
+              isMobile && mobileTab === 'code' ? 'hidden' : 'flex'
+            }`}
           >
             {/* Drawer Tabs Header */}
             <div className="h-10 border-b border-white/10 px-3 flex items-center justify-between bg-dark-950/80 shrink-0">
@@ -1422,6 +1448,39 @@ const ProblemSolve = () => {
           </div>
         </div>
       </div>
+
+      {/* MOBILE BOTTOM NAVIGATION BAR */}
+      {isMobile && (
+        <div className="md:hidden flex bg-dark-950 border-t border-white/10 shrink-0 h-14 relative z-40">
+          <button
+            onClick={() => setMobileTab('problem')}
+            className={`flex-1 flex flex-col items-center justify-center gap-1 transition ${
+              mobileTab === 'problem' ? 'text-neon-green' : 'text-dark-400 hover:text-white'
+            }`}
+          >
+            <FileText className="w-5 h-5" />
+            <span className="text-[10px] font-bold uppercase tracking-wider">Problem</span>
+          </button>
+          <button
+            onClick={() => setMobileTab('code')}
+            className={`flex-1 flex flex-col items-center justify-center gap-1 transition ${
+              mobileTab === 'code' ? 'text-neon-green' : 'text-dark-400 hover:text-white'
+            }`}
+          >
+            <Code2 className="w-5 h-5" />
+            <span className="text-[10px] font-bold uppercase tracking-wider">Code</span>
+          </button>
+          <button
+            onClick={() => setMobileTab('console')}
+            className={`flex-1 flex flex-col items-center justify-center gap-1 transition ${
+              mobileTab === 'console' ? 'text-neon-green' : 'text-dark-400 hover:text-white'
+            }`}
+          >
+            <Terminal className="w-5 h-5" />
+            <span className="text-[10px] font-bold uppercase tracking-wider">Console</span>
+          </button>
+        </div>
+      )}
 
       {/* POST-SUBMISSION "BEATS X%" STATS MODAL */}
       {showStatsModal && (
