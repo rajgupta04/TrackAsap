@@ -67,6 +67,7 @@ const FeatureRoute = ({ feature, children }) => {
 // Public Route wrapper (redirects to dashboard if authenticated)
 const PublicRoute = ({ children }) => {
   const { isAuthenticated, isLoading } = useAuthStore();
+  const location = useLocation();
 
   if (isLoading) {
     return (
@@ -77,7 +78,9 @@ const PublicRoute = ({ children }) => {
   }
 
   if (isAuthenticated) {
-    return <Navigate to="/dashboard" replace />;
+    const searchParams = new URLSearchParams(location.search);
+    const redirect = searchParams.get('redirect') || location.state?.from || '/dashboard';
+    return <Navigate to={redirect} replace />;
   }
 
   return children;

@@ -256,10 +256,7 @@ const ProblemSolve = () => {
   const handleRunCode = async (isCustomRun = false) => {
     if (!isAuthenticated) {
       toast.error('Please log in or sign up to run code!');
-      // Assuming a login modal or a route to login exists, /profile usually handles auth.
-      // Redirecting to Google auth or a generic login could be done, let's just toast for now,
-      // or navigate('/login') depending on how login is implemented in this app.
-      navigate('/'); // Or whichever is the public landing / login page
+      navigate(`/login?redirect=/solve/${slug}`);
       return;
     }
 
@@ -297,7 +294,7 @@ const ProblemSolve = () => {
   const handleSubmitCode = async () => {
     if (!isAuthenticated) {
       toast.error('Please log in or sign up to submit code!');
-      navigate('/');
+      navigate(`/login?redirect=/solve/${slug}`);
       return;
     }
 
@@ -810,7 +807,7 @@ const ProblemSolve = () => {
                   <div className="p-8 text-center bg-dark-900/40 border border-white/5 rounded-2xl space-y-2">
                     <History className="w-8 h-8 text-dark-500 mx-auto" />
                     <p className="text-xs text-dark-300">
-                      Please <Link to="/" className="text-neon-green hover:underline">log in</Link> to view your past submissions.
+                      Please <Link to={`/login?redirect=/solve/${slug}`} className="text-neon-green hover:underline">log in</Link> to view your past submissions.
                     </p>
                   </div>
                 ) : !selectedSubmissionDetail ? (
