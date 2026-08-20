@@ -18,13 +18,14 @@ const WorldModal = ({ worldId, onClose, onCompleteWorld }) => {
     problemNotes = {},
     problemCode = {},
     saveProblemNotes,
-    saveProblemCode
+    saveProblemCode,
+    worlds = WORLDS,
   } = useRoadmapStore();
 
   const [selectedProblemForNotes, setSelectedProblemForNotes] = useState(null);
   const [selectedProblemForCode, setSelectedProblemForCode] = useState(null);
   
-  const world = WORLDS.find((w) => w.id === worldId);
+  const world = (worlds || WORLDS).find((w) => w.id === worldId);
   if (!world) return null;
 
   const activeProblems = world.problems.filter((p) => p[questionMode]);

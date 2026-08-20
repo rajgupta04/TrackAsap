@@ -10,7 +10,8 @@ const WorldMap = ({ onSelectWorld, onActiveWorldChange }) => {
     unlockedWorlds = ['arrays'], 
     getWorldProgress, 
     justCompletedWorldId,
-    clearJustCompletedWorld
+    clearJustCompletedWorld,
+    worlds = WORLDS,
   } = useRoadmapStore();
 
   const containerRef = useRef(null);
@@ -23,7 +24,7 @@ const WorldMap = ({ onSelectWorld, onActiveWorldChange }) => {
     const containerRect = containerRef.current.getBoundingClientRect();
     const positions = {};
 
-    WORLDS.forEach((world) => {
+    (worlds || WORLDS).forEach((world) => {
       const nodeEl = document.getElementById(`node-world-${world.id}`);
       if (nodeEl) {
         const nodeRect = nodeEl.getBoundingClientRect();
@@ -83,8 +84,9 @@ const WorldMap = ({ onSelectWorld, onActiveWorldChange }) => {
   // Handle justCompletedWorldId animation trigger
   useEffect(() => {
     if (justCompletedWorldId) {
-      const worldIdx = WORLDS.findIndex((w) => w.id === justCompletedWorldId);
-      const nextWorld = WORLDS[worldIdx + 1];
+      const activeWorlds = worlds || WORLDS;
+      const worldIdx = activeWorlds.findIndex((w) => w.id === justCompletedWorldId);
+      const nextWorld = activeWorlds[worldIdx + 1];
       if (nextWorld) {
         // Trigger path sparkle animation to next world
         setActiveSparkleSegment(justCompletedWorldId);
@@ -108,7 +110,9 @@ const WorldMap = ({ onSelectWorld, onActiveWorldChange }) => {
         clearJustCompletedWorld();
       }
     }
-  }, [justCompletedWorldId, clearJustCompletedWorld]);
+  }, [justCompletedWorldId, clearJustCompletedWorld, worlds]);
+
+  const activeWorldsList = worlds || WORLDS;
 
   return (
     <div 
@@ -132,9 +136,9 @@ const WorldMap = ({ onSelectWorld, onActiveWorldChange }) => {
         </defs>
 
         {/* Draw Path Segments between consecutive nodes */}
-        {WORLDS.map((world, idx) => {
-          if (idx === WORLDS.length - 1) return null;
-          const nextWorld = WORLDS[idx + 1];
+        {activeWorldsList.map((world, idx) => {
+          if (idx === activeWorldsList.length - 1) return null;
+          const nextWorld = activeWorldsList[idx + 1];
 
           const start = nodePositions[world.id];
           const end = nodePositions[nextWorld.id];
@@ -207,7 +211,7 @@ const WorldMap = ({ onSelectWorld, onActiveWorldChange }) => {
 
       {/* ── Rendering World Nodes ── */}
       <div className="flex flex-col w-full relative z-10 gap-1">
-        {WORLDS.map((world, idx) => {
+        {activeWorldsList.map((world, idx) => {
           const isUnlocked = unlockedWorlds.includes(world.id);
           const isCompleted = completedWorlds.includes(world.id);
           const progress = getWorldProgress(world.id);

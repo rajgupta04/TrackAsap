@@ -71,6 +71,48 @@ const adminService = {
     const response = await api.put('/admin/compiler-settings', settings);
     return response.data;
   },
+
+  // Roadmap World Management
+  getRoadmapWorlds: async () => {
+    const response = await api.get('/admin/roadmap/worlds');
+    return response.data;
+  },
+
+  upsertRoadmapWorld: async (worldData) => {
+    const response = await api.post('/admin/roadmap/worlds', worldData);
+    return response.data;
+  },
+
+  deleteRoadmapWorld: async (id) => {
+    const response = await api.delete(`/admin/roadmap/worlds/${id}`);
+    return response.data;
+  },
+
+  seedRoadmapWorlds: async (worlds) => {
+    const response = await api.post('/admin/roadmap/seed', { worlds });
+    return response.data;
+  },
+
+  // Telemetry & Clickstream Analytics
+  getClickstream: async (params = {}) => {
+    const response = await api.get('/admin/telemetry/clickstream', { params });
+    return response.data;
+  },
+
+  getUserJourney: async (email) => {
+    const response = await api.get(`/admin/telemetry/user-journey/${encodeURIComponent(email)}`);
+    return response.data;
+  },
+
+  getIpStats: async () => {
+    const response = await api.get('/admin/telemetry/ip-stats');
+    return response.data;
+  },
+
+  getTopClicks: async () => {
+    const response = await api.get('/admin/telemetry/top-clicks');
+    return response.data;
+  },
 };
 
 export default adminService;

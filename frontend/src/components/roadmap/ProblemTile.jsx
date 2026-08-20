@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Lock, Check, ExternalLink, FileText, Code } from 'lucide-react';
+import { Lock, Check, ExternalLink, FileText, Code, Zap } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { useRoadmapStore } from '../../store/roadmapStore';
 
@@ -36,6 +36,24 @@ const ProblemTile = ({
         return 'from-slate-400 to-slate-600';
     }
   };
+
+  const getLeetCodeUrl = () => {
+    if (problem.leetcodeUrl && problem.leetcodeUrl.startsWith('http')) return problem.leetcodeUrl;
+    if (problem.url && problem.url.startsWith('http')) return problem.url;
+    let slug = '';
+    if (problem.judgeSlug) {
+      slug = problem.judgeSlug;
+    } else if (problem.url && problem.url.startsWith('/solve/')) {
+      slug = problem.url.replace('/solve/', '').replace(/\/$/, '');
+    } else if (problem.title) {
+      slug = problem.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+    }
+    return slug ? `https://leetcode.com/problems/${slug}/` : 'https://leetcode.com/problemset/all/';
+  };
+
+  const hasTrackAsapSolve = Boolean(problem.judgeSlug || (problem.url && problem.url.startsWith('/solve/')));
+  const trackAsapUrl = problem.judgeSlug ? `/solve/${problem.judgeSlug}` : (problem.url && problem.url.startsWith('/solve/') ? problem.url : null);
+  const leetCodeUrl = getLeetCodeUrl();
 
   const handleSolve = () => {
     // Fire confetti on complete
@@ -115,12 +133,28 @@ const ProblemTile = ({
           {/* Actions */}
           {isUnlocked && (
             <div className="flex flex-col gap-1.5">
+              {/* Internal Solve in TrackAsap Judge Button (If attached) */}
+              {hasTrackAsapSolve && (
+                <a
+                  href={trackAsapUrl}
+                  className="flex items-center justify-center gap-1.5 w-full py-2 bg-neon-green hover:brightness-110 text-dark-950 text-xs font-bold rounded-xl transition shadow-lg shadow-neon-green/20"
+                >
+                  <Zap size={13} className="fill-dark-950" />
+                  <span>Solve in TrackAsap ⚡</span>
+                </a>
+              )}
+
+              {/* External LeetCode Link (Always visible) */}
               <button
-                onClick={() => window.open(problem.url, '_blank')}
-                className="flex items-center justify-center gap-1.5 w-full py-1.5 bg-white/10 hover:bg-white/15 text-white text-xs font-semibold rounded-lg border border-white/10 transition-colors"
+                onClick={() => window.open(leetCodeUrl, '_blank')}
+                className={`flex items-center justify-center gap-1.5 w-full py-2 text-xs font-semibold rounded-xl border transition-all cursor-pointer ${
+                  hasTrackAsapSolve
+                    ? 'bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 hover:text-amber-200 border-amber-500/30'
+                    : 'bg-neon-green hover:brightness-110 text-dark-950 font-bold border-transparent shadow-lg shadow-neon-green/20'
+                }`}
               >
                 <ExternalLink size={12} />
-                <span>Solve on LeetCode</span>
+                <span>Solve on LeetCode ↗</span>
               </button>
 
               <div className="grid grid-cols-2 gap-1.5">

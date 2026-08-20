@@ -11,8 +11,8 @@ export const LeetCodeStatsWidget = ({ user, leetcodeStats, isPlatformLoading, fe
     <GlassCard className="h-full overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-thumb-dark-600 scrollbar-track-transparent">
       <div className="flex items-center justify-between mb-4 cursor-move drag-handle">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-[#FFA116]/20 flex items-center justify-center">
-            <Code2 className="w-5 h-5 text-[#FFA116]" />
+          <div className="w-10 h-10 rounded-xl bg-neon-green/10 border border-neon-green/25 flex items-center justify-center">
+            <Code2 className="w-5 h-5 text-neon-green" />
           </div>
           <div>
             <h3 className="font-semibold text-white">LeetCode</h3>
@@ -30,39 +30,39 @@ export const LeetCodeStatsWidget = ({ user, leetcodeStats, isPlatformLoading, fe
       </div>
       {!leetcodeStats ? (
         <div className="flex items-center justify-center py-8">
-          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-[#FFA116]"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-neon-green"></div>
         </div>
       ) : (
         <div className="space-y-4">
           <div className="text-center py-2">
-            <div className="text-3xl font-bold text-[#FFA116]">{leetcodeStats.totalSolved}</div>
-            <div className="text-sm text-dark-400">Problems Solved</div>
+            <div className="text-3xl font-bold text-white">{leetcodeStats.totalSolved}</div>
+            <div className="text-xs text-dark-400 mt-0.5">Problems Solved</div>
           </div>
           <div className="grid grid-cols-3 gap-2">
-            <div className="bg-green-500/10 rounded-xl p-3 text-center">
-              <div className="text-lg md:text-xl font-bold text-green-400">{leetcodeStats.easySolved}</div>
+            <div className="bg-white/5 border border-white/5 rounded-xl p-3 text-center">
+              <div className="text-lg md:text-xl font-bold text-emerald-400">{leetcodeStats.easySolved}</div>
               <div className="text-xs text-dark-400">Easy<br/><span className="text-[10px] opacity-50">/{leetcodeStats.totalEasy}</span></div>
             </div>
-            <div className="bg-yellow-500/10 rounded-xl p-3 text-center">
-              <div className="text-lg md:text-xl font-bold text-yellow-500">{leetcodeStats.mediumSolved}</div>
+            <div className="bg-white/5 border border-white/5 rounded-xl p-3 text-center">
+              <div className="text-lg md:text-xl font-bold text-amber-400">{leetcodeStats.mediumSolved}</div>
               <div className="text-xs text-dark-400">Medium<br/><span className="text-[10px] opacity-50">/{leetcodeStats.totalMedium}</span></div>
             </div>
-            <div className="bg-red-500/10 rounded-xl p-3 text-center">
-              <div className="text-lg md:text-xl font-bold text-red-500">{leetcodeStats.hardSolved}</div>
+            <div className="bg-white/5 border border-white/5 rounded-xl p-3 text-center">
+              <div className="text-lg md:text-xl font-bold text-rose-400">{leetcodeStats.hardSolved}</div>
               <div className="text-xs text-dark-400">Hard<br/><span className="text-[10px] opacity-50">/{leetcodeStats.totalHard}</span></div>
             </div>
           </div>
           <div className="flex items-center justify-around pt-2 border-t border-dark-700/50">
             <div className="text-center">
-              <div className="flex items-center gap-1 text-white"><Trophy className="w-4 h-4 text-yellow-500" /><span className="font-semibold">{leetcodeStats.contestsParticipated || 0}</span></div>
+              <div className="flex items-center gap-1 text-white"><Trophy className="w-4 h-4 text-neon-green" /><span className="font-semibold">{leetcodeStats.contestsParticipated || 0}</span></div>
               <div className="text-xs text-dark-400">Contests</div>
             </div>
             <div className="text-center">
-              <div className="flex items-center gap-1 text-white"><TrendingUp className="w-4 h-4 text-[#FFA116]" /><span className="font-semibold">#{leetcodeStats.ranking?.toLocaleString()}</span></div>
+              <div className="flex items-center gap-1 text-white"><TrendingUp className="w-4 h-4 text-neon-green" /><span className="font-semibold">#{leetcodeStats.ranking?.toLocaleString()}</span></div>
               <div className="text-xs text-dark-400">Ranking</div>
             </div>
             <div className="text-center">
-              <div className="flex items-center gap-1 text-white"><Flame className="w-4 h-4 text-orange-500" /><span className="font-semibold">{leetcodeStats.streak || 0}</span></div>
+              <div className="flex items-center gap-1 text-white"><Flame className="w-4 h-4 text-neon-green" /><span className="font-semibold">{leetcodeStats.streak || 0}</span></div>
               <div className="text-xs text-dark-400">Streak</div>
             </div>
           </div>
@@ -85,8 +85,8 @@ export const CodeforcesStatsWidget = ({ user, codeforcesStats, isPlatformLoading
     <GlassCard className="h-full">
       <div className="flex items-center justify-between mb-4 cursor-move drag-handle">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-[#1F8ACB]/20 flex items-center justify-center">
-            <Code2 className="w-5 h-5 text-[#1F8ACB]" />
+          <div className="w-10 h-10 rounded-xl bg-neon-green/10 border border-neon-green/25 flex items-center justify-center">
+            <Code2 className="w-5 h-5 text-neon-green" />
           </div>
           <div>
             <h3 className="font-semibold text-white">Codeforces</h3>
@@ -104,12 +104,12 @@ export const CodeforcesStatsWidget = ({ user, codeforcesStats, isPlatformLoading
       </div>
       {!codeforcesStats ? (
         <div className="flex items-center justify-center py-8">
-          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-[#1F8ACB]"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-neon-green"></div>
         </div>
       ) : (
         <div className="space-y-4">
           <div className="text-center py-2">
-            <div className="text-3xl font-bold text-[#1F8ACB]">{codeforcesStats.rating || 'Unrated'}</div>
+            <div className="text-3xl font-bold text-white">{codeforcesStats.rating || 'Unrated'}</div>
             <div className="text-sm capitalize text-dark-400">{codeforcesStats.rank || 'Unrated'}</div>
           </div>
           <div className="grid grid-cols-2 gap-2">
@@ -124,7 +124,7 @@ export const CodeforcesStatsWidget = ({ user, codeforcesStats, isPlatformLoading
           </div>
           <div className="flex items-center justify-around pt-2 border-t border-dark-700/50">
             <div className="text-center">
-              <div className="flex items-center gap-1 text-white"><Trophy className="w-4 h-4 text-yellow-500" /><span className="font-semibold">{codeforcesStats.contestsParticipated}</span></div>
+              <div className="flex items-center gap-1 text-white"><Trophy className="w-4 h-4 text-neon-green" /><span className="font-semibold">{codeforcesStats.contestsParticipated}</span></div>
               <div className="text-xs text-dark-400">Contests</div>
             </div>
             <div className="text-center">
@@ -145,8 +145,8 @@ export const CodeChefStatsWidget = ({ user, codechefStats, isPlatformLoading, fe
     <GlassCard className="h-full">
       <div className="flex items-center justify-between mb-4 cursor-move drag-handle">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-[#5B4638]/20 flex items-center justify-center">
-            <Code2 className="w-5 h-5 text-[#5B4638]" />
+          <div className="w-10 h-10 rounded-xl bg-neon-green/10 border border-neon-green/25 flex items-center justify-center">
+            <Code2 className="w-5 h-5 text-neon-green" />
           </div>
           <div>
             <h3 className="font-semibold text-white">CodeChef</h3>
@@ -175,15 +175,15 @@ export const CodeChefStatsWidget = ({ user, codechefStats, isPlatformLoading, fe
 
       {!codechefStats ? (
         <div className="flex items-center justify-center py-8">
-          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-[#5B4638]"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-neon-green"></div>
         </div>
       ) : (
         <div className="space-y-4">
           <div className="text-center py-2">
-            <div className="text-3xl font-bold text-amber-500 flex items-center justify-center gap-1.5">
+            <div className="text-3xl font-bold text-white flex items-center justify-center gap-1.5">
               {codechefStats.rating || 'Unrated'}
               {codechefStats.stars && (
-                <span className="text-xs px-2 py-0.5 rounded bg-amber-500/20 text-amber-400 font-medium">
+                <span className="text-xs px-2 py-0.5 rounded bg-neon-green/15 text-neon-green border border-neon-green/25 font-medium">
                   {codechefStats.stars}
                 </span>
               )}
@@ -203,7 +203,7 @@ export const CodeChefStatsWidget = ({ user, codechefStats, isPlatformLoading, fe
           <div className="flex items-center justify-around pt-2 border-t border-dark-700/50">
             <div className="text-center">
               <div className="flex items-center gap-1 text-white justify-center">
-                <Trophy className="w-3.5 h-3.5 text-amber-500" />
+                <Trophy className="w-3.5 h-3.5 text-neon-green" />
                 <span className="font-semibold text-sm">{codechefStats.contestsParticipated || 0}</span>
               </div>
               <div className="text-xs text-dark-400">Contests</div>
@@ -235,8 +235,8 @@ export const CodeChefRatingWidget = ({ codechefStats }) => {
   return (
     <GlassCard className="h-full flex flex-col">
       <div className="flex items-center gap-3 mb-4 cursor-move drag-handle">
-        <div className="w-8 h-8 rounded-lg bg-[#5B4638]/20 flex items-center justify-center">
-          <TrendingUp className="w-4 h-4 text-amber-500" />
+        <div className="w-8 h-8 rounded-lg bg-neon-green/10 border border-neon-green/25 flex items-center justify-center">
+          <TrendingUp className="w-4 h-4 text-neon-green" />
         </div>
         <div>
           <h3 className="font-semibold text-white">CodeChef Contest History</h3>
@@ -256,7 +256,7 @@ export const CodeChefRatingWidget = ({ codechefStats }) => {
                 props.payload.contestName,
               ]}
             />
-            <Line type="monotone" dataKey="newRating" stroke="#f59e0b" strokeWidth={2} dot={{ fill: '#f59e0b', r: 3 }} />
+            <Line type="monotone" dataKey="newRating" stroke="var(--color-accent, #6366f1)" strokeWidth={2} dot={{ fill: 'var(--color-accent, #6366f1)', r: 3 }} />
           </LineChart>
         </ResponsiveContainer>
       </div>
@@ -327,21 +327,21 @@ export const LeetCodeRatingWidget = ({ leetcodeStats }) => {
     <GlassCard className="h-full flex flex-col">
       <div className="flex items-center justify-between mb-4 cursor-move drag-handle">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-[#FFA116]/20 flex items-center justify-center">
-            <TrendingUp className="w-4 h-4 text-[#FFA116]" />
+          <div className="w-8 h-8 rounded-lg bg-neon-green/10 border border-neon-green/25 flex items-center justify-center">
+            <TrendingUp className="w-4 h-4 text-neon-green" />
           </div>
           <div>
             <h3 className="font-semibold text-white leading-tight">LeetCode Rating</h3>
             <p className="text-xs text-dark-400 leading-tight">
-              Current: <span className={`font-bold ${isUp ? 'text-green-400' : 'text-red-400'}`}>{currentRating}</span>
+              Current: <span className="font-bold text-white">{currentRating}</span>
               <span className="mx-1.5 text-dark-600">·</span>
-              Best: <span className="font-bold text-yellow-400">★ {maxRating}</span>
+              Peak: <span className="font-bold text-neon-green">★ {maxRating}</span>
             </p>
           </div>
         </div>
         {isUp
-          ? <TrendingUp className="w-4 h-4 text-green-400 shrink-0" />
-          : <TrendingDown className="w-4 h-4 text-red-400 shrink-0" />}
+          ? <TrendingUp className="w-4 h-4 text-neon-green shrink-0" />
+          : <TrendingDown className="w-4 h-4 text-dark-400 shrink-0" />}
       </div>
       <div className="flex-1 min-h-[160px]">
         <ResponsiveContainer width="100%" height="100%">
@@ -351,9 +351,8 @@ export const LeetCodeRatingWidget = ({ leetcodeStats }) => {
             <YAxis stroke="#64748b" tick={{ fill: '#94a3b8', fontSize: 12 }} domain={['dataMin - 50', 'dataMax + 50']} />
             <Tooltip
               contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #334155', borderRadius: '12px' }}
-              itemStyle={{ color: '#FFA116' }}
+              itemStyle={{ color: 'var(--color-accent, #6366f1)' }}
               formatter={(value, name, props) => {
-                const prev = props.payload?.rankChange;
                 return [Math.round(value), 'Rating'];
               }}
               labelFormatter={(label) => label || 'Contest'}
@@ -361,10 +360,10 @@ export const LeetCodeRatingWidget = ({ leetcodeStats }) => {
             <Line
               type="monotone"
               dataKey="newRating"
-              stroke="#FFA116"
-              strokeWidth={3}
-              dot={<RatingDot data={history} />}
-              activeDot={{ r: 7, fill: '#FFA116', stroke: '#fff', strokeWidth: 2 }}
+              stroke="var(--color-accent, #6366f1)"
+              strokeWidth={2.5}
+              dot={{ fill: 'var(--color-accent, #6366f1)', r: 3 }}
+              activeDot={{ r: 6, fill: 'var(--color-accent, #6366f1)', stroke: '#fff', strokeWidth: 2 }}
             />
           </LineChart>
         </ResponsiveContainer>
@@ -378,8 +377,8 @@ export const CodeforcesRatingWidget = ({ codeforcesStats }) => {
   return (
     <GlassCard className="h-full flex flex-col">
       <div className="flex items-center gap-3 mb-4 cursor-move drag-handle">
-        <div className="w-8 h-8 rounded-lg bg-blue-500/20 flex items-center justify-center">
-          <TrendingUp className="w-4 h-4 text-blue-500" />
+        <div className="w-8 h-8 rounded-lg bg-neon-green/10 border border-neon-green/25 flex items-center justify-center">
+          <TrendingUp className="w-4 h-4 text-neon-green" />
         </div>
         <h3 className="font-semibold text-white">Codeforces Rating</h3>
       </div>
@@ -389,8 +388,8 @@ export const CodeforcesRatingWidget = ({ codeforcesStats }) => {
             <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
             <XAxis dataKey="contestName" hide />
             <YAxis stroke="#64748b" tick={{ fill: '#94a3b8', fontSize: 12 }} domain={['dataMin - 100', 'dataMax + 100']} />
-            <Tooltip contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #334155', borderRadius: '12px' }} itemStyle={{ color: '#3b82f6' }} />
-            <Line type="monotone" dataKey="newRating" stroke="#3b82f6" strokeWidth={3} dot={{ fill: '#3b82f6', r: 4 }} activeDot={{ r: 6 }} />
+            <Tooltip contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #334155', borderRadius: '12px' }} itemStyle={{ color: 'var(--color-accent, #6366f1)' }} />
+            <Line type="monotone" dataKey="newRating" stroke="var(--color-accent, #6366f1)" strokeWidth={2.5} dot={{ fill: 'var(--color-accent, #6366f1)', r: 3 }} activeDot={{ r: 6 }} />
           </LineChart>
         </ResponsiveContainer>
       </div>
@@ -409,15 +408,15 @@ export const ProblemsTrendWidget = ({ problemsTrend }) => (
         <AreaChart data={problemsTrend}>
           <defs>
             <linearGradient id="colorProblems" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor="#39FF14" stopOpacity={0.3} />
-              <stop offset="95%" stopColor="#39FF14" stopOpacity={0} />
+              <stop offset="5%" stopColor="var(--color-accent, #6366f1)" stopOpacity={0.3} />
+              <stop offset="95%" stopColor="var(--color-accent, #6366f1)" stopOpacity={0} />
             </linearGradient>
           </defs>
           <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
           <XAxis dataKey="dayNumber" stroke="#64748b" tick={{ fill: '#94a3b8', fontSize: 12 }} tickFormatter={(val) => `D${val}`} />
           <YAxis stroke="#64748b" tick={{ fill: '#94a3b8', fontSize: 12 }} />
           <Tooltip contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #334155', borderRadius: '12px' }} />
-          <Area type="monotone" dataKey="cumulative" stroke="#39FF14" strokeWidth={2} fill="url(#colorProblems)" />
+          <Area type="monotone" dataKey="cumulative" stroke="var(--color-accent, #6366f1)" strokeWidth={2} fill="url(#colorProblems)" />
         </AreaChart>
       </ResponsiveContainer>
     </div>

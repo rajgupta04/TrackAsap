@@ -17,6 +17,18 @@ export const useRoadmapStore = create()(
       awardedCoinWorlds: [],   // Array of world IDs that already paid coins
       justCompletedWorldId: null, // Tracked for path completion animation
       activeWorldId: null, // Currently open world in modal
+      worlds: WORLDS, // Dynamic worlds from Cosmos DB with fallback to static WORLDS
+
+      fetchWorlds: async () => {
+        try {
+          const res = await roadmapService.getWorlds();
+          if (res?.success && Array.isArray(res.data) && res.data.length > 0) {
+            set({ worlds: res.data });
+          }
+        } catch (error) {
+          console.error('Failed to fetch live roadmap worlds from DB, using fallback', error);
+        }
+      },
 
       syncToServer: async () => {
         if (syncTimeout) {
@@ -47,6 +59,8 @@ export const useRoadmapStore = create()(
 
       loadFromServer: async () => {
         try {
+          // Load worlds and progress concurrently
+          get().fetchWorlds();
           const data = await roadmapService.getProgress();
           if (data) {
             set((state) => {
@@ -92,11 +106,12 @@ export const useRoadmapStore = create()(
       },
 
       getWorldProgress: (worldId) => {
-        const world = WORLDS.find((w) => w.id === worldId);
+        const currentWorlds = get().worlds || WORLDS;
+        const world = currentWorlds.find((w) => w.id === worldId);
         if (!world) return { solved: 0, total: 0, percentage: 0 };
 
         const mode = get().questionMode || 'blind75';
-        const activeProblems = world.problems.filter((p) => p[mode]);
+        const activeProblems = (world.problems || []).filter((p) => p[mode]);
         
         const completed = get().completedProblems || [];
         const solved = activeProblems.filter((p) => completed.includes(p.id)).length;

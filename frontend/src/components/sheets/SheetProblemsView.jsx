@@ -41,9 +41,9 @@ import { useAuthStore } from '../../store/authStore';
 import localforage from 'localforage';
 
 const DIFFICULTY_COLORS = {
-  easy: { bg: 'bg-green-500/20', text: 'text-green-400', border: 'border-green-500/30' },
-  medium: { bg: 'bg-yellow-500/20', text: 'text-yellow-400', border: 'border-yellow-500/30' },
-  hard: { bg: 'bg-red-500/20', text: 'text-red-400', border: 'border-red-500/30' },
+  easy: { bg: 'bg-emerald-500/10', text: 'text-emerald-400', border: 'border-emerald-500/20' },
+  medium: { bg: 'bg-amber-500/10', text: 'text-amber-400', border: 'border-amber-500/20' },
+  hard: { bg: 'bg-rose-500/10', text: 'text-rose-400', border: 'border-rose-500/20' },
 };
 
 const STATUS_ICONS = {
@@ -801,19 +801,19 @@ const SheetProblemsView = ({ sheet, onStatsUpdate, onDelete }) => {
                                   className="transition-transform active:scale-90 mt-0.5 p-1 rounded-full hover:bg-white/10"
                                 >
                                   <StatusIcon
-                                    className={`w-6 h-6 ${
+                                    className={`w-5 h-5 ${
                                       problem.status === 'solved'
-                                        ? 'text-green-400'
+                                        ? 'text-neon-green'
                                         : problem.status === 'revision'
-                                        ? 'text-yellow-400'
-                                        : 'text-gray-400 hover:text-neon-green'
+                                        ? 'text-amber-400'
+                                        : 'text-dark-500 hover:text-white'
                                     }`}
                                   />
                                 </button>
 
                                 <div className="flex-1 min-w-0">
                                   <div className="flex items-start justify-between gap-2">
-                                    <p className={`text-sm font-bold leading-snug break-words ${problem.status === 'solved' ? 'text-green-300/90' : 'text-white'}`}>
+                                    <p className={`text-sm font-semibold leading-snug break-words ${problem.status === 'solved' ? 'text-dark-400 line-through opacity-75' : 'text-white'}`}>
                                       {idx + 1}. {problem.title}
                                     </p>
                                     <div className="flex items-center gap-1.5 shrink-0">
@@ -873,10 +873,10 @@ const SheetProblemsView = ({ sheet, onStatsUpdate, onDelete }) => {
                                           href={problem.problemLink}
                                           target="_blank"
                                           rel="noopener noreferrer"
-                                          className="p-1.5 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 rounded-lg transition-colors flex items-center gap-1 text-[11px] font-medium shrink-0"
+                                          className="p-1.5 bg-white/5 hover:bg-white/10 text-dark-200 hover:text-white border border-white/10 rounded-lg transition-colors flex items-center gap-1 text-[11px] font-medium shrink-0"
                                           title="Problem"
                                         >
-                                          <Code2 className="w-3.5 h-3.5" />
+                                          <Code2 className="w-3.5 h-3.5 text-neon-green" />
                                           <span>Solve</span>
                                         </a>
                                       )}
@@ -885,7 +885,7 @@ const SheetProblemsView = ({ sheet, onStatsUpdate, onDelete }) => {
                                           href={problem.articleLink}
                                           target="_blank"
                                           rel="noopener noreferrer"
-                                          className="p-1.5 bg-orange-500/10 hover:bg-orange-500/20 text-orange-400 rounded-lg transition-colors shrink-0"
+                                          className="p-1.5 bg-white/5 hover:bg-white/10 text-dark-300 hover:text-white border border-white/5 rounded-lg transition-colors shrink-0"
                                           title="Article"
                                         >
                                           <FileText className="w-3.5 h-3.5" />
@@ -896,7 +896,7 @@ const SheetProblemsView = ({ sheet, onStatsUpdate, onDelete }) => {
                                           href={problem.youtubeLink}
                                           target="_blank"
                                           rel="noopener noreferrer"
-                                          className="p-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-lg transition-colors shrink-0"
+                                          className="p-1.5 bg-white/5 hover:bg-white/10 text-dark-300 hover:text-white border border-white/5 rounded-lg transition-colors shrink-0"
                                           title="YouTube"
                                         >
                                           <Youtube className="w-3.5 h-3.5" />
@@ -909,8 +909,8 @@ const SheetProblemsView = ({ sheet, onStatsUpdate, onDelete }) => {
                                         onClick={() => handleOpenNotes(problem)}
                                         className={`p-1.5 rounded-lg transition-all flex items-center gap-1 text-[11px] font-medium ${
                                           problem.notes
-                                            ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30'
-                                            : 'bg-white/5 text-gray-400 hover:text-white'
+                                            ? 'bg-white/15 text-white border border-white/20'
+                                            : 'bg-white/5 text-dark-400 hover:text-white border border-white/5'
                                         }`}
                                         title={problem.notes ? 'View notes' : 'Add notes'}
                                       >
@@ -921,8 +921,8 @@ const SheetProblemsView = ({ sheet, onStatsUpdate, onDelete }) => {
                                         onClick={() => handleOpenCode(problem)}
                                         className={`p-1.5 rounded-lg transition-all flex items-center gap-1 text-[11px] font-medium ${
                                           (problem.code || problem.solutions?.some(s => s.code?.trim()))
-                                            ? 'bg-neon-green/20 text-neon-green border border-neon-green/30'
-                                            : 'bg-white/5 text-gray-400 hover:text-white'
+                                            ? 'bg-neon-green/15 text-neon-green border border-neon-green/30'
+                                            : 'bg-white/5 text-dark-400 hover:text-white border border-white/5'
                                         }`}
                                         title={problem.code ? 'View code' : 'Add code'}
                                       >
@@ -1029,21 +1029,21 @@ const SheetProblemsView = ({ sheet, onStatsUpdate, onDelete }) => {
                                       <StatusIcon
                                         className={`w-5 h-5 ${
                                           problem.status === 'solved'
-                                            ? 'text-green-400'
+                                            ? 'text-neon-green'
                                             : problem.status === 'revision'
-                                            ? 'text-yellow-400'
-                                            : 'text-gray-500 hover:text-neon-green'
+                                            ? 'text-amber-400'
+                                            : 'text-dark-500 hover:text-white'
                                         }`}
                                       />
                                     </button>
                                   </td>
                                   <td className="px-4 py-3">
                                     <div className="flex items-center gap-2">
-                                      <span className="text-gray-500 text-sm">{idx + 1}.</span>
+                                      <span className="text-dark-500 text-sm">{idx + 1}.</span>
                                       <span
                                         className={`font-medium ${
                                           problem.status === 'solved'
-                                            ? 'text-green-400 line-through opacity-70'
+                                            ? 'text-dark-400 line-through opacity-75'
                                             : 'text-white'
                                         }`}
                                       >
@@ -1077,7 +1077,7 @@ const SheetProblemsView = ({ sheet, onStatsUpdate, onDelete }) => {
                                           href={problem.problemLink}
                                           target="_blank"
                                           rel="noopener noreferrer"
-                                          className="p-1.5 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 rounded-lg transition-colors"
+                                          className="p-1.5 bg-white/5 hover:bg-white/10 text-dark-300 hover:text-white border border-white/5 rounded-lg transition-colors"
                                           title="Problem"
                                         >
                                           <Code2 className="w-4 h-4" />
@@ -1088,7 +1088,7 @@ const SheetProblemsView = ({ sheet, onStatsUpdate, onDelete }) => {
                                           href={problem.articleLink}
                                           target="_blank"
                                           rel="noopener noreferrer"
-                                          className="p-1.5 bg-orange-500/10 hover:bg-orange-500/20 text-orange-400 rounded-lg transition-colors"
+                                          className="p-1.5 bg-white/5 hover:bg-white/10 text-dark-300 hover:text-white border border-white/5 rounded-lg transition-colors"
                                           title="Article"
                                         >
                                           <FileText className="w-4 h-4" />
@@ -1099,7 +1099,7 @@ const SheetProblemsView = ({ sheet, onStatsUpdate, onDelete }) => {
                                           href={problem.youtubeLink}
                                           target="_blank"
                                           rel="noopener noreferrer"
-                                          className="p-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-lg transition-colors"
+                                          className="p-1.5 bg-white/5 hover:bg-white/10 text-dark-300 hover:text-white border border-white/5 rounded-lg transition-colors"
                                           title="YouTube"
                                         >
                                           <Youtube className="w-4 h-4" />
@@ -1112,8 +1112,8 @@ const SheetProblemsView = ({ sheet, onStatsUpdate, onDelete }) => {
                                       onClick={() => handleOpenNotes(problem)}
                                       className={`p-1.5 rounded-lg transition-all ${
                                         problem.notes
-                                          ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30'
-                                          : 'bg-white/5 text-gray-400 hover:text-white'
+                                          ? 'bg-white/15 text-white border border-white/20'
+                                          : 'bg-white/5 text-dark-400 hover:text-white border border-white/5'
                                       }`}
                                       title={problem.notes ? 'View notes' : 'Add notes'}
                                     >
@@ -1125,8 +1125,8 @@ const SheetProblemsView = ({ sheet, onStatsUpdate, onDelete }) => {
                                       onClick={() => handleOpenCode(problem)}
                                       className={`p-1.5 rounded-lg transition-all ${
                                         (problem.code || problem.solutions?.some(s => s.code?.trim()))
-                                          ? 'bg-neon-green/20 text-neon-green border border-neon-green/30'
-                                          : 'bg-white/5 text-gray-400 hover:text-white'
+                                          ? 'bg-neon-green/15 text-neon-green border border-neon-green/30'
+                                          : 'bg-white/5 text-dark-400 hover:text-white border border-white/5'
                                       }`}
                                       title={problem.code ? 'View code' : 'Add code'}
                                     >
@@ -1134,7 +1134,7 @@ const SheetProblemsView = ({ sheet, onStatsUpdate, onDelete }) => {
                                     </button>
                                   </td>
                                   <td className="px-4 py-3 text-center">
-                                    <span className="text-sm text-gray-400">
+                                    <span className="text-xs text-dark-400 font-medium">
                                       {problem.revisionCount}
                                     </span>
                                   </td>

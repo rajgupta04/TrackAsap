@@ -55,6 +55,31 @@ export const requireAdmin = (req, res, next) => {
   next();
 };
 
+export const optionalProtect = async (req, res, next) => {
+  let token;
+  if (
+    req.headers.authorization &&
+    req.headers.authorization.startsWith('Bearer')
+  ) {
+    try {
+      token = req.headers.authorization.split(' ')[1];
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      req.user = await User.findById(decoded.id).select('-password');
+    } catch (error) {
+      // Fail silently for optional auth
+    }
+  }
+  next();
+};
+
+export const requireSetter = (req, res, next) => {
+  if (!req.user || (req.user.role !== 'setter' && req.user.role !== 'admin')) {
+    return res.status(403).json({ message: 'Problem Setter or Admin access required' });
+  }
+
+  next();
+};
+
 export const generateToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, {
     expiresIn: process.env.JWT_EXPIRE || '30d',

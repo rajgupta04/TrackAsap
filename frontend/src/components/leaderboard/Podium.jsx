@@ -32,7 +32,7 @@ const PodiumStep = ({ rank, user, score, height, color, delay }) => {
           >
             <img
               src={getAvatarSrc(user)}
-              alt={user.name}
+              alt={user.name || 'User'}
               className="w-full h-full object-cover"
             />
           </div>
@@ -44,10 +44,10 @@ const PodiumStep = ({ rank, user, score, height, color, delay }) => {
         </div>
         <div className="text-center mt-2">
           <p className="font-bold text-white truncate w-24 md:w-32 text-sm md:text-base">
-            {user.name}
+            {user.name || 'Anonymous User'}
           </p>
           <p className={`text-xs md:text-sm font-semibold ${color.text}`}>
-            {score.toLocaleString()} pts
+            {(score || 0).toLocaleString()} pts
           </p>
         </div>
       </motion.div>
@@ -71,9 +71,9 @@ const Podium = ({ topUsers }) => {
 
   // Reorder for visual podium: [2, 1, 3]
   const podiumOrder = [
-    topUsers[1] ? { rank: 2, ...topUsers[1] } : null,
-    topUsers[0] ? { rank: 1, ...topUsers[0] } : null,
-    topUsers[2] ? { rank: 3, ...topUsers[2] } : null,
+    topUsers[1] && topUsers[1].user ? { rank: 2, ...topUsers[1] } : null,
+    topUsers[0] && topUsers[0].user ? { rank: 1, ...topUsers[0] } : null,
+    topUsers[2] && topUsers[2].user ? { rank: 3, ...topUsers[2] } : null,
   ];
 
   const colors = {
@@ -109,11 +109,11 @@ const Podium = ({ topUsers }) => {
   return (
     <div className="flex justify-center items-end h-[350px] mb-12 gap-2 md:gap-4 border-b border-dark-700/50 pb-0">
       {podiumOrder.map((item, index) => {
-        if (!item) return <div key={index} className="w-24 md:w-32" />;
+        if (!item || !item.user) return <div key={index} className="w-24 md:w-32" />;
         const scoreField = item.globalScore !== undefined ? item.globalScore : item.weeklyScore !== undefined ? item.weeklyScore : item.monthlyScore;
         return (
           <PodiumStep
-            key={item.user._id}
+            key={item.user._id || index}
             rank={item.rank}
             user={item.user}
             score={scoreField}

@@ -33,12 +33,13 @@ const LeaderboardTable = () => {
         </thead>
         <tbody>
           {tableData.map((item, index) => {
+            if (!item || !item.user) return null;
             const currentRank = baseRank + index;
             const score = activeTab === 'global' ? item.globalScore : activeTab === 'weekly' ? item.weeklyScore : item.monthlyScore;
             
             return (
               <motion.tr
-                key={item.user._id}
+                key={item.user._id || item._id || index}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.3, delay: index * 0.05 }}
@@ -56,16 +57,16 @@ const LeaderboardTable = () => {
                   <div className="flex items-center gap-3">
                     <img
                       src={getAvatarSrc(item.user)}
-                      alt={item.user.name}
+                      alt={item.user.name || 'User'}
                       className="w-10 h-10 rounded-full bg-dark-700 border border-dark-600 object-cover"
                     />
                     <div>
-                      <p className="font-semibold text-white group-hover:text-primary-400 transition-colors">
-                        {item.user.name}
+                      <p className="font-semibold text-white group-hover:text-neon-green transition-colors">
+                        {item.user.name || 'Anonymous User'}
                       </p>
                       {item.user.codeforcesHandle && (
                         <p className="text-xs text-dark-400">
-                          CF: {item.user.codeforcesHandle}
+                          CF: @{item.user.codeforcesHandle}
                         </p>
                       )}
                     </div>
@@ -83,8 +84,8 @@ const LeaderboardTable = () => {
                 {/* Max Streak */}
                 <td className="py-4 px-4 text-center">
                   <div className="inline-flex items-center gap-1 bg-dark-800 px-2.5 py-1 rounded-lg border border-dark-700/80 text-sm shadow-inner">
-                    <Flame className="w-4 h-4 text-orange-500 animate-pulse" />
-                    <span className="font-bold text-orange-400">
+                    <Flame className="w-4 h-4 text-neon-green" />
+                    <span className="font-bold text-neon-green">
                       {item.statsBreakdown?.maxStreak ?? item.statsBreakdown?.currentStreak ?? 0}
                     </span>
                   </div>
@@ -92,9 +93,9 @@ const LeaderboardTable = () => {
 
                 {/* Score */}
                 <td className="py-4 px-4 text-right">
-                  <div className="flex items-center justify-end gap-1 font-bold text-primary-400">
-                    {score.toLocaleString()}
-                    <Medal className="w-4 h-4 text-primary-500/70 hidden sm:block" />
+                  <div className="flex items-center justify-end gap-1 font-bold text-white">
+                    {(score || 0).toLocaleString()}
+                    <Medal className="w-4 h-4 text-neon-green hidden sm:block" />
                   </div>
                 </td>
               </motion.tr>

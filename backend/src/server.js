@@ -20,6 +20,10 @@ import aiRoutes from './routes/ai.routes.js';
 import compilerRoutes from './routes/compiler.routes.js';
 import emailRoutes from './routes/email.routes.js';
 import roadmapRoutes from './routes/roadmap.routes.js';
+import judgeProblemRoutes from './routes/judgeProblem.routes.js';
+import judgeRoutes from './routes/judge.routes.js';
+import featureRoutes from './routes/feature.routes.js';
+import telemetryRoutes from './routes/telemetry.routes.js';
 import { initLeaderboardCron } from './cron/leaderboard.cron.js';
 import { requestLogger } from './analytics/middlewares/requestLogger.js';
 import { startAnalyticsCronJobs } from './analytics/cron/aggregateDaily.js';
@@ -74,6 +78,10 @@ app.use('/api/ai', aiRoutes);
 app.use('/api/compiler', compilerRoutes);
 app.use('/api/email', emailRoutes);
 app.use('/api/roadmap', roadmapRoutes);
+app.use('/api/judge-problems', judgeProblemRoutes);
+app.use('/api/judge', judgeRoutes);
+app.use('/api/features', featureRoutes);
+app.use('/api/telemetry', telemetryRoutes);
 
 // System Analytics (Admin only)
 app.use('/api/system-analytics', systemAnalyticsRoutes);

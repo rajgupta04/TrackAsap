@@ -20,12 +20,16 @@ import {
   PanelLeftOpen,
   Code2,
   Compass,
+  Palette,
 } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
+import { useThemeStore } from '../../store/themeStore';
+import { useFeatureStore } from '../../store/featureStore';
 
 const navItems = [
   { path: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
   { path: '/roadmap', icon: Compass, label: 'Roadmap', badge: 'Beta' },
+  { path: '/arena', icon: Flame, label: 'Arena', badge: 'New' },
   { path: '/daily-tracker', icon: Calendar, label: 'Daily Tracker' },
   { path: '/leaderboard', icon: Trophy, label: 'Leaderboard' },
   { path: '/analytics', icon: BarChart3, label: 'Analytics' },
@@ -34,18 +38,20 @@ const navItems = [
   { path: '/playground', icon: Code2, label: 'Playground' },
   { path: '/discussion', icon: MessageSquare, label: 'Discussion' },
   { path: '/physique', icon: Dumbbell, label: 'Physique' },
-  { path: '/profile', icon: User, label: 'Profile' },
 ];
 
 const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
   const { logout, user, githubStatus, fetchGitHubStatus } = useAuthStore();
+  const { openThemeModal } = useThemeStore();
+  const { showProblems, showLeaderboard, fetchFeatures } = useFeatureStore();
   const location = useLocation();
 
   const toggleCollapse = () => setIsCollapsed(!isCollapsed);
 
   useEffect(() => {
     fetchGitHubStatus();
-  }, [fetchGitHubStatus]);
+    fetchFeatures();
+  }, [fetchGitHubStatus, fetchFeatures]);
 
   const avatarSrc =
     user?.profilePicture ||
@@ -115,6 +121,12 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
               if (item.path === '/physique' && !user?.enablePhysique) {
                 return false;
               }
+              if (item.path === '/problems' && !showProblems) {
+                return false;
+              }
+              if (item.path === '/leaderboard' && !showLeaderboard) {
+                return false;
+              }
               return true;
             })
             .map((item) => {
@@ -166,6 +178,29 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
             );
           })}
         </nav>
+
+        {/* Setter Studio link - shown for setter and admin users */}
+        {(user?.role === 'setter' || user?.role === 'admin') && (
+          <div className="px-2 md:px-4 pb-1.5">
+            <NavLink
+              to="/studio"
+              title={isCollapsed ? 'Problem Setter Studio' : ''}
+              className={({ isActive }) =>
+                `flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-300 ${
+                  isCollapsed ? 'md:justify-center md:px-3' : ''
+                } ${
+                  isActive
+                    ? 'bg-neon-green/10 text-neon-green border border-neon-green/20 font-semibold'
+                    : 'text-dark-300 hover:bg-dark-800/50 hover:text-white'
+                }`
+              }
+            >
+              <Code2 size={18} className="flex-shrink-0 text-neon-green" />
+              {!isCollapsed && <span className="text-xs font-semibold hidden md:inline">Setter Studio</span>}
+              <span className="text-xs font-semibold md:hidden">Setter Studio</span>
+            </NavLink>
+          </div>
+        )}
 
         {/* Admin link - only shown for admin users */}
         {user?.role === 'admin' && (
@@ -234,13 +269,22 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
             </div>
           </NavLink>
           <button
+            onClick={openThemeModal}
+            title={isCollapsed ? 'Customize Theme' : ''}
+            className={`w-full flex items-center gap-3 px-4 py-2.5 mb-1 rounded-xl text-dark-300 hover:bg-dark-800/60 hover:text-white transition-all duration-300 ${isCollapsed ? 'md:justify-center md:px-3' : ''}`}
+          >
+            <Palette size={18} className="flex-shrink-0 text-neon-green" />
+            {!isCollapsed && <span className="text-xs font-semibold hidden md:inline">Theme Customizer</span>}
+            <span className="text-xs font-semibold md:hidden">Theme Customizer</span>
+          </button>
+          <button
             onClick={logout}
             title={isCollapsed ? 'Logout' : ''}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-dark-400 hover:bg-red-500/10 hover:text-red-400 transition-all duration-300 ${isCollapsed ? 'md:justify-center md:px-3' : ''}`}
+            className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-dark-400 hover:bg-red-500/10 hover:text-red-400 transition-all duration-300 ${isCollapsed ? 'md:justify-center md:px-3' : ''}`}
           >
-            <LogOut size={20} className="flex-shrink-0" />
-            {!isCollapsed && <span className="font-medium hidden md:inline">Logout</span>}
-            <span className="font-medium md:hidden">Logout</span>
+            <LogOut size={18} className="flex-shrink-0" />
+            {!isCollapsed && <span className="text-xs font-medium hidden md:inline">Logout</span>}
+            <span className="text-xs font-medium md:hidden">Logout</span>
           </button>
         </div>
       </aside>

@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { ShieldAlert, Trophy, ExternalLink, Check, Lock, FileText, Code } from 'lucide-react';
+import { ShieldAlert, Trophy, ExternalLink, Check, Lock, FileText, Code, Zap } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { useRoadmapStore } from '../../store/roadmapStore';
 
@@ -19,6 +19,20 @@ const BossLevel = ({
   // Check how many boss problems are completed
   const solvedCount = bossProblems.filter((p) => completedProblems.includes(p.id)).length;
   const isFullySolved = solvedCount === bossProblems.length;
+
+  const getLeetCodeUrl = (prob) => {
+    if (prob?.leetcodeUrl && prob.leetcodeUrl.startsWith('http')) return prob.leetcodeUrl;
+    if (prob?.url && prob.url.startsWith('http')) return prob.url;
+    let slug = '';
+    if (prob?.judgeSlug) {
+      slug = prob.judgeSlug;
+    } else if (prob?.url && prob.url.startsWith('/solve/')) {
+      slug = prob.url.replace('/solve/', '').replace(/\/$/, '');
+    } else if (prob?.title) {
+      slug = prob.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+    }
+    return slug ? `https://leetcode.com/problems/${slug}/` : 'https://leetcode.com/problemset/all/';
+  };
 
   const handleClaimVictory = () => {
     // Blast massive double confetti on victory!
@@ -137,9 +151,21 @@ const BossLevel = ({
                     </div>
 
                     <div className="flex items-center gap-2 shrink-0">
+                      {Boolean(prob.judgeSlug || (prob.url && prob.url.startsWith('/solve/'))) && (
+                        <a
+                          href={prob.judgeSlug ? `/solve/${prob.judgeSlug}` : prob.url}
+                          className="px-2.5 py-1 bg-neon-green/10 hover:bg-neon-green hover:text-dark-950 text-neon-green text-[11px] font-bold rounded-lg border border-neon-green/30 flex items-center gap-1 transition-all shadow-sm"
+                          title="Solve in TrackAsap Judge"
+                        >
+                          <Zap size={11} className="fill-current" />
+                          <span>Solve</span>
+                        </a>
+                      )}
+
+                      {/* Solve on LeetCode button (Always available) */}
                       <button
-                        onClick={() => window.open(prob.url, '_blank')}
-                        className="p-1.5 bg-white/5 hover:bg-white/10 rounded-lg text-dark-400 hover:text-white transition-colors"
+                        onClick={() => window.open(getLeetCodeUrl(prob), '_blank')}
+                        className="p-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 rounded-lg border border-amber-500/30 transition-colors cursor-pointer"
                         title="Solve on LeetCode"
                       >
                         <ExternalLink size={12} />

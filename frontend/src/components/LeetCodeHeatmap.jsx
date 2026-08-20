@@ -62,19 +62,19 @@ const LeetCodeHeatmap = ({ submissionCalendar }) => {
   }, [submissionCalendar]);
 
   const getColorClass = (count) => {
-    if (count === 0) return 'bg-dark-700/50';
-    if (count <= 1) return 'bg-green-900/60';
-    if (count <= 3) return 'bg-green-700/70';
-    if (count <= 5) return 'bg-green-500/80';
-    return 'bg-green-400';
+    if (count === 0) return 'bg-white/5';
+    if (count <= 1) return 'bg-neon-green/30';
+    if (count <= 3) return 'bg-neon-green/50';
+    if (count <= 5) return 'bg-neon-green/75';
+    return 'bg-neon-green';
   };
 
   const getIntensityColor = (count) => {
-    if (count === 0) return 'rgba(30, 41, 59, 0.5)';
-    if (count <= 1) return 'rgba(20, 83, 45, 0.6)';
-    if (count <= 3) return 'rgba(21, 128, 61, 0.7)';
-    if (count <= 5) return 'rgba(34, 197, 94, 0.8)';
-    return 'rgba(74, 222, 128, 1)';
+    if (count === 0) return 'rgba(255, 255, 255, 0.05)';
+    if (count <= 1) return 'rgb(var(--color-accent-rgb) / 0.35)';
+    if (count <= 3) return 'rgb(var(--color-accent-rgb) / 0.6)';
+    if (count <= 5) return 'rgb(var(--color-accent-rgb) / 0.85)';
+    return 'var(--color-accent, #6366f1)';
   };
 
   // Group days by week
