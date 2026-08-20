@@ -17,20 +17,20 @@ export const WORLDS = [
       bgOverlay: 'radial-gradient(circle at 50% 30%, rgba(16, 185, 129, 0.15) 0%, transparent 70%)',
     },
     problems: [
-      { id: 'arr-1', title: 'Contains Duplicate', difficulty: 'easy', url: 'https://leetcode.com/problems/contains-duplicate/', xp: 10, tags: ['Hashing', 'Array'], blind75: true, rabbit150: true, running175: true },
-      { id: 'arr-2', title: 'Valid Anagram', difficulty: 'easy', url: 'https://leetcode.com/problems/valid-anagram/', xp: 10, tags: ['Hashing', 'String'], blind75: true, rabbit150: true, running175: true },
-      { id: 'arr-3', title: 'Two Sum', difficulty: 'easy', url: 'https://leetcode.com/problems/two-sum/', xp: 10, tags: ['Array', 'Hash Map'], blind75: true, rabbit150: true, running175: true },
-      { id: 'arr-4', title: 'Group Anagrams', difficulty: 'medium', url: 'https://leetcode.com/problems/group-anagrams/', xp: 25, tags: ['Hashing', 'Sorting'], blind75: true, rabbit150: true, running175: true },
-      { id: 'arr-5', title: 'Top K Frequent Elements', difficulty: 'medium', url: 'https://leetcode.com/problems/top-k-frequent-elements/', xp: 25, tags: ['Heap', 'Hash Map'], blind75: true, rabbit150: true, running175: true },
-      { id: 'arr-6', title: 'Product of Array Except Self', difficulty: 'medium', url: 'https://leetcode.com/problems/product-of-array-except-self/', xp: 25, tags: ['Prefix Sum', 'Array'], blind75: true, rabbit150: true, running175: true },
+      { id: 'arr-1', title: 'Contains Duplicate', difficulty: 'easy', url: 'https://leetcode.com/problems/contains-duplicate/', xp: 10, tags: ['Hashing', 'Array'], blind75: true, rabbit150: true, running175: true, judgeSlug: 'contains-duplicate' },
+      { id: 'arr-2', title: 'Valid Anagram', difficulty: 'easy', url: 'https://leetcode.com/problems/valid-anagram/', xp: 10, tags: ['Hashing', 'String'], blind75: true, rabbit150: true, running175: true, judgeSlug: 'valid-anagram' },
+      { id: 'arr-3', title: 'Two Sum', difficulty: 'easy', url: 'https://leetcode.com/problems/two-sum/', xp: 10, tags: ['Array', 'Hash Map'], blind75: true, rabbit150: true, running175: true, judgeSlug: 'two-sum' },
+      { id: 'arr-4', title: 'Group Anagrams', difficulty: 'medium', url: 'https://leetcode.com/problems/group-anagrams/', xp: 25, tags: ['Hashing', 'Sorting'], blind75: true, rabbit150: true, running175: true, judgeSlug: 'group-anagrams' },
+      { id: 'arr-5', title: 'Top K Frequent Elements', difficulty: 'medium', url: 'https://leetcode.com/problems/top-k-frequent-elements/', xp: 25, tags: ['Heap', 'Hash Map'], blind75: true, rabbit150: true, running175: true, judgeSlug: 'top-k-frequent-elements' },
+      { id: 'arr-6', title: 'Product of Array Except Self', difficulty: 'medium', url: 'https://leetcode.com/problems/product-of-array-except-self/', xp: 25, tags: ['Prefix Sum', 'Array'], blind75: true, rabbit150: true, running175: true, judgeSlug: 'product-of-array-except-self' },
       { id: 'arr-7', title: 'Valid Sudoku', difficulty: 'medium', url: 'https://leetcode.com/problems/valid-sudoku/', xp: 25, tags: ['Array', 'Matrix'], blind75: true, rabbit150: true, running175: true },
-      { id: 'arr-8', title: 'Longest Consecutive Sequence', difficulty: 'medium', url: 'https://leetcode.com/problems/longest-consecutive-sequence/', xp: 25, tags: ['HashSet', 'Union Find'], blind75: true, rabbit150: true, running175: true },
+      { id: 'arr-8', title: 'Longest Consecutive Sequence', difficulty: 'medium', url: 'https://leetcode.com/problems/longest-consecutive-sequence/', xp: 25, tags: ['HashSet', 'Union Find'], blind75: true, rabbit150: true, running175: true, judgeSlug: 'longest-consecutive-sequence' },
       { id: 'arr-9', title: 'Encode and Decode Strings', difficulty: 'medium', url: 'https://leetcode.com/problems/encode-and-decode-strings/', xp: 25, tags: ['String', 'Design'], blind75: true, rabbit150: true, running175: true },
-      { id: 'arr-10', title: "Pascal's Triangle", difficulty: 'easy', url: 'https://leetcode.com/problems/pascals-triangle/', xp: 10, tags: ['Array', 'Math'], blind75: false, rabbit150: true, running175: true },
+      { id: 'arr-10', title: "Pascal's Triangle", difficulty: 'easy', url: 'https://leetcode.com/problems/pascals-triangle/', xp: 10, tags: ['Array', 'Math'], blind75: false, rabbit150: true, running175: true, judgeSlug: 'pascals-triangle' },
       { id: 'arr-11', title: 'Remove Element', difficulty: 'easy', url: 'https://leetcode.com/problems/remove-element/', xp: 10, tags: ['Array', 'Two Pointers'], blind75: false, rabbit150: true, running175: true },
       { id: 'arr-12', title: 'Unique Email Addresses', difficulty: 'easy', url: 'https://leetcode.com/problems/unique-email-addresses/', xp: 10, tags: ['String', 'HashSet'], blind75: false, rabbit150: true, running175: true },
       { id: 'arr-13', title: 'Is Subsequence', difficulty: 'easy', url: 'https://leetcode.com/problems/is-subsequence/', xp: 10, tags: ['Two Pointers', 'String'], blind75: false, rabbit150: true, running175: true },
-      { id: 'arr-14', title: 'Majority Element', difficulty: 'easy', url: 'https://leetcode.com/problems/majority-element/', xp: 10, tags: ['Array', 'Voting'], blind75: false, rabbit150: true, running175: true },
+      { id: 'arr-14', title: 'Majority Element', difficulty: 'easy', url: 'https://leetcode.com/problems/majority-element/', xp: 10, tags: ['Array', 'Voting'], blind75: false, rabbit150: true, running175: true, judgeSlug: 'majority-element' },
       { id: 'arr-15', title: 'Find Pivot Index', difficulty: 'easy', url: 'https://leetcode.com/problems/find-pivot-index/', xp: 10, tags: ['Array', 'Prefix Sum'], blind75: false, rabbit150: true, running175: true }
     ],
     bossLevel: {
@@ -39,7 +39,7 @@ export const WORLDS = [
       description: 'Defeat the Array Guardian by solving the ultimate frequency-based boundary problem.',
       xp: 100,
       problems: [
-        { id: 'arr-b1', title: 'First Missing Positive', difficulty: 'hard', url: 'https://leetcode.com/problems/first-missing-positive/', tags: ['Cyclic Sort', 'Array'] }
+        { id: 'arr-b1', title: 'First Missing Positive', difficulty: 'hard', url: 'https://leetcode.com/problems/first-missing-positive/', tags: ['Cyclic Sort', 'Array'], judgeSlug: 'first-missing-positive' }
       ]
     }
   },
