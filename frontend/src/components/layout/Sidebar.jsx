@@ -8,6 +8,7 @@ import {
   Dumbbell,
   User,
   LogOut,
+  LogIn,
   Target,
   Flame,
   BookOpen,
@@ -41,7 +42,7 @@ const navItems = [
 ];
 
 const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
-  const { logout, user, githubStatus, fetchGitHubStatus } = useAuthStore();
+  const { logout, user, isAuthenticated, githubStatus, fetchGitHubStatus } = useAuthStore();
   const { openThemeModal } = useThemeStore();
   const { showProblems, showLeaderboard, fetchFeatures } = useFeatureStore();
   const location = useLocation();
@@ -277,15 +278,27 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
             {!isCollapsed && <span className="text-xs font-semibold hidden md:inline">Theme Customizer</span>}
             <span className="text-xs font-semibold md:hidden">Theme Customizer</span>
           </button>
-          <button
-            onClick={logout}
-            title={isCollapsed ? 'Logout' : ''}
-            className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-dark-400 hover:bg-red-500/10 hover:text-red-400 transition-all duration-300 ${isCollapsed ? 'md:justify-center md:px-3' : ''}`}
-          >
-            <LogOut size={18} className="flex-shrink-0" />
-            {!isCollapsed && <span className="text-xs font-medium hidden md:inline">Logout</span>}
-            <span className="text-xs font-medium md:hidden">Logout</span>
-          </button>
+          {isAuthenticated ? (
+            <button
+              onClick={logout}
+              title={isCollapsed ? 'Logout' : ''}
+              className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-dark-400 hover:bg-red-500/10 hover:text-red-400 transition-all duration-300 ${isCollapsed ? 'md:justify-center md:px-3' : ''}`}
+            >
+              <LogOut size={18} className="flex-shrink-0" />
+              {!isCollapsed && <span className="text-xs font-medium hidden md:inline">Logout</span>}
+              <span className="text-xs font-medium md:hidden">Logout</span>
+            </button>
+          ) : (
+            <NavLink
+              to="/login"
+              title={isCollapsed ? 'Login' : ''}
+              className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-dark-400 hover:bg-neon-green/10 hover:text-neon-green transition-all duration-300 ${isCollapsed ? 'md:justify-center md:px-3' : ''}`}
+            >
+              <LogIn size={18} className="flex-shrink-0" />
+              {!isCollapsed && <span className="text-xs font-medium hidden md:inline">Login / Sign up</span>}
+              <span className="text-xs font-medium md:hidden">Login</span>
+            </NavLink>
+          )}
         </div>
       </aside>
     </>
