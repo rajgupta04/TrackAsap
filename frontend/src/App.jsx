@@ -148,6 +148,11 @@ function App() {
         }
       />
 
+      {/* Public Layout Routes (Visible without login) */}
+      <Route path="/" element={<Layout />}>
+        <Route path="arena" element={<ProblemArena />} />
+      </Route>
+
       {/* Protected Routes */}
       <Route
         path="/"
@@ -175,7 +180,6 @@ function App() {
         <Route path="playground" element={<Playground />} />
         <Route path="discussion" element={<Discussion />} />
         <Route path="roadmap" element={<Roadmap />} />
-        <Route path="arena" element={<ProblemArena />} />
         <Route path="studio" element={<ProblemSetterStudio />} />
         <Route path="admin" element={<Admin />} />
         <Route
