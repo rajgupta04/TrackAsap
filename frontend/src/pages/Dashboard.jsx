@@ -137,9 +137,6 @@ const QUICK_ACTIONS = [
     title: 'Start Your Challenge',
     description: 'Flexible 14, 30, or 75+ day tracker',
     icon: Flame,
-    color: '#ec4899',
-    bg: 'rgba(236, 72, 153, 0.1)',
-    border: 'rgba(236, 72, 153, 0.25)',
     to: '/daily-tracker',
     state: { openCreateChallenge: true },
   },
@@ -147,45 +144,30 @@ const QUICK_ACTIONS = [
     title: 'Continue Sheets',
     description: 'Resume active DSA & study plans',
     icon: BookOpen,
-    color: '#39FF14',
-    bg: 'rgba(57, 255, 20, 0.1)',
-    border: 'rgba(57, 255, 20, 0.25)',
     to: '/sheets',
   },
   {
     title: 'Daily Tracker',
     description: 'Log today\'s coding time & tasks',
     icon: Clock,
-    color: '#22d3ee',
-    bg: 'rgba(34, 211, 238, 0.1)',
-    border: 'rgba(34, 211, 238, 0.25)',
     to: '/daily-tracker',
   },
   {
     title: 'Code Playground',
     description: 'Multi-language online compiler',
     icon: Code2,
-    color: '#a78bfa',
-    bg: 'rgba(167, 139, 250, 0.1)',
-    border: 'rgba(167, 139, 250, 0.25)',
     to: '/playground',
   },
   {
     title: 'Analytics Platform',
     description: 'CP ratings, stats & heatmaps',
     icon: Activity,
-    color: '#f97316',
-    bg: 'rgba(249, 115, 22, 0.1)',
-    border: 'rgba(249, 115, 22, 0.25)',
     to: '/analytics',
   },
   {
     title: 'Leaderboard',
     description: 'Check global ranks & peers',
     icon: Trophy,
-    color: '#eab308',
-    bg: 'rgba(234, 179, 8, 0.1)',
-    border: 'rgba(234, 179, 8, 0.25)',
     to: '/leaderboard',
   },
 ];
@@ -313,59 +295,55 @@ const Dashboard = () => {
       {/* ── Section 1: Hero Welcome & Quick Action Command Center ─────────── */}
       {/* ═════════════════════════════════════════════════════════════════════ */}
       <GlassCard padding="p-6 md:p-8" className="relative overflow-hidden">
-        {/* Glow Effects */}
-        <div className="absolute -top-24 -right-24 w-96 h-96 bg-neon-green/10 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute -bottom-24 -left-24 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none" />
-
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
           <div>
-            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-neon-green mb-1">
-              <Sparkles className="w-4 h-4" /> Developer Command Center
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-white/5 border border-white/10 text-[11px] font-semibold uppercase tracking-wider text-dark-300 mb-2">
+              <Sparkles className="w-3.5 h-3.5 text-neon-green" /> Developer Command Center
             </div>
             <h1 className="text-2xl md:text-3xl lg:text-4xl font-extrabold text-white tracking-tight">
-              Welcome back, <span className="text-transparent bg-clip-text bg-gradient-to-r from-neon-green via-cyan-400 to-purple-400">{displayName}</span>!
+              Welcome back, <span className="text-white font-extrabold">{displayName}</span>!
             </h1>
-            <p className="text-sm text-gray-400 mt-1 max-w-xl">
+            <p className="text-sm text-dark-300 mt-1 max-w-xl">
               Stay consistent, crush your interview sheets, and sync your solutions seamlessly.
             </p>
           </div>
 
           {/* Quick Stats Badges */}
           <div className="flex items-center gap-3 flex-wrap">
-            <div className="flex items-center gap-2.5 px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 backdrop-blur-md">
-              <div className="w-8 h-8 rounded-lg bg-orange-500/20 flex items-center justify-center text-orange-400">
+            <div className="flex items-center gap-2.5 px-4 py-2 rounded-xl bg-dark-900/80 border border-white/10 backdrop-blur-md">
+              <div className="w-8 h-8 rounded-lg bg-amber-500/15 border border-amber-500/25 flex items-center justify-center text-amber-400">
                 <Flame className="w-4 h-4" />
               </div>
               <div>
-                <div className="text-xs text-gray-400">Streak</div>
-                <div className="text-base font-bold text-white">{userStreak} Days</div>
+                <div className="text-[11px] text-dark-400 font-medium">Streak</div>
+                <div className="text-sm font-bold text-white">{userStreak} Days</div>
               </div>
             </div>
 
-            <div className="flex items-center gap-2.5 px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 backdrop-blur-md">
-              <div className="w-8 h-8 rounded-lg bg-neon-green/20 flex items-center justify-center text-neon-green">
+            <div className="flex items-center gap-2.5 px-4 py-2 rounded-xl bg-dark-900/80 border border-white/10 backdrop-blur-md">
+              <div className="w-8 h-8 rounded-lg bg-emerald-500/15 border border-emerald-500/25 flex items-center justify-center text-emerald-400">
                 <CheckCircle2 className="w-4 h-4" />
               </div>
               <div>
-                <div className="text-xs text-gray-400">Solved</div>
-                <div className="text-base font-bold text-white">{totalSolved} Qs</div>
+                <div className="text-[11px] text-dark-400 font-medium">Solved</div>
+                <div className="text-sm font-bold text-white">{totalSolved} Qs</div>
               </div>
             </div>
 
-            <div className="flex items-center gap-2.5 px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 backdrop-blur-md">
-              <div className="w-8 h-8 rounded-lg bg-cyan-500/20 flex items-center justify-center text-cyan-400">
+            <div className="flex items-center gap-2.5 px-4 py-2 rounded-xl bg-dark-900/80 border border-white/10 backdrop-blur-md">
+              <div className="w-8 h-8 rounded-lg bg-indigo-500/15 border border-indigo-500/25 flex items-center justify-center text-indigo-400">
                 <Layers className="w-4 h-4" />
               </div>
               <div>
-                <div className="text-xs text-gray-400">Sheets</div>
-                <div className="text-base font-bold text-white">{totalSheets} Active</div>
+                <div className="text-[11px] text-dark-400 font-medium">Sheets</div>
+                <div className="text-sm font-bold text-white">{totalSheets} Active</div>
               </div>
             </div>
           </div>
         </div>
 
         {/* ── 6 Quick Action Link Cards ── */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3.5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
           {QUICK_ACTIONS.map((action, idx) => {
             const Icon = action.icon;
             return (
@@ -373,23 +351,19 @@ const Dashboard = () => {
                 key={idx}
                 to={action.to}
                 state={action.state || {}}
-                className="group flex flex-col justify-between p-4 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 transition-all active:scale-98"
-                style={{ borderColor: action.border }}
+                className="group flex flex-col justify-between p-4 rounded-xl bg-dark-900/60 hover:bg-dark-800/80 border border-white/5 hover:border-white/20 transition-all duration-200"
               >
                 <div className="flex items-center justify-between mb-3">
-                  <div
-                    className="w-10 h-10 rounded-xl flex items-center justify-center transition-transform group-hover:scale-110"
-                    style={{ backgroundColor: action.bg, color: action.color }}
-                  >
-                    <Icon className="w-5 h-5" />
+                  <div className="w-8 h-8 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-dark-300 group-hover:text-neon-green group-hover:border-neon-green/30 transition-all">
+                    <Icon className="w-4 h-4" />
                   </div>
-                  <ChevronRight className="w-4 h-4 text-gray-500 group-hover:text-white group-hover:translate-x-0.5 transition-all" />
+                  <ChevronRight className="w-3.5 h-3.5 text-dark-500 group-hover:text-white group-hover:translate-x-0.5 transition-all" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-white group-hover:text-neon-green transition-colors">
+                  <h3 className="text-xs font-bold text-white group-hover:text-neon-green transition-colors">
                     {action.title}
                   </h3>
-                  <p className="text-xs text-gray-400 mt-0.5 leading-relaxed">
+                  <p className="text-[11px] text-dark-400 mt-0.5 leading-relaxed">
                     {action.description}
                   </p>
                 </div>
@@ -418,7 +392,7 @@ const Dashboard = () => {
           <Link
             to="/sheets"
             state={{ openBuckets: true, category: 'company-wise' }}
-            className="text-xs font-semibold text-cyan-400 hover:text-cyan-300 flex items-center gap-1 transition-colors"
+            className="text-xs font-semibold text-neon-green hover:text-white flex items-center gap-1 transition-colors"
           >
             View All Companies <ExternalLink size={14} />
           </Link>
@@ -427,8 +401,8 @@ const Dashboard = () => {
         {/* Infinite Scrolling Marquee Banner */}
         <div className="relative w-full overflow-hidden py-2 -mx-2 px-2">
           {/* Left/Right Fade Masks */}
-          <div className="absolute left-0 top-0 bottom-0 w-12 bg-gradient-to-r from-[#0d131f] to-transparent z-10 pointer-events-none" />
-          <div className="absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-[#0d131f] to-transparent z-10 pointer-events-none" />
+          <div className="absolute left-0 top-0 bottom-0 w-12 bg-gradient-to-r from-dark-950 to-transparent z-10 pointer-events-none" />
+          <div className="absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-dark-950 to-transparent z-10 pointer-events-none" />
 
           <div className="animate-marquee-scroll gap-4">
             {[...COMPANY_SHEETS, ...COMPANY_SHEETS].map((company, idx) => (
@@ -464,13 +438,13 @@ const Dashboard = () => {
         {/* Left Column: TrackAsap Superpower Workflow Guide (7 Cols) */}
         <GlassCard padding="p-6 md:p-8" className="lg:col-span-7 flex flex-col justify-between h-full">
           <div>
-            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-cyan-400 mb-1">
-              <Zap className="w-4 h-4" /> Platform Superpowers
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-white/5 border border-white/10 text-[11px] font-semibold uppercase tracking-wider text-dark-300 mb-2">
+              <Zap className="w-3.5 h-3.5 text-neon-green" /> Platform Superpowers
             </div>
             <h2 className="text-xl md:text-2xl font-bold text-white tracking-tight mb-2">
               How TrackAsap Accelerates Your Growth
             </h2>
-            <p className="text-xs text-gray-400">
+            <p className="text-xs text-dark-400">
               A frictionless workflow built for developers aiming for top tech companies and competitive programming mastery.
             </p>
           </div>
@@ -481,14 +455,11 @@ const Dashboard = () => {
               return (
                 <div
                   key={index}
-                  className="group relative flex-1 flex items-center gap-4 p-4 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 transition-all"
+                  className="group relative flex-1 flex items-center gap-4 p-4 rounded-xl bg-dark-900/60 hover:bg-dark-800/80 border border-white/5 hover:border-white/15 transition-all"
                 >
-                  <div
-                    className="w-12 h-12 rounded-2xl flex flex-col items-center justify-center shrink-0 border border-white/10 transition-transform group-hover:scale-105"
-                    style={{ backgroundColor: `${stepItem.color}15`, color: stepItem.color }}
-                  >
-                    <span className="text-[10px] font-extrabold uppercase opacity-60 leading-none">Step</span>
-                    <span className="text-sm font-extrabold leading-none mt-0.5">{stepItem.step}</span>
+                  <div className="w-11 h-11 rounded-xl flex flex-col items-center justify-center shrink-0 bg-white/5 border border-white/10 group-hover:border-neon-green/30 transition-all">
+                    <span className="text-[9px] font-bold uppercase text-dark-400 leading-none">Step</span>
+                    <span className="text-sm font-black text-neon-green leading-none mt-0.5">{stepItem.step}</span>
                   </div>
 
                   <div className="flex-1">
@@ -496,9 +467,9 @@ const Dashboard = () => {
                       <h3 className="text-sm font-bold text-white group-hover:text-neon-green transition-colors">
                         {stepItem.title}
                       </h3>
-                      <Icon className="w-4 h-4 text-gray-500 group-hover:text-white transition-colors" />
+                      <Icon className="w-4 h-4 text-dark-500 group-hover:text-white transition-colors" />
                     </div>
-                    <p className="text-xs text-gray-400 mt-1 leading-relaxed">
+                    <p className="text-xs text-dark-400 mt-1 leading-relaxed">
                       {stepItem.description}
                     </p>
                   </div>
@@ -508,13 +479,13 @@ const Dashboard = () => {
           </div>
 
           <div className="mt-2 pt-4 border-t border-white/10 flex flex-wrap items-center justify-between gap-4">
-            <div className="text-xs text-gray-400">
+            <div className="text-xs text-dark-400">
               Ready to import a sheet or jump into your playground?
             </div>
             <div className="flex items-center gap-3">
               <Link
                 to="/sheets"
-                className="px-4 py-2 rounded-xl bg-neon-green text-dark-900 font-bold text-xs hover:brightness-110 active:scale-95 transition-all shadow-md shadow-neon-green/20"
+                className="px-4 py-2 rounded-xl bg-neon-green text-dark-950 font-bold text-xs hover:brightness-110 active:scale-95 transition-all shadow-sm"
               >
                 Explore Sheets
               </Link>
@@ -533,17 +504,17 @@ const Dashboard = () => {
           <div>
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-purple-500/20 border border-purple-500/30 flex items-center justify-center">
-                  <MessageSquare className="w-5 h-5 text-purple-400" />
+                <div className="w-9 h-9 rounded-xl bg-neon-green/10 border border-neon-green/25 flex items-center justify-center">
+                  <MessageSquare className="w-5 h-5 text-neon-green" />
                 </div>
                 <div>
                   <h2 className="text-lg font-bold text-white">Community Chatter</h2>
-                  <p className="text-xs text-gray-400">What peeps are talking...</p>
+                  <p className="text-xs text-dark-400">What peeps are talking...</p>
                 </div>
               </div>
               <Link
                 to="/discussions"
-                className="p-2 hover:bg-white/10 rounded-xl transition-colors text-gray-400 hover:text-white"
+                className="p-2 hover:bg-white/10 rounded-xl transition-colors text-dark-400 hover:text-white"
                 title="Open Community Discussions"
               >
                 <ExternalLink className="w-4 h-4" />
@@ -556,12 +527,12 @@ const Dashboard = () => {
                   <LoadingSpinner />
                 </div>
               ) : posts.length === 0 ? (
-                <div className="flex-1 flex flex-col items-center justify-center text-center py-10 text-gray-500 space-y-2">
+                <div className="flex-1 flex flex-col items-center justify-center text-center py-10 text-dark-400 space-y-2">
                   <MessageSquare size={32} className="opacity-30" />
                   <p className="text-sm">No recent community posts yet</p>
                   <Link
                     to="/discussions"
-                    className="text-xs text-cyan-400 hover:underline mt-1 font-semibold"
+                    className="text-xs text-neon-green hover:underline mt-1 font-semibold"
                   >
                     Start a discussion ➔
                   </Link>
@@ -584,7 +555,7 @@ const Dashboard = () => {
                       <Link
                         key={post._id || index}
                         to="/discussions"
-                        className="group block p-3.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 transition-all"
+                        className="group block p-3.5 rounded-xl bg-white/[0.03] hover:bg-white/[0.07] border border-white/5 hover:border-white/15 transition-all"
                       >
                         <div className="flex items-center justify-between mb-1.5">
                           <div className="flex items-center gap-2">
@@ -593,16 +564,16 @@ const Dashboard = () => {
                               alt={authorName}
                               className="w-6 h-6 rounded-full object-cover border border-white/20 shrink-0 bg-dark-700"
                             />
-                            <span className="text-xs font-bold text-white group-hover:text-cyan-400 transition-colors">
+                            <span className="text-xs font-bold text-white group-hover:text-neon-green transition-colors">
                               {authorName}
                             </span>
                           </div>
-                          <span className="text-[10px] text-gray-500">
+                          <span className="text-[10px] text-dark-500">
                             {post.createdAt ? new Date(post.createdAt).toLocaleDateString() : 'Recent'}
                           </span>
                         </div>
 
-                        <p className="text-xs text-gray-300 leading-relaxed line-clamp-2">
+                        <p className="text-xs text-dark-300 leading-relaxed line-clamp-2">
                           {contentSnippet}
                         </p>
 
@@ -612,12 +583,12 @@ const Dashboard = () => {
                           </div>
                         )}
 
-                        <div className="flex items-center gap-4 mt-2 pt-2 border-t border-white/5 text-[10px] text-gray-400">
+                        <div className="flex items-center gap-4 mt-2 pt-2 border-t border-white/5 text-[10px] text-dark-400">
                           <span className="flex items-center gap-1">
-                            <Heart className="w-3 h-3 text-red-400" /> {likeCount}
+                            <Heart className="w-3 h-3 text-rose-400" /> {likeCount}
                           </span>
                           <span className="flex items-center gap-1">
-                            <MessageSquare className="w-3 h-3 text-cyan-400" /> {commentCount}
+                            <MessageSquare className="w-3 h-3 text-neon-green" /> {commentCount}
                           </span>
                         </div>
                       </Link>
@@ -631,9 +602,9 @@ const Dashboard = () => {
           <div className="mt-2 pt-4 border-t border-white/10">
             <Link
               to="/discussions"
-              className="w-full py-2.5 rounded-xl bg-gradient-to-r from-purple-500/20 to-cyan-500/20 hover:from-purple-500/30 hover:to-cyan-500/30 border border-white/15 text-white font-bold text-xs text-center flex items-center justify-center gap-2 transition-all"
+              className="w-full py-2.5 rounded-xl bg-dark-800 hover:bg-dark-700 border border-white/10 hover:border-white/20 text-white font-bold text-xs text-center flex items-center justify-center gap-2 transition-all shadow-sm"
             >
-              Join Community Discussions <ArrowRight className="w-3.5 h-3.5" />
+              Join Community Discussions <ArrowRight className="w-3.5 h-3.5 text-neon-green" />
             </Link>
           </div>
         </GlassCard>

@@ -31,12 +31,14 @@ import {
   Star,
   Trophy,
   LogOut,
+  Palette,
 } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { useAnalyticsStore } from '../store/analyticsStore';
 import { useTaskStore } from '../store/taskStore';
 import useSheetStore from '../store/sheetStore';
 import { useLeaderboardStore } from '../store/leaderboardStore';
+import { useThemeStore } from '../store/themeStore';
 import githubService from '../services/githubService';
 import GlassCard from '../components/ui/GlassCard';
 import NumberInput from '../components/ui/NumberInput';
@@ -79,6 +81,7 @@ const Profile = () => {
   const { streak } = useTaskStore();
   const { sheets, fetchSheets } = useSheetStore();
   const { currentUserRanks, fetchCurrentUserRank } = useLeaderboardStore();
+  const { openThemeModal } = useThemeStore();
 
   const [syncing, setSyncing] = useState(false);
   const [connectingGithub, setConnectingGithub] = useState(false);
@@ -337,6 +340,29 @@ const Profile = () => {
               Logout
             </button>
           </div>
+        </div>
+      </GlassCard>
+
+      {/* Theme Customizer Card */}
+      <GlassCard className="p-4 sm:p-5">
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-neon-green/10 text-neon-green border border-neon-green/30 flex items-center justify-center shrink-0">
+              <Palette size={20} />
+            </div>
+            <div>
+              <h3 className="text-sm sm:text-base font-bold text-white">App Theme & Appearance</h3>
+              <p className="text-xs text-dark-400">Switch color palettes, glassmorphic accents, and styles.</p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={openThemeModal}
+            className="px-4 py-2 bg-neon-green hover:brightness-110 text-dark-950 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shrink-0 cursor-pointer shadow-md shadow-neon-green/20"
+          >
+            <Palette size={14} />
+            <span>Customize</span>
+          </button>
         </div>
       </GlassCard>
 

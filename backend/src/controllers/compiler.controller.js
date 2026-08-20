@@ -1,28 +1,16 @@
-import fetch from 'node-fetch';
-
-const PISTON_URL = process.env.PISTON_URL || 'http://20.235.181.16:2358';
-
-// Piston language name + version mapping
-const PISTON_LANG_MAP = {
-  cpp:        { language: 'c++',     version: '10.2.0' },
-  c:          { language: 'c',       version: '10.2.0' },
-  java:       { language: 'java',    version: '15.0.2' },
-  python:     { language: 'python',  version: '3.10.0' },
-  javascript: { language: 'javascript', version: '15.10.0' },
-  sql:        { language: 'sqlite3', version: '3.36.0' },
-};
+import { executeCode } from '../services/judgeEngine.js';
 
 // Admin-configurable compiler settings
 export const compilerConfig = {
   enabled: true,
-  maxRunsPerMinute: 15,
+  maxRunsPerMinute: 30,
 };
 
 // In-memory execution map per user: userId -> timestamp[]
 const userExecutions = new Map();
 
 /**
- * @desc    Execute code via Azure Piston Compiler Engine
+ * @desc    Execute code via Resilient Piston Compiler Engine
  * @route   POST /api/compiler/run
  * @access  Private
  */
@@ -38,9 +26,9 @@ export const runCode = async (req, res) => {
     // 2. User Rate Limiter check (per 60 seconds)
     const userId = req.user?._id?.toString() || req.ip;
     const now = Date.now();
-    const windowMs = 60000; // 1 minute window
+    const windowMs = 60000;
 
-    const timestamps = (userExecutions.get(userId) || []).filter(t => now - t < windowMs);
+    const timestamps = (userExecutions.get(userId) || []).filter((t) => now - t < windowMs);
 
     if (timestamps.length >= compilerConfig.maxRunsPerMinute) {
       const oldestRun = timestamps[0];
@@ -61,60 +49,23 @@ export const runCode = async (req, res) => {
       return res.status(400).json({ message: 'Source code cannot be empty' });
     }
 
-    const langConfig = PISTON_LANG_MAP[language] || PISTON_LANG_MAP.cpp;
+    const result = await executeCode(source_code, language, stdin || '', 5000);
 
-    // Detect Java class name so javac doesn't throw file/class mismatch errors
-    let fileName;
-    if (language === 'java') {
-      const match = source_code.match(/(?:public\s+)?class\s+([A-Za-z0-9_]+)/);
-      fileName = match ? `${match[1]}.java` : 'Main.java';
-    }
-
-    const fileObj = fileName ? { name: fileName, content: source_code } : { content: source_code };
-
-    const response = await fetch(`${PISTON_URL}/api/v2/execute`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        language: langConfig.language,
-        version: langConfig.version,
-        files: [fileObj],
-        stdin: stdin || '',
-      }),
-    });
-
-    if (!response.ok) {
-      const errText = await response.text();
-      return res.status(500).json({
-        message: `Piston execution failed: ${errText || response.statusText}`,
-      });
-    }
-
-    const result = await response.json();
-
-    // Map Piston response to same format frontend expects
-    const run = result.run || {};
-    const compile = result.compile || {};
-    const isCompileError = compile.code !== 0 && (compile.stderr || compile.stdout);
-    const succeeded = !isCompileError && run.code === 0 && !run.signal;
-    const timeMs = run.cpu_time || 0;
-    const memoryKb = run.memory ? Math.round(run.memory / 1024) : 0;
-    const memoryMb = memoryKb ? (memoryKb / 1024).toFixed(1) : 0;
-
-    let statusDesc = 'Accepted';
     let statusCode = 3;
-    if (isCompileError) {
-      statusDesc = 'Compilation Error';
+    let statusDesc = 'Accepted';
+
+    if (result.status === 'CE') {
       statusCode = 6;
-    } else if (!succeeded) {
+      statusDesc = 'Compilation Error';
+    } else if (result.status === 'TLE') {
+      statusCode = 5;
+      statusDesc = 'Time Limit Exceeded';
+    } else if (result.status === 'MLE') {
       statusCode = 11;
-      if (run.signal === 'SIGKILL' || run.signal === 'SIGABRT' || (run.stderr && run.stderr.includes('signal 6'))) {
-        statusDesc = 'Stack Overflow / Memory Exceeded';
-      } else {
-        statusDesc = 'Runtime Error';
-      }
+      statusDesc = 'Memory Limit Exceeded';
+    } else if (result.status === 'RE') {
+      statusCode = 11;
+      statusDesc = 'Runtime Error';
     }
 
     res.json({
@@ -123,18 +74,22 @@ export const runCode = async (req, res) => {
         id: statusCode,
         description: statusDesc,
       },
-      stdout: run.stdout || '',
-      stderr: run.stderr || '',
-      compile_output: compile.stderr || compile.stdout || '',
-      message: run.message || '',
-      timeMs,
-      memoryKb,
-      memoryMb,
+      stdout: result.stdout,
+      stderr: result.stderr,
+      compile_output: result.compile_output,
+      timeMs: result.timeMs,
+      memoryKb: result.memoryKb,
+      memoryMb: (result.memoryKb / 1024).toFixed(1),
     });
   } catch (error) {
     console.error('Compiler run error:', error?.message);
     res.status(500).json({
-      message: error?.message || 'Failed to connect to Azure Compiler Engine',
+      message: error?.message || 'Failed to execute code',
     });
   }
+};
+
+export default {
+  runCode,
+  compilerConfig,
 };

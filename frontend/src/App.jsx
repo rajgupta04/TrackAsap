@@ -1,5 +1,9 @@
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { useEffect } from 'react';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from './store/authStore';
+import { useThemeStore } from './store/themeStore';
+import { useFeatureStore } from './store/featureStore';
+import { initTelemetry, trackPageView } from './utils/telemetry';
 import Layout from './components/layout/Layout';
 import Login from './pages/Login';
 import Register from './pages/Register';
@@ -19,6 +23,10 @@ import LandingPage from './pages/LandingPage';
 import EmailVerified from './pages/EmailVerified';
 import ResetPassword from './pages/ResetPassword';
 import Roadmap from './pages/Roadmap';
+import ProblemArena from './pages/ProblemArena';
+import ProblemSetterStudio from './pages/ProblemSetterStudio';
+import ProblemSolve from './pages/ProblemSolve';
+import ThemeModal from './components/layout/ThemeModal';
 
 // Protected Route wrapper
 const ProtectedRoute = ({ children }) => {
@@ -34,6 +42,23 @@ const ProtectedRoute = ({ children }) => {
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
+  }
+
+  return children;
+};
+
+// Feature Route guard (redirects if section is toggled off and user is not admin)
+const FeatureRoute = ({ feature, children }) => {
+  const { showProblems, showLeaderboard } = useFeatureStore();
+  const { user } = useAuthStore();
+
+  const isEnabled =
+    user?.role === 'admin' ||
+    (feature === 'problems' && showProblems) ||
+    (feature === 'leaderboard' && showLeaderboard);
+
+  if (!isEnabled) {
+    return <Navigate to="/dashboard" replace />;
   }
 
   return children;
@@ -59,8 +84,36 @@ const PublicRoute = ({ children }) => {
 };
 
 function App() {
+  const { currentTheme } = useThemeStore();
+  const { fetchFeatures } = useFeatureStore();
+  const { checkAuth, token } = useAuthStore();
+  const location = useLocation();
+
+  useEffect(() => {
+    initTelemetry();
+  }, []);
+
+  useEffect(() => {
+    if (location.pathname) {
+      trackPageView(location.pathname);
+    }
+  }, [location.pathname]);
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', currentTheme);
+  }, [currentTheme]);
+
+  useEffect(() => {
+    fetchFeatures();
+    if (token) {
+      checkAuth();
+    }
+  }, []);
+
   return (
-    <Routes>
+    <>
+      <ThemeModal />
+      <Routes>
       {/* Fully public — no auth required */}
       <Route path="/privacy-policy" element={<PrivacyPolicy />} />
       <Route path="/verify-email/:token" element={<EmailVerified />} />
@@ -108,17 +161,44 @@ function App() {
         <Route path="physique" element={<PhysiqueTracker />} />
         <Route path="profile" element={<Profile />} />
         <Route path="sheets" element={<Sheets />} />
-        <Route path="problems" element={<Problems />} />
+        <Route
+          path="problems"
+          element={
+            <FeatureRoute feature="problems">
+              <Problems />
+            </FeatureRoute>
+          }
+        />
         <Route path="playground" element={<Playground />} />
         <Route path="discussion" element={<Discussion />} />
         <Route path="roadmap" element={<Roadmap />} />
+        <Route path="arena" element={<ProblemArena />} />
+        <Route path="studio" element={<ProblemSetterStudio />} />
         <Route path="admin" element={<Admin />} />
-        <Route path="leaderboard" element={<Leaderboard />} />
+        <Route
+          path="leaderboard"
+          element={
+            <FeatureRoute feature="leaderboard">
+              <Leaderboard />
+            </FeatureRoute>
+          }
+        />
       </Route>
+
+      {/* Standalone Full-screen Problem Solving Workspace */}
+      <Route
+        path="/solve/:slug"
+        element={
+          <ProtectedRoute>
+            <ProblemSolve />
+          </ProtectedRoute>
+        }
+      />
 
       {/* Catch all */}
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>
+    </>
   );
 }
 

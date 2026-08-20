@@ -28,31 +28,21 @@ import {
 import GlassCard from '../components/ui/GlassCard';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
 
-// ── Color Palette ──────────────────────────────────────────────────────
-const COLORS = {
-  neon: '#39FF14',
-  cyan: '#22d3ee',
-  purple: '#a78bfa',
-  orange: '#fb923c',
-  pink: '#f472b6',
-  yellow: '#facc15',
-  red: '#ef4444',
-  emerald: '#34d399',
-  blue: '#60a5fa',
-  indigo: '#818cf8',
-};
+// ── Color Palette & Theme Tokens ─────────────────────────────────────────
+const THEME_CHART_COLORS = [
+  'var(--color-accent, #6366f1)',
+  'rgb(var(--color-accent-rgb) / 0.75)',
+  'rgb(var(--color-accent-rgb) / 0.5)',
+  'rgb(var(--color-accent-rgb) / 0.3)',
+  'rgba(255, 255, 255, 0.25)',
+];
 
-const DIFFICULTY_COLORS = { easy: '#34d399', medium: '#facc15', hard: '#ef4444', unknown: '#6b7280' };
+const DIFFICULTY_COLORS = { easy: '#10b981', medium: '#f59e0b', hard: '#f43f5e', unknown: '#64748b' };
 const STATUS_CONFIG = {
-  solved: { color: '#34d399', icon: CheckCircle2, label: 'Solved' },
-  attempted: { color: '#facc15', icon: AlertCircle, label: 'Attempted' },
-  revisit: { color: '#fb923c', icon: RotateCcw, label: 'Revisit' },
-  todo: { color: '#6b7280', icon: ListTodo, label: 'Todo' },
-};
-
-const LANG_COLORS = {
-  cpp: '#00599C', java: '#f97316', python: '#3B82F6', javascript: '#EAB308',
-  c: '#5C6BC0', sql: '#E38C00', typescript: '#3178C6', go: '#00ADD8',
+  solved: { color: 'var(--color-accent, #6366f1)', icon: CheckCircle2, label: 'Solved' },
+  attempted: { color: 'rgba(var(--color-accent-rgb), 0.75)', icon: AlertCircle, label: 'Attempted' },
+  revisit: { color: 'rgba(var(--color-accent-rgb), 0.5)', icon: RotateCcw, label: 'Revisit' },
+  todo: { color: 'rgba(255, 255, 255, 0.25)', icon: ListTodo, label: 'Todo' },
 };
 
 // ── Helper: Day of week label ──
@@ -63,11 +53,11 @@ const MONTH_LABELS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'S
 const CustomTooltip = ({ active, payload, label }) => {
   if (!active || !payload?.length) return null;
   return (
-    <div className="bg-dark-800/95 backdrop-blur-xl border border-white/10 rounded-xl px-4 py-3 shadow-2xl">
-      <p className="text-xs text-gray-400 mb-1">{label}</p>
+    <div className="bg-dark-900/95 backdrop-blur-xl border border-white/10 rounded-xl px-4 py-3 shadow-2xl">
+      <p className="text-xs text-dark-400 mb-1">{label}</p>
       {payload.map((p, i) => (
-        <p key={i} className="text-sm font-bold" style={{ color: p.color || '#39FF14' }}>
-          {p.name}: {p.value}
+        <p key={i} className="text-sm font-bold text-white">
+          {p.name}: <span className="text-neon-green">{p.value}</span>
         </p>
       ))}
     </div>
@@ -75,7 +65,7 @@ const CustomTooltip = ({ active, payload, label }) => {
 };
 
 // ── Stat Card Component ──
-const StatCard = ({ icon: Icon, label, value, sub, color = '#39FF14', delay = 0 }) => (
+const StatCard = ({ icon: Icon, label, value, sub, delay = 0 }) => (
   <motion.div
     initial={{ opacity: 0, y: 20 }}
     animate={{ opacity: 1, y: 0 }}
@@ -83,15 +73,14 @@ const StatCard = ({ icon: Icon, label, value, sub, color = '#39FF14', delay = 0 
     className="glass-card p-4 md:p-5 flex items-center gap-4 group hover:border-white/20 transition-all"
   >
     <div
-      className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 transition-transform group-hover:scale-110"
-      style={{ background: `${color}15`, border: `1px solid ${color}30` }}
+      className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 bg-neon-green/10 border border-neon-green/25 text-neon-green transition-transform group-hover:scale-105"
     >
-      <Icon size={22} style={{ color }} />
+      <Icon size={20} />
     </div>
     <div className="min-w-0">
       <p className="text-2xl font-bold text-white tracking-tight">{value}</p>
-      <p className="text-xs text-gray-400 truncate">{label}</p>
-      {sub && <p className="text-[11px] mt-0.5" style={{ color }}>{sub}</p>}
+      <p className="text-xs text-dark-400 truncate">{label}</p>
+      {sub && <p className="text-[11px] mt-0.5 text-dark-300 font-medium">{sub}</p>}
     </div>
   </motion.div>
 );
@@ -103,22 +92,7 @@ const SheetCard = ({ sheet, index }) => {
     : 0;
   const circumference = 2 * Math.PI * 36;
   const strokeDashoffset = circumference - (pct / 100) * circumference;
-
-  // Count difficulty from topics
-  let easy = 0, medium = 0, hard = 0;
-  (sheet.topics || []).forEach(t => {
-    // We don't have per-difficulty data in topics, so use solvedProblems
-    easy += Math.floor((t.solvedProblems || 0) * 0.4);
-    medium += Math.floor((t.solvedProblems || 0) * 0.35);
-    hard += (t.solvedProblems || 0) - Math.floor((t.solvedProblems || 0) * 0.4) - Math.floor((t.solvedProblems || 0) * 0.35);
-  });
-
-  const categoryColors = {
-    dsa: '#39FF14', cp: '#22d3ee', os: '#a78bfa', cn: '#fb923c',
-    oops: '#f472b6', dev: '#facc15', 'system-design': '#60a5fa',
-    custom: '#818cf8', 'company-wise': '#34d399',
-  };
-  const accentColor = categoryColors[sheet.category] || '#39FF14';
+  const accentColor = 'var(--color-accent, #6366f1)';
 
   return (
     <motion.div
@@ -250,7 +224,7 @@ const ActivityHeatmap = ({ problems }) => {
     return { weeks: weeksArr, monthLabels: monthLabelsArr, totalActive: totalAct, totalSolved: totalSol };
   }, [problems]);
 
-  const levelColors = ['rgba(255,255,255,0.04)', '#0e4429', '#006d32', '#26a641', '#39FF14'];
+  const levelColors = ['rgba(255,255,255,0.04)', 'rgb(var(--color-accent-rgb) / 0.3)', 'rgb(var(--color-accent-rgb) / 0.55)', 'rgb(var(--color-accent-rgb) / 0.8)', 'var(--color-accent, #6366f1)'];
   const tileSize = 'minmax(12px, 1fr)';
 
   return (
@@ -411,10 +385,10 @@ const Analytics = () => {
     return Object.entries(langMap)
       .sort((a, b) => b[1] - a[1])
       .slice(0, 8)
-      .map(([name, value]) => ({
+      .map(([name, value], i) => ({
         name: name === 'cpp' ? 'C++' : name === 'javascript' ? 'JS' : name.charAt(0).toUpperCase() + name.slice(1),
         value,
-        color: LANG_COLORS[name] || COLORS.indigo,
+        color: THEME_CHART_COLORS[i % THEME_CHART_COLORS.length],
       }));
   }, [problems]);
 
@@ -507,18 +481,12 @@ const Analytics = () => {
         counts['Manual Log']++;
       }
     });
-    const colors = {
-      'Manual Log': COLORS.neon,
-      'TrackEx Extension': COLORS.cyan,
-      'GitHub Sync': COLORS.purple,
-      'Sheet / Study Plan': COLORS.orange,
-    };
     return Object.entries(counts)
       .filter(([, val]) => val > 0)
-      .map(([name, value]) => ({
+      .map(([name, value], i) => ({
         name,
         value,
-        color: colors[name] || COLORS.blue,
+        color: THEME_CHART_COLORS[i % THEME_CHART_COLORS.length],
       }));
   }, [problems]);
 
@@ -544,18 +512,18 @@ const Analytics = () => {
   }
 
   const activeSheets = sheets.filter(s => s.isActive !== false);
-  const tagColors = [COLORS.neon, COLORS.cyan, COLORS.purple, COLORS.orange, COLORS.pink, COLORS.yellow, COLORS.blue, COLORS.emerald, COLORS.indigo, COLORS.red];
+  const tagColors = THEME_CHART_COLORS;
 
   return (
     <div className="space-y-6 pb-8">
 
       {/* ═══ Section 1: Journey Stats Bar ═══ */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
-        <StatCard icon={Target} label="Journey Day" value={`Day ${journeyStats.dayNumber}`} sub="of 75 days" color={COLORS.neon} delay={0} />
-        <StatCard icon={Code} label="Problems Logged" value={journeyStats.totalProblems} sub={`${journeyStats.avgPerDay}/day avg`} color={COLORS.cyan} delay={0.05} />
-        <StatCard icon={BookOpen} label="Sheets Progress" value={`${journeyStats.sheetPct}%`} sub={`${journeyStats.solvedSheetProblems}/${journeyStats.totalSheetProblems} solved`} color={COLORS.purple} delay={0.1} />
-        <StatCard icon={Zap} label="Avg / Day" value={journeyStats.avgPerDay} sub="problems per day" color={COLORS.orange} delay={0.15} />
-        <StatCard icon={Globe} label="Languages" value={journeyStats.langCount} sub="coding languages used" color={COLORS.pink} delay={0.2} />
+        <StatCard icon={Target} label="Journey Day" value={`Day ${journeyStats.dayNumber}`} sub="of 75 days" delay={0} />
+        <StatCard icon={Code} label="Problems Logged" value={journeyStats.totalProblems} sub={`${journeyStats.avgPerDay}/day avg`} delay={0.05} />
+        <StatCard icon={BookOpen} label="Sheets Progress" value={`${journeyStats.sheetPct}%`} sub={`${journeyStats.solvedSheetProblems}/${journeyStats.totalSheetProblems} solved`} delay={0.1} />
+        <StatCard icon={Zap} label="Avg / Day" value={journeyStats.avgPerDay} sub="problems per day" delay={0.15} />
+        <StatCard icon={Globe} label="Languages" value={journeyStats.langCount} sub="coding languages used" delay={0.2} />
       </div>
 
       {/* ═══ Section 2: Sheet Progress Cards ═══ */}
@@ -563,7 +531,7 @@ const Analytics = () => {
         <GlassCard hover={false} padding="p-5">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-bold text-white flex items-center gap-2">
-              <BookOpen size={20} className="text-purple-400" />
+              <BookOpen size={20} className="text-neon-green" />
               Sheet Progress Overview
             </h2>
             <span className="text-xs text-gray-500">{activeSheets.length} active sheets</span>
@@ -581,7 +549,7 @@ const Analytics = () => {
         {/* Difficulty Mastery Radar */}
         <GlassCard hover={false} padding="p-5">
           <h3 className="text-lg font-bold text-white flex items-center gap-2 mb-4">
-            <PieChartIcon size={20} className="text-cyan-400" />
+            <PieChartIcon size={20} className="text-neon-green" />
             Difficulty Mastery
           </h3>
           {difficultyData.length > 0 ? (
@@ -591,7 +559,7 @@ const Analytics = () => {
                   <PolarGrid stroke="rgba(255,255,255,0.08)" />
                   <PolarAngleAxis dataKey="subject" tick={{ fill: '#9ca3af', fontSize: 13, fontWeight: 600 }} />
                   <PolarRadiusAxis tick={false} axisLine={false} />
-                  <Radar name="Problems" dataKey="value" stroke="#39FF14" fill="#39FF14" fillOpacity={0.15} strokeWidth={2} />
+                  <Radar name="Problems" dataKey="value" stroke="var(--color-accent, #6366f1)" fill="var(--color-accent, #6366f1)" fillOpacity={0.2} strokeWidth={2} />
                 </RadarChart>
               </ResponsiveContainer>
               {/* Legend */}
@@ -612,7 +580,7 @@ const Analytics = () => {
         {/* Language Distribution Donut */}
         <GlassCard hover={false} padding="p-5">
           <h3 className="text-lg font-bold text-white flex items-center gap-2 mb-4">
-            <Globe size={20} className="text-pink-400" />
+            <Globe size={20} className="text-neon-green" />
             Language Distribution
           </h3>
           {languageData.length > 0 ? (
@@ -654,7 +622,7 @@ const Analytics = () => {
         {/* Status Pipeline */}
         <GlassCard hover={false} padding="p-5">
           <h3 className="text-lg font-bold text-white flex items-center gap-2 mb-5">
-            <TrendingUp size={20} className="text-emerald-400" />
+            <TrendingUp size={20} className="text-neon-green" />
             Problem Status Pipeline
           </h3>
           <div className="space-y-4">
@@ -696,15 +664,14 @@ const Analytics = () => {
         {/* Tag / Topic Cloud */}
         <GlassCard hover={false} padding="p-5">
           <h3 className="text-lg font-bold text-white flex items-center gap-2 mb-5">
-            <BarChart3 size={20} className="text-yellow-400" />
+            <BarChart3 size={20} className="text-neon-green" />
             Most Practiced Topics
           </h3>
           {tagData.length > 0 ? (
             <div className="flex flex-wrap gap-2">
               {tagData.map((t, i) => {
-                const color = tagColors[i % tagColors.length];
+                const color = THEME_CHART_COLORS[i % THEME_CHART_COLORS.length];
                 const maxCount = tagData[0]?.count || 1;
-                const scale = 0.7 + (t.count / maxCount) * 0.3;
                 return (
                   <motion.div
                     key={t.tag}
@@ -713,9 +680,9 @@ const Analytics = () => {
                     transition={{ delay: i * 0.04, type: 'spring', stiffness: 300, damping: 20 }}
                     className="px-3 py-1.5 rounded-lg text-xs font-semibold cursor-default transition-all hover:scale-105"
                     style={{
-                      background: `${color}15`,
-                      border: `1px solid ${color}30`,
-                      color,
+                      background: `rgba(var(--color-accent-rgb), 0.1)`,
+                      border: `1px solid rgba(var(--color-accent-rgb), 0.25)`,
+                      color: 'var(--color-accent)',
                       fontSize: `${Math.max(11, 11 + (t.count / maxCount) * 4)}px`,
                     }}
                     title={`${t.tag}: ${t.count} problems`}
@@ -744,7 +711,7 @@ const Analytics = () => {
         {/* Best Day of Week (1/3 width) */}
         <GlassCard hover={false} padding="p-5" className="self-start">
           <h3 className="text-lg font-bold text-white flex items-center gap-2 mb-4">
-            <Flame size={20} className="text-orange-400" />
+            <Flame size={20} className="text-neon-green" />
             Best Days
           </h3>
           <div className="space-y-3">
@@ -763,8 +730,8 @@ const Analytics = () => {
                       className="h-full rounded-full"
                       style={{
                         background: isMax
-                          ? 'linear-gradient(90deg, #39FF14, #22d3ee)'
-                          : 'linear-gradient(90deg, rgba(57,255,20,0.4), rgba(57,255,20,0.15))',
+                          ? 'var(--color-accent, #6366f1)'
+                          : 'rgba(var(--color-accent-rgb), 0.2)',
                       }}
                     />
                   </div>
@@ -785,7 +752,7 @@ const Analytics = () => {
           {/* Avg Time by Difficulty */}
           <GlassCard hover={false} padding="p-5">
             <h3 className="text-lg font-bold text-white flex items-center gap-2 mb-4">
-              <Timer size={20} className="text-cyan-400" />
+              <Timer size={20} className="text-neon-green" />
               Avg Solve Time by Difficulty
             </h3>
             {timeAnalysis.hasTimeData ? (
@@ -824,7 +791,7 @@ const Analytics = () => {
           {/* Problem Sources */}
           <GlassCard hover={false} padding="p-5">
             <h3 className="text-lg font-bold text-white flex items-center gap-2 mb-4">
-              <Layers size={20} className="text-purple-400" />
+              <Layers size={20} className="text-neon-green" />
               Problem Sources
             </h3>
             {sourceData.length > 0 ? (
@@ -873,7 +840,7 @@ const Analytics = () => {
         {/* Fastest Solves */}
         <GlassCard hover={false} padding="p-5" className="self-start">
           <h3 className="text-lg font-bold text-white flex items-center gap-2 mb-4">
-            <Award size={20} className="text-yellow-400" />
+            <Award size={20} className="text-neon-green" />
             Fastest Solves
           </h3>
           {timeAnalysis.fastest.length > 0 ? (
@@ -887,10 +854,10 @@ const Analytics = () => {
                   className="flex items-center gap-3 p-2.5 rounded-lg bg-white/[0.02] border border-white/5 hover:border-white/10 transition-all"
                 >
                   <div className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-black shrink-0 ${
-                    i === 0 ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30' :
-                    i === 1 ? 'bg-gray-400/15 text-gray-300 border border-gray-400/20' :
-                    i === 2 ? 'bg-orange-500/15 text-orange-400 border border-orange-500/20' :
-                    'bg-white/5 text-gray-500 border border-white/5'
+                    i === 0 ? 'bg-white/15 text-white border border-white/20' :
+                    i === 1 ? 'bg-white/10 text-dark-300 border border-white/10' :
+                    i === 2 ? 'bg-white/5 text-dark-400 border border-white/5' :
+                    'bg-white/5 text-dark-500 border border-white/5'
                   }`}>
                     #{i + 1}
                   </div>
@@ -931,7 +898,7 @@ const Analytics = () => {
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
           <div>
             <h2 className="text-xl font-bold text-white flex items-center gap-2.5">
-              <Trophy className="w-6 h-6 text-yellow-400" />
+              <Trophy className="w-6 h-6 text-neon-green" />
               Competitive Programming & Platform Integrations
             </h2>
             <p className="text-xs text-gray-400 mt-0.5">
@@ -940,7 +907,7 @@ const Analytics = () => {
           </div>
           <Link
             to="/profile"
-            className="text-xs font-semibold text-cyan-400 hover:text-cyan-300 flex items-center gap-1 transition-colors bg-cyan-400/10 hover:bg-cyan-400/20 px-3 py-1.5 rounded-lg border border-cyan-400/20"
+            className="text-xs font-semibold text-neon-green hover:text-white flex items-center gap-1 transition-colors bg-neon-green/10 hover:bg-neon-green/20 px-3 py-1.5 rounded-lg border border-neon-green/20"
           >
             Configure Handles <ExternalLink size={14} />
           </Link>

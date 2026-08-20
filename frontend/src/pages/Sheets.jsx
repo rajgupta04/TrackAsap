@@ -332,30 +332,29 @@ const Sheets = () => {
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
                         onClick={() => handleSelectSheet(sheet._id)}
-                        className={`cursor-pointer shrink-0 px-3 py-2 rounded-lg flex items-center gap-2 transition-all ${
+                        className={`cursor-pointer shrink-0 px-3 py-2 rounded-xl flex items-center gap-2.5 transition-all ${
                           isSelected
-                            ? 'bg-neon-green/15 border border-neon-green/40'
-                            : 'bg-white/5 border border-white/10 hover:bg-white/10'
+                            ? 'bg-dark-800 border border-neon-green/40 shadow-sm shadow-neon-green/10'
+                            : 'bg-dark-900/60 border border-white/5 hover:border-white/20 hover:bg-dark-800/50'
                         }`}
                       >
                         <div
-                          className="w-7 h-7 rounded-md flex items-center justify-center shrink-0"
-                          style={{ backgroundColor: `${sheet.color}20` }}
+                          className="w-7 h-7 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center shrink-0"
                         >
-                          <Icon className="w-3.5 h-3.5" style={{ color: sheet.color }} />
+                          <Icon className={`w-3.5 h-3.5 ${isSelected ? 'text-neon-green' : 'text-dark-300'}`} />
                         </div>
                         <div className="flex flex-col min-w-0">
-                          <span className={`text-xs font-bold truncate max-w-[130px] sm:max-w-[200px] ${isSelected ? 'text-neon-green' : 'text-white'}`}>
+                          <span className={`text-xs font-semibold truncate max-w-[130px] sm:max-w-[200px] ${isSelected ? 'text-white' : 'text-dark-300'}`}>
                             {sheet.name}
                           </span>
                           <div className="flex items-center gap-1.5 mt-0.5">
                             <div className="w-12 h-1 bg-white/10 rounded-full overflow-hidden shrink-0">
                               <div
-                                className="h-full rounded-full"
-                                style={{ width: `${progress}%`, backgroundColor: sheet.color }}
+                                className="h-full rounded-full bg-neon-green transition-all"
+                                style={{ width: `${progress}%` }}
                               />
                             </div>
-                            <span className="text-[9px] text-gray-400 font-medium">{progress}%</span>
+                            <span className="text-[9px] text-dark-400 font-medium">{progress}%</span>
                           </div>
                         </div>
                         {isSelected && (
@@ -365,7 +364,7 @@ const Sheets = () => {
                               setSelectedSheet(null);
                               clearCurrentSheet();
                             }}
-                            className="ml-1 p-1 text-gray-500 hover:text-white hover:bg-white/10 rounded transition-all shrink-0"
+                            className="ml-1 p-1 text-dark-400 hover:text-white hover:bg-white/10 rounded transition-all shrink-0"
                           >
                             <X className="w-3 h-3" />
                           </button>
@@ -514,14 +513,14 @@ const Sheets = () => {
       {/* Right Sidebar - Progress & Stats */}
       <div className="hidden xl:block w-60 shrink-0 border-l border-white/10 p-4 overflow-y-auto space-y-3 scrollbar-thin">
         {/* Overall Progress */}
-        <GlassCard className="p-3">
+        <GlassCard className="p-3.5">
           <div className="flex items-center gap-2 mb-2">
             <TrendingUp className="w-3.5 h-3.5 text-neon-green" />
             <h3 className="text-xs font-semibold text-white">Overall Progress</h3>
           </div>
           <div className="text-center mb-2">
-            <div className="text-3xl font-bold text-neon-green">{overallProgress}%</div>
-            <p className="text-[10px] text-gray-500 mt-0.5">
+            <div className="text-2xl font-extrabold text-white">{overallProgress}%</div>
+            <p className="text-[10px] text-dark-400 mt-0.5">
               {solvedProblems} of {totalProblems} problems
             </p>
           </div>
@@ -530,41 +529,41 @@ const Sheets = () => {
               initial={{ width: 0 }}
               animate={{ width: `${overallProgress}%` }}
               transition={{ duration: 0.8 }}
-              className="h-full bg-gradient-to-r from-neon-green to-emerald-400 rounded-full"
+              className="h-full bg-neon-green rounded-full"
             />
           </div>
         </GlassCard>
 
         {/* Stats */}
-        <GlassCard className="p-3">
-          <div className="flex items-center gap-2 mb-2">
-            <Target className="w-3.5 h-3.5 text-blue-400" />
+        <GlassCard className="p-3.5">
+          <div className="flex items-center gap-2 mb-2.5">
+            <Target className="w-3.5 h-3.5 text-dark-300" />
             <h3 className="text-xs font-semibold text-white">Stats</h3>
           </div>
           <div className="grid grid-cols-2 gap-2">
-            <div className="text-center p-1.5 bg-white/5 rounded-lg">
-              <div className="text-lg font-bold text-white">{sheets.length}</div>
-              <p className="text-[9px] text-gray-500">Sheets</p>
+            <div className="text-center p-2 bg-dark-900/80 border border-white/5 rounded-xl">
+              <div className="text-base font-bold text-white">{sheets.length}</div>
+              <p className="text-[10px] text-dark-400 font-medium">Sheets</p>
             </div>
-            <div className="text-center p-1.5 bg-white/5 rounded-lg">
-              <div className="text-lg font-bold text-green-400">{solvedProblems}</div>
-              <p className="text-[9px] text-gray-500">Solved</p>
+            <div className="text-center p-2 bg-dark-900/80 border border-white/5 rounded-xl">
+              <div className="text-base font-bold text-white">{solvedProblems}</div>
+              <p className="text-[10px] text-dark-400 font-medium">Solved</p>
             </div>
-            <div className="text-center p-1.5 bg-white/5 rounded-lg">
-              <div className="text-lg font-bold text-yellow-400">{totalProblems - solvedProblems}</div>
-              <p className="text-[9px] text-gray-500">Remaining</p>
+            <div className="text-center p-2 bg-dark-900/80 border border-white/5 rounded-xl">
+              <div className="text-base font-bold text-white">{totalProblems - solvedProblems}</div>
+              <p className="text-[10px] text-dark-400 font-medium">Remaining</p>
             </div>
-            <div className="text-center p-1.5 bg-white/5 rounded-lg">
-              <div className="text-lg font-bold text-purple-400">{totalProblems}</div>
-              <p className="text-[9px] text-gray-500">Total</p>
+            <div className="text-center p-2 bg-dark-900/80 border border-white/5 rounded-xl">
+              <div className="text-base font-bold text-white">{totalProblems}</div>
+              <p className="text-[10px] text-dark-400 font-medium">Total</p>
             </div>
           </div>
         </GlassCard>
 
         {/* Motivational Quote */}
-        <GlassCard className="p-3">
+        <GlassCard className="p-3.5">
           <div className="flex items-center gap-2 mb-2">
-            <Sparkles className="w-3.5 h-3.5 text-yellow-400" />
+            <Sparkles className="w-3.5 h-3.5 text-neon-green" />
             <h3 className="text-xs font-semibold text-white">Daily Motivation</h3>
           </div>
           <AnimatePresence mode="wait">
@@ -575,10 +574,10 @@ const Sheets = () => {
               exit={{ opacity: 0, y: -10 }}
               transition={{ duration: 0.3 }}
             >
-              <p className="text-xs text-gray-300 italic leading-relaxed">
+              <p className="text-xs text-dark-300 italic leading-relaxed">
                 "{PROGRAMMER_QUOTES[currentQuoteIndex].quote}"
               </p>
-              <p className="text-[10px] text-gray-500 mt-1.5 text-right">
+              <p className="text-[10px] text-dark-400 mt-1.5 text-right">
                 — {PROGRAMMER_QUOTES[currentQuoteIndex].author}
               </p>
             </motion.div>
@@ -587,19 +586,19 @@ const Sheets = () => {
 
         {/* Current Sheet Stats */}
         {currentSheet && (
-          <GlassCard className="p-3">
+          <GlassCard className="p-3.5">
             <div className="flex items-center gap-2 mb-2">
-              <Flame className="w-3.5 h-3.5 text-orange-400" />
+              <Flame className="w-3.5 h-3.5 text-amber-400" />
               <h3 className="text-xs font-semibold text-white">Current Sheet</h3>
             </div>
-            <p className="text-[10px] text-gray-400 truncate mb-1.5">{currentSheet.name}</p>
+            <p className="text-[11px] text-dark-300 font-medium truncate mb-1.5">{currentSheet.name}</p>
             <div className="flex justify-between text-[10px]">
-              <span className="text-gray-500">Progress</span>
-              <span className="text-neon-green font-medium">{currentSheet.completionPercentage || 0}%</span>
+              <span className="text-dark-400 font-medium">Progress</span>
+              <span className="text-white font-bold">{currentSheet.completionPercentage || 0}%</span>
             </div>
-            <div className="flex justify-between text-[10px] mt-0.5">
-              <span className="text-gray-500">Solved</span>
-              <span className="text-white">{currentSheet.solvedProblems || 0}/{currentSheet.totalProblems || 0}</span>
+            <div className="flex justify-between text-[10px] mt-1">
+              <span className="text-dark-400 font-medium">Solved</span>
+              <span className="text-white font-semibold">{currentSheet.solvedProblems || 0}/{currentSheet.totalProblems || 0}</span>
             </div>
           </GlassCard>
         )}

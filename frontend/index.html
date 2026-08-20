@@ -4,6 +4,19 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script>
+      (function() {
+        try {
+          var t = localStorage.getItem('trackasap_theme') || 'obsidian';
+          if (t === 'vercel') t = 'obsidian';
+          if (t === 'linear') t = 'carbon';
+          if (t === 'tokyo') t = 'midnight';
+          if (t === 'stripe') t = 'amber';
+          if (t === 'cyberpunk') t = 'matrix';
+          document.documentElement.setAttribute('data-theme', t);
+        } catch(e) {}
+      })();
+    </script>
     <meta name="description" content="The Ultimate Developer Command Center & Interview Prep Platform. Featuring extensive Company-Wise DSA Sheets (Google, Meta, Amazon & more), TakeUForward-style problem buckets, live CP analytics & heatmaps (LeetCode, CodeChef, Codeforces), automated time-tracking via Chrome Extension (TrackEx), instant GitHub repository sync, multi-language code playground, and a 75-Day coding & physique mastery tracker. Built with React + Vite + Node.js + MongoDB." />
     <!-- Open Graph / Facebook / LinkedIn / WhatsApp -->
     <meta property="og:type" content="website" />

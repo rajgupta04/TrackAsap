@@ -369,7 +369,7 @@ const Playground = () => {
 
         {/* ── macOS Titlebar ── */}
         <div
-          className="flex items-center justify-between px-4 py-3 border-b select-none shrink-0"
+          className="flex items-center justify-between px-3 sm:px-4 py-2 sm:py-3 border-b select-none shrink-0 gap-2"
           style={{
             background: 'linear-gradient(180deg, #2a2b3d 0%, #1e1f31 100%)',
             borderColor: 'rgba(255,255,255,0.06)'
@@ -377,24 +377,24 @@ const Playground = () => {
           onDoubleClick={toggleFullScreen}
         >
           {/* Left: Authentic macOS Traffic Light Dots */}
-          <div className="pg-traffic flex items-center gap-2">
+          <div className="pg-traffic flex items-center gap-1.5 sm:gap-2 shrink-0">
             <button
               onClick={() => toast.error('Playground is your live scratchpad!')}
-              className="w-3.5 h-3.5 rounded-full bg-[#FF5F57] hover:brightness-90 transition-all flex items-center justify-center relative"
+              className="w-3 sm:w-3.5 h-3 sm:h-3.5 rounded-full bg-[#FF5F57] hover:brightness-90 transition-all flex items-center justify-center relative"
               title="Close"
             >
               <svg className="pg-dot-icon w-[8px] h-[8px] absolute" viewBox="0 0 12 12" fill="none"><path d="M3 3L9 9M9 3L3 9" stroke="#4D0000" strokeWidth="1.8" strokeLinecap="round" /></svg>
             </button>
             <button
               onClick={() => setShowConsole(p => !p)}
-              className="w-3.5 h-3.5 rounded-full bg-[#FEBC2E] hover:brightness-90 transition-all flex items-center justify-center relative"
+              className="w-3 sm:w-3.5 h-3 sm:h-3.5 rounded-full bg-[#FEBC2E] hover:brightness-90 transition-all flex items-center justify-center relative"
               title="Toggle Console"
             >
               <svg className="pg-dot-icon w-[8px] h-[8px] absolute" viewBox="0 0 12 12" fill="none"><path d="M2.5 6H9.5" stroke="#995700" strokeWidth="1.8" strokeLinecap="round" /></svg>
             </button>
             <button
               onClick={toggleFullScreen}
-              className="w-3.5 h-3.5 rounded-full bg-[#28C840] hover:brightness-90 transition-all flex items-center justify-center relative"
+              className="w-3 sm:w-3.5 h-3 sm:h-3.5 rounded-full bg-[#28C840] hover:brightness-90 transition-all flex items-center justify-center relative"
               title="Toggle Fullscreen"
             >
               <svg className="pg-dot-icon w-[7px] h-[7px] absolute" viewBox="0 0 12 12" fill="none">
@@ -406,23 +406,23 @@ const Playground = () => {
           </div>
 
           {/* Center: File name & Status */}
-          <div className="flex items-center gap-2 hidden md:flex">
-            <span className="w-2 h-2 rounded-full bg-neon-green animate-pulse shadow-[0_0_8px_rgba(57,255,20,0.6)]" />
-            <span className="text-sm font-semibold text-gray-300 tracking-wide font-mono">
+          <div className="flex items-center gap-2 hidden md:flex min-w-0">
+            <span className="w-2 h-2 rounded-full bg-neon-green animate-pulse shadow-[0_0_8px_rgba(57,255,20,0.6)] shrink-0" />
+            <span className="text-sm font-semibold text-gray-300 tracking-wide font-mono truncate">
               {activeLangObj.filename}
             </span>
-            <span className="text-xs text-gray-500 hidden sm:inline">
+            <span className="text-xs text-gray-500 hidden sm:inline truncate">
               — Auto-saved to scratchpad
             </span>
           </div>
 
           {/* Right: Controls & Run Button */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
             {/* Language Dropdown */}
             <select
               value={activeLang}
               onChange={(e) => setActiveLang(e.target.value)}
-              className="bg-black/30 text-gray-200 border border-white/10 rounded-lg px-3 py-1.5 text-xs font-semibold focus:outline-none focus:border-neon-green/50 cursor-pointer"
+              className="bg-black/40 text-gray-200 border border-white/10 rounded-lg px-2 sm:px-3 py-1 sm:py-1.5 text-xs font-semibold focus:outline-none focus:border-neon-green/50 cursor-pointer"
             >
               {LANG_OPTIONS.map(l => (
                 <option key={l.value} value={l.value} className="bg-[#1e1f31] text-white">
@@ -475,17 +475,17 @@ const Playground = () => {
             <button
               onClick={handleRunCode}
               disabled={isRunningCode}
-              className="flex items-center gap-1.5 px-4 py-1.5 bg-neon-green/20 hover:bg-neon-green/30 text-neon-green border border-neon-green/40 hover:border-neon-green rounded-lg text-xs font-bold transition-all shadow-[0_0_15px_rgba(57,255,20,0.2)] disabled:opacity-50 cursor-pointer"
+              className="flex items-center gap-1.5 px-3 sm:px-4 py-1 sm:py-1.5 bg-neon-green/20 hover:bg-neon-green/30 text-neon-green border border-neon-green/40 hover:border-neon-green rounded-lg text-xs font-bold transition-all shadow-[0_0_15px_rgba(57,255,20,0.2)] disabled:opacity-50 cursor-pointer shrink-0"
               title="Run Code (Ctrl/Cmd + Enter)"
             >
               {isRunningCode ? (
                 <>
-                  <Loader2 size={14} className="animate-spin" />
-                  <span>Running...</span>
+                  <Loader2 size={13} className="animate-spin" />
+                  <span>Running</span>
                 </>
               ) : (
                 <>
-                  <Play size={14} fill="currentColor" />
+                  <Play size={13} fill="currentColor" />
                   <span>Run</span>
                 </>
               )}

@@ -8,21 +8,25 @@ import { leaderboardService } from '../services/leaderboard.service.js';
 const getPaginatedLeaderboard = async (query, sortCriteria, page, limit) => {
   const skip = (page - 1) * limit;
 
-  // TODO: REDIS_INTEGRATION_POINT
-  // When Redis is active, we'll bypass this MongoDB query.
-  // We'll use `ZREVRANGE leaderboard:global <skip> <skip + limit - 1>`
-  // Then we'll take the returned userIds and fetch their populated profiles from MongoDB in one batch.
-
   const total = await LeaderboardProfile.countDocuments(query);
-  const leaderboard = await LeaderboardProfile.find(query)
+  
+  // If no profiles exist at all, kick off background calculation
+  if (total === 0) {
+    leaderboardService.updateAllUsers().catch((err) => console.error('Background leaderboard sync error:', err));
+  }
+
+  const rawLeaderboard = await LeaderboardProfile.find(query)
     .sort(sortCriteria)
     .skip(skip)
     .limit(limit)
-    .populate('user', 'name codeforcesHandle leetcodeHandle codechefHandle profilePicture googlePicture githubUsername college'); // Only fetching necessary fields
+    .populate('user', 'name codeforcesHandle leetcodeHandle codechefHandle profilePicture googlePicture githubUsername college avatarUrl')
+    .lean();
+
+  const leaderboard = rawLeaderboard.filter((item) => item.user != null);
 
   return {
     leaderboard,
-    totalPages: Math.ceil(total / limit),
+    totalPages: Math.max(1, Math.ceil(total / limit)),
     currentPage: page,
     totalUsers: total,
   };
@@ -34,16 +38,12 @@ const getPaginatedLeaderboard = async (query, sortCriteria, page, limit) => {
  */
 export const getGlobalLeaderboard = async (req, res) => {
   try {
-    // Sync scores & maxStreak across all users
-    await leaderboardService.updateAllUsers();
-
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 50;
     const searchQuery = req.query.search;
 
     let query = {};
     if (searchQuery) {
-      // Find users matching search, then find their leaderboard profiles
       const users = await User.find({ name: { $regex: searchQuery, $options: 'i' } }, '_id');
       const userIds = users.map((u) => u._id);
       query = { user: { $in: userIds } };
@@ -52,6 +52,7 @@ export const getGlobalLeaderboard = async (req, res) => {
     const data = await getPaginatedLeaderboard(query, { globalScore: -1 }, page, limit);
     res.json(data);
   } catch (error) {
+    console.error('getGlobalLeaderboard error:', error);
     res.status(500).json({ message: 'Server Error', error: error.message });
   }
 };
@@ -62,14 +63,13 @@ export const getGlobalLeaderboard = async (req, res) => {
  */
 export const getWeeklyLeaderboard = async (req, res) => {
   try {
-    await leaderboardService.updateAllUsers();
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 50;
     
-    // TODO: REDIS_INTEGRATION_POINT -> Query `leaderboard:weekly`
     const data = await getPaginatedLeaderboard({}, { weeklyScore: -1 }, page, limit);
     res.json(data);
   } catch (error) {
+    console.error('getWeeklyLeaderboard error:', error);
     res.status(500).json({ message: 'Server Error', error: error.message });
   }
 };
@@ -80,14 +80,13 @@ export const getWeeklyLeaderboard = async (req, res) => {
  */
 export const getMonthlyLeaderboard = async (req, res) => {
   try {
-    await leaderboardService.updateAllUsers();
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 50;
     
-    // TODO: REDIS_INTEGRATION_POINT -> Query `leaderboard:monthly`
     const data = await getPaginatedLeaderboard({}, { monthlyScore: -1 }, page, limit);
     res.json(data);
   } catch (error) {
+    console.error('getMonthlyLeaderboard error:', error);
     res.status(500).json({ message: 'Server Error', error: error.message });
   }
 };
@@ -102,10 +101,10 @@ export const getCollegeLeaderboard = async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 50;
     
-    // TODO: REDIS_INTEGRATION_POINT -> Query `leaderboard:college:<collegeName>`
     const data = await getPaginatedLeaderboard({ college: collegeName }, { globalScore: -1 }, page, limit);
     res.json(data);
   } catch (error) {
+    console.error('getCollegeLeaderboard error:', error);
     res.status(500).json({ message: 'Server Error', error: error.message });
   }
 };
@@ -117,25 +116,43 @@ export const getCollegeLeaderboard = async (req, res) => {
 export const getCurrentUserRank = async (req, res) => {
   try {
     const userId = req.user._id;
-    let lbProfile = await LeaderboardProfile.findOne({ user: userId });
+    let lbProfile = await LeaderboardProfile.findOne({ user: userId })
+      .populate('user', 'name codeforcesHandle leetcodeHandle codechefHandle profilePicture googlePicture githubUsername college avatarUrl')
+      .lean();
 
-    // If they don't have a profile yet, try to generate it now
     if (!lbProfile) {
-      lbProfile = await leaderboardService.updateUserScore(userId);
+      try {
+        const created = await leaderboardService.updateUserScore(userId);
+        if (created) {
+          lbProfile = await LeaderboardProfile.findById(created._id)
+            .populate('user', 'name codeforcesHandle leetcodeHandle codechefHandle profilePicture googlePicture githubUsername college avatarUrl')
+            .lean();
+        }
+      } catch (err) {
+        console.error('Error generating user score on the fly:', err);
+      }
     }
     
     if (!lbProfile) {
-      return res.status(404).json({ message: 'Leaderboard profile not found' });
+      return res.json({
+        profile: {
+          user: req.user,
+          globalScore: 0,
+          weeklyScore: 0,
+          monthlyScore: 0,
+          statsBreakdown: { easySolved: 0, mediumSolved: 0, hardSolved: 0, currentStreak: 0, maxStreak: 0, totalTasksCompleted: 0 },
+        },
+        ranks: {
+          global: 1,
+          weekly: 1,
+          monthly: 1,
+        },
+      });
     }
 
-    // TODO: REDIS_INTEGRATION_POINT
-    // In MongoDB, finding the absolute rank requires counting all documents with a higher score.
-    // This is O(N). With Redis, we will use ZREVRANK to get the rank in O(log(N)).
-    // Example: const globalRank = await redisClient.zrevrank('leaderboard:global', userId);
-    
-    const globalRank = await LeaderboardProfile.countDocuments({ globalScore: { $gt: lbProfile.globalScore } }) + 1;
-    const weeklyRank = await LeaderboardProfile.countDocuments({ weeklyScore: { $gt: lbProfile.weeklyScore } }) + 1;
-    const monthlyRank = await LeaderboardProfile.countDocuments({ monthlyScore: { $gt: lbProfile.monthlyScore } }) + 1;
+    const globalRank = (await LeaderboardProfile.countDocuments({ globalScore: { $gt: lbProfile.globalScore || 0 } })) + 1;
+    const weeklyRank = (await LeaderboardProfile.countDocuments({ weeklyScore: { $gt: lbProfile.weeklyScore || 0 } })) + 1;
+    const monthlyRank = (await LeaderboardProfile.countDocuments({ monthlyScore: { $gt: lbProfile.monthlyScore || 0 } })) + 1;
 
     res.json({
       profile: lbProfile,
@@ -143,9 +160,10 @@ export const getCurrentUserRank = async (req, res) => {
         global: globalRank,
         weekly: weeklyRank,
         monthly: monthlyRank,
-      }
+      },
     });
   } catch (error) {
+    console.error('getCurrentUserRank error:', error);
     res.status(500).json({ message: 'Server Error', error: error.message });
   }
 };

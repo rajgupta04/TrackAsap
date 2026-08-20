@@ -20,7 +20,8 @@ const Roadmap = () => {
     selectedAudioTrack,
     setSelectedAudioTrack,
     unlockedAudioTracks = [],
-    loadFromServer
+    loadFromServer,
+    worlds = WORLDS,
   } = useRoadmapStore();
 
   // Sync progress from server on mount
@@ -77,8 +78,9 @@ const Roadmap = () => {
 
   // Find the highest unlocked world that actually has an audio file
   const getFallbackAudioId = () => {
-    for (let i = WORLDS.length - 1; i >= 0; i--) {
-      const wId = WORLDS[i].id;
+    const activeWorlds = worlds || WORLDS;
+    for (let i = activeWorlds.length - 1; i >= 0; i--) {
+      const wId = activeWorlds[i].id;
       const isUnlocked = safeUnlocked.includes(wId) || unlockedAudioTracks.includes(wId);
       if (isUnlocked && AVAILABLE_AUDIO_KEYS.includes(wId)) {
         return wId;
@@ -97,9 +99,10 @@ const Roadmap = () => {
 
   // Determine current active theme based on scrolled world, selected world, or highest unlocked world
   const getActiveWorldTheme = () => {
+    const activeWorlds = worlds || WORLDS;
     const currentId = selectedWorldId || activeWorldId || visibleWorldId || highestUnlocked;
-    const world = WORLDS.find((w) => w.id === currentId);
-    return world ? world.theme : WORLDS[0].theme;
+    const world = activeWorlds.find((w) => w.id === currentId);
+    return world ? world.theme : activeWorlds[0]?.theme || WORLDS[0].theme;
   };
 
   const activeTheme = getActiveWorldTheme();

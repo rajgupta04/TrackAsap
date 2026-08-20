@@ -257,8 +257,8 @@ const DailyTracker = () => {
             <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
               <defs>
                 <linearGradient id="colorCompleted" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#39FF14" stopOpacity={0.3}/>
-                  <stop offset="95%" stopColor="#39FF14" stopOpacity={0}/>
+                  <stop offset="5%" stopColor="var(--color-accent, #6366f1)" stopOpacity={0.3}/>
+                  <stop offset="95%" stopColor="var(--color-accent, #6366f1)" stopOpacity={0}/>
                 </linearGradient>
               </defs>
               <XAxis 
@@ -278,13 +278,13 @@ const DailyTracker = () => {
               />
               <Tooltip 
                 contentStyle={{ backgroundColor: '#111827', borderColor: '#334155', borderRadius: '8px' }}
-                itemStyle={{ color: '#39FF14' }}
+                itemStyle={{ color: 'var(--color-accent, #6366f1)' }}
               />
               <Area 
                 type="monotone" 
                 dataKey="completed" 
                 name="Tasks Completed" 
-                stroke="#39FF14" 
+                stroke="var(--color-accent, #6366f1)" 
                 strokeWidth={2}
                 fillOpacity={1} 
                 fill="url(#colorCompleted)" 
@@ -399,48 +399,48 @@ const DailyTracker = () => {
             <h3 className="text-lg font-semibold text-white mb-4">Quick Stats</h3>
             <div className="space-y-4">
               <div className="p-4 rounded-xl bg-dark-800/50 border border-white/5">
-                <p className="text-sm text-dark-300">Total Active Tasks</p>
+                <p className="text-xs text-dark-400 font-medium">Total Active Tasks</p>
                 <p className="text-2xl font-bold text-white mt-1">{tasks.length}</p>
               </div>
               <div className="p-4 rounded-xl bg-neon-green/10 border border-neon-green/20">
-                <p className="text-sm text-neon-green">Completions Today</p>
+                <p className="text-xs text-neon-green font-medium">Completions Today</p>
                 <p className="text-2xl font-bold text-white mt-1">
                   {taskLogs.filter(log => format(parseISO(log.date), 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd') && log.completed).length}
                 </p>
-            </div>
-            
-            <div className="p-4 rounded-xl bg-orange-500/10 border border-orange-500/20">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-orange-400">Current Streak</p>
-                  <p className="text-2xl font-bold text-white mt-1">{streak?.currentStreak || 0} Days</p>
-                </div>
-                <div className="flex flex-col items-end">
-                  <div className="w-10 h-10 rounded-full bg-orange-500/20 flex items-center justify-center">
-                    <Flame className="w-5 h-5 text-orange-500" />
-                  </div>
-                  <span className="text-[10px] text-amber-400 font-bold mt-1.5 px-1.5 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/20">
-                    ⚡ {streak?.powerUpsRemaining ?? 3}/3 Power-Ups
-                  </span>
-                </div>
               </div>
-
-              {/* Streak Recovery Banner if user missed 1 day */}
-              {streak?.canRecoverStreak && (
-                <div className="mt-3.5 pt-3 border-t border-orange-500/20 animate-pulse">
-                  <p className="text-xs text-amber-300 font-medium mb-2 leading-relaxed">
-                    ⚠️ 1-day gap detected! Use 1 Power-Up to restore your <strong className="text-white font-bold">{streak.recoverableStreak}-Day Streak</strong>!
-                  </p>
-                  <button
-                    onClick={handleUsePowerUp}
-                    disabled={isPoweringUp}
-                    className="w-full py-2 px-3 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-black font-extrabold text-xs flex items-center justify-center gap-1.5 shadow-lg transition-all active:scale-95 disabled:opacity-50"
-                  >
-                    ⚡ Use Power-Up (Restore {streak.recoverableStreak} Days)
-                  </button>
+              
+              <div className="p-4 rounded-xl bg-neon-green/10 border border-neon-green/20">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs text-neon-green font-medium">Current Streak</p>
+                    <p className="text-2xl font-bold text-white mt-1">{streak?.currentStreak || 0} Days</p>
+                  </div>
+                  <div className="flex flex-col items-end">
+                    <div className="w-10 h-10 rounded-full bg-neon-green/20 flex items-center justify-center">
+                      <Flame className="w-5 h-5 text-neon-green" />
+                    </div>
+                    <span className="text-[10px] text-neon-green font-bold mt-1.5 px-1.5 py-0.5 rounded-full bg-neon-green/10 border border-neon-green/25">
+                      ⚡ {streak?.powerUpsRemaining ?? 3}/3 Power-Ups
+                    </span>
+                  </div>
                 </div>
-              )}
-            </div>
+
+                {/* Streak Recovery Banner if user missed 1 day */}
+                {streak?.canRecoverStreak && (
+                  <div className="mt-3.5 pt-3 border-t border-neon-green/20">
+                    <p className="text-xs text-dark-300 font-medium mb-2 leading-relaxed">
+                      ⚠️ 1-day gap detected! Use 1 Power-Up to restore your <strong className="text-white font-bold">{streak.recoverableStreak}-Day Streak</strong>!
+                    </p>
+                    <button
+                      onClick={handleUsePowerUp}
+                      disabled={isPoweringUp}
+                      className="w-full py-2 px-3 rounded-xl bg-neon-green hover:brightness-110 text-dark-950 font-extrabold text-xs flex items-center justify-center gap-1.5 shadow-md transition-all active:scale-95 disabled:opacity-50"
+                    >
+                      ⚡ Use Power-Up (Restore {streak.recoverableStreak} Days)
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
           </GlassCard>
 

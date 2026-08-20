@@ -17,6 +17,59 @@ export const useAdminStore = create((set) => ({
   userDetails: null,
   isUserDetailsLoading: false,
 
+  // Telemetry & Clickstream State
+  clickstream: [],
+  clickstreamPagination: null,
+  isClickstreamLoading: false,
+  userJourney: null,
+  isUserJourneyLoading: false,
+  ipStats: [],
+  topClicks: null,
+
+  fetchClickstream: async (params = {}) => {
+    set({ isClickstreamLoading: true });
+    try {
+      const res = await adminService.getClickstream(params);
+      set({
+        clickstream: res.data || [],
+        clickstreamPagination: res.pagination,
+        isClickstreamLoading: false,
+      });
+    } catch (err) {
+      console.error('Failed to fetch clickstream:', err);
+      set({ isClickstreamLoading: false });
+    }
+  },
+
+  fetchUserJourney: async (email) => {
+    set({ isUserJourneyLoading: true, userJourney: null });
+    try {
+      const res = await adminService.getUserJourney(email);
+      set({ userJourney: res.data, isUserJourneyLoading: false });
+    } catch (err) {
+      console.error('Failed to fetch user journey:', err);
+      set({ isUserJourneyLoading: false });
+    }
+  },
+
+  fetchIpStats: async () => {
+    try {
+      const res = await adminService.getIpStats();
+      set({ ipStats: res.data || [] });
+    } catch (err) {
+      console.error('Failed to fetch IP stats:', err);
+    }
+  },
+
+  fetchTopClicks: async () => {
+    try {
+      const res = await adminService.getTopClicks();
+      set({ topClicks: res.data || null });
+    } catch (err) {
+      console.error('Failed to fetch top clicks:', err);
+    }
+  },
+
   fetchStats: async () => {
     try {
       const stats = await adminService.getStats();
