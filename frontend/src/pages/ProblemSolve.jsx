@@ -102,6 +102,13 @@ const ProblemSolve = () => {
   const [isDraggingHorizontal, setIsDraggingHorizontal] = useState(false);
   const [isDraggingVertical, setIsDraggingVertical] = useState(false);
 
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   const containerRef = useRef(null);
   const rightPaneRef = useRef(null);
 
@@ -507,11 +514,14 @@ const ProblemSolve = () => {
       </header>
 
       {/* MAIN ADJUSTABLE SPLIT-PANE WORKSPACE */}
-      <div ref={containerRef} className="flex-1 flex flex-row min-h-0 overflow-hidden relative">
+      <div ref={containerRef} className="flex-1 flex flex-col md:flex-row min-h-0 overflow-hidden relative">
         {/* LEFT PANE: DESCRIPTION / EDITORIAL / SUBMISSIONS */}
         <div
-          style={{ width: `${leftWidthPercent}%` }}
-          className="flex flex-col border-r border-white/10 bg-dark-900/40 min-h-0 shrink-0"
+          style={{ 
+            width: isMobile ? '100%' : `${leftWidthPercent}%`,
+            height: isMobile ? '45%' : '100%'
+          }}
+          className="flex flex-col border-b md:border-b-0 md:border-r border-white/10 bg-dark-900/40 min-h-0 shrink-0"
         >
           {/* Left Pane Tabs Header */}
           <div className="flex items-center gap-2 border-b border-white/10 px-4 bg-dark-950/60 shrink-0">
@@ -1035,7 +1045,7 @@ const ProblemSolve = () => {
         {/* DRAGGABLE HORIZONTAL SPLITTER HANDLE (Left <-> Right) */}
         <div
           onMouseDown={handleMouseDownHorizontal}
-          className={`w-1.5 bg-dark-800 hover:bg-neon-green/60 active:bg-neon-green transition-colors cursor-col-resize flex items-center justify-center shrink-0 z-10 group ${
+          className={`hidden md:flex w-1.5 bg-dark-800 hover:bg-neon-green/60 active:bg-neon-green transition-colors cursor-col-resize items-center justify-center shrink-0 z-10 group ${
             isDraggingHorizontal ? 'bg-neon-green' : ''
           }`}
         >
@@ -1045,7 +1055,10 @@ const ProblemSolve = () => {
         {/* RIGHT PANE: CODE EDITOR + EXPANDABLE / RESIZABLE BOTTOM CONSOLE */}
         <div
           ref={rightPaneRef}
-          style={{ width: `${100 - leftWidthPercent}%` }}
+          style={{ 
+            width: isMobile ? '100%' : `${100 - leftWidthPercent}%`,
+            height: isMobile ? '55%' : '100%'
+          }}
           className="flex flex-col min-h-0 bg-dark-950 flex-1 relative"
         >
           {/* CODE EDITOR CONTAINER */}
@@ -1063,7 +1076,7 @@ const ProblemSolve = () => {
           {/* DRAGGABLE VERTICAL SPLITTER HANDLE (Top <-> Bottom) */}
           <div
             onMouseDown={handleMouseDownVertical}
-            className={`h-1.5 bg-dark-800 hover:bg-neon-green/60 active:bg-neon-green transition-colors cursor-row-resize flex items-center justify-center shrink-0 z-10 group ${
+            className={`hidden md:flex h-1.5 bg-dark-800 hover:bg-neon-green/60 active:bg-neon-green transition-colors cursor-row-resize items-center justify-center shrink-0 z-10 group ${
               isDraggingVertical ? 'bg-neon-green' : ''
             }`}
           >
@@ -1072,7 +1085,7 @@ const ProblemSolve = () => {
 
           {/* RESIZABLE BOTTOM CONSOLE DRAWER */}
           <div
-            style={{ height: isConsoleExpanded ? `${consoleHeightPx}px` : '40px' }}
+            style={{ height: isConsoleExpanded ? (isMobile ? '50%' : `${consoleHeightPx}px`) : '40px' }}
             className="border-t border-white/10 bg-dark-900 flex flex-col shrink-0 overflow-hidden"
           >
             {/* Drawer Tabs Header */}
