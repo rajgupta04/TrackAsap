@@ -189,9 +189,7 @@ function App() {
       <Route
         path="/solve/:slug"
         element={
-          <ProtectedRoute>
-            <ProblemSolve />
-          </ProtectedRoute>
+          <ProblemSolve />
         }
       />
 

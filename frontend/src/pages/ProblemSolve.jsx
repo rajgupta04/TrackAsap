@@ -54,6 +54,7 @@ import {
   formatCode,
 } from '../components/editor/editorConfig';
 import judgeService from '../services/judgeService';
+import { useAuthStore } from '../store/authStore';
 
 const DIFFICULTY_STYLES = {
   Easy: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30',
@@ -70,6 +71,7 @@ const formatTestcase = (str = '') => {
 };
 
 const ProblemSolve = () => {
+  const { isAuthenticated } = useAuthStore();
   const { slug } = useParams();
   const navigate = useNavigate();
 
@@ -239,6 +241,7 @@ const ProblemSolve = () => {
   };
 
   const fetchSubmissions = async (problemId) => {
+    if (!isAuthenticated) return;
     try {
       const res = await judgeService.getMySubmissions(problemId);
       if (res.success) {
@@ -251,6 +254,15 @@ const ProblemSolve = () => {
 
   // Run Code against Sample Visible Cases or Custom Input
   const handleRunCode = async (isCustomRun = false) => {
+    if (!isAuthenticated) {
+      toast.error('Please log in or sign up to run code!');
+      // Assuming a login modal or a route to login exists, /profile usually handles auth.
+      // Redirecting to Google auth or a generic login could be done, let's just toast for now,
+      // or navigate('/login') depending on how login is implemented in this app.
+      navigate('/'); // Or whichever is the public landing / login page
+      return;
+    }
+
     if (!code.trim() || !problem) return;
 
     setIsRunning(true);
@@ -283,6 +295,12 @@ const ProblemSolve = () => {
 
   // Submit Code for Official Judge Evaluation
   const handleSubmitCode = async () => {
+    if (!isAuthenticated) {
+      toast.error('Please log in or sign up to submit code!');
+      navigate('/');
+      return;
+    }
+
     if (!code.trim() || !problem) return;
 
     setIsSubmitting(true);
@@ -788,7 +806,14 @@ const ProblemSolve = () => {
             {/* TAB: SUBMISSIONS */}
             {leftTab === 'submissions' && (
               <div className="space-y-4">
-                {!selectedSubmissionDetail ? (
+                {!isAuthenticated ? (
+                  <div className="p-8 text-center bg-dark-900/40 border border-white/5 rounded-2xl space-y-2">
+                    <History className="w-8 h-8 text-dark-500 mx-auto" />
+                    <p className="text-xs text-dark-300">
+                      Please <Link to="/" className="text-neon-green hover:underline">log in</Link> to view your past submissions.
+                    </p>
+                  </div>
+                ) : !selectedSubmissionDetail ? (
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
                       <h2 className="text-base font-bold text-white flex items-center gap-2">
