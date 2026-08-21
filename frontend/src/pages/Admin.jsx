@@ -41,6 +41,11 @@ import {
   Laptop,
   Smartphone,
   RefreshCw,
+  Edit3,
+  FileText,
+  ListPlus,
+  Terminal,
+  HardDrive,
 } from 'lucide-react';
 import { useAdminStore } from '../store/adminStore';
 import { useAuthStore } from '../store/authStore';
@@ -49,6 +54,7 @@ import adminService from '../services/adminService';
 import judgeService from '../services/judgeService';
 import toast from 'react-hot-toast';
 import CodeViewer from '../components/CodeViewer';
+import CodeEditor from '../components/editor/CodeEditor';
 
 const CSV_TEMPLATE_HEADER = 'Topic,Title,Difficulty,Platform,Problem Link,Article Link,YouTube,Tags';
 const CSV_TEMPLATE_ROWS = [
@@ -272,6 +278,109 @@ const Admin = () => {
       console.error('Failed to fetch pending problems:', err);
     } finally {
       setIsLoadingPending(false);
+    }
+  };
+
+  // Problem Editing State in Admin
+  const [editingProblem, setEditingProblem] = useState(null);
+  const [editProblemTab, setEditProblemTab] = useState('statement'); // statement | testcases | code | editorial
+  const [editProblemCodeLang, setEditProblemCodeLang] = useState('python');
+  const [editProblemCodeMode, setEditProblemCodeMode] = useState('starter'); // starter | solution
+  const [isSavingProblemEdit, setIsSavingProblemEdit] = useState(false);
+  const [isLoadingFullProblem, setIsLoadingFullProblem] = useState(false);
+
+  const openEditProblemModal = async (prob) => {
+    setIsLoadingFullProblem(true);
+    setEditProblemTab('statement');
+    setEditProblemCodeLang('python');
+    setEditProblemCodeMode('starter');
+    try {
+      const res = await judgeService.getProblemBySlug(prob.slug || prob._id);
+      const fullProb = res.data || prob;
+      setEditingProblem({
+        _id: fullProb._id,
+        title: fullProb.title || '',
+        slug: fullProb.slug || '',
+        difficulty: fullProb.difficulty || 'Medium',
+        tags: Array.isArray(fullProb.tags) ? fullProb.tags.join(', ') : (fullProb.tags || ''),
+        description: fullProb.description || '',
+        constraints: Array.isArray(fullProb.constraints) && fullProb.constraints.length ? [...fullProb.constraints] : [''],
+        hints: Array.isArray(fullProb.hints) && fullProb.hints.length ? [...fullProb.hints] : [''],
+        editorial: fullProb.editorial || '',
+        status: fullProb.status || 'published',
+        timeLimitMs: fullProb.timeLimitMs || 1000,
+        memoryLimitMb: fullProb.memoryLimitMb || 256,
+        visibleTestcases: Array.isArray(fullProb.visibleTestcases) && fullProb.visibleTestcases.length ? fullProb.visibleTestcases.map(tc => ({ ...tc })) : [{ input: '', expectedOutput: '' }],
+        hiddenTestcases: Array.isArray(fullProb.hiddenTestcases) && fullProb.hiddenTestcases.length ? fullProb.hiddenTestcases.map(tc => ({ ...tc })) : [{ input: '', expectedOutput: '' }],
+        starterCode: fullProb.starterCode || {},
+        solutions: fullProb.solutions || {},
+        driverCode: fullProb.driverCode || {},
+      });
+    } catch (err) {
+      console.error('Failed to load full problem details:', err);
+      setEditingProblem({
+        _id: prob._id,
+        title: prob.title || '',
+        slug: prob.slug || '',
+        difficulty: prob.difficulty || 'Medium',
+        tags: Array.isArray(prob.tags) ? prob.tags.join(', ') : (prob.tags || ''),
+        description: prob.description || '',
+        constraints: Array.isArray(prob.constraints) && prob.constraints.length ? [...prob.constraints] : [''],
+        hints: Array.isArray(prob.hints) && prob.hints.length ? [...prob.hints] : [''],
+        editorial: prob.editorial || '',
+        status: prob.status || 'published',
+        timeLimitMs: prob.timeLimitMs || 1000,
+        memoryLimitMb: prob.memoryLimitMb || 256,
+        visibleTestcases: Array.isArray(prob.visibleTestcases) && prob.visibleTestcases.length ? prob.visibleTestcases.map(tc => ({ ...tc })) : [{ input: '', expectedOutput: '' }],
+        hiddenTestcases: [{ input: '', expectedOutput: '' }],
+        starterCode: prob.starterCode || {},
+        solutions: prob.solutions || {},
+        driverCode: prob.driverCode || {},
+      });
+    } finally {
+      setIsLoadingFullProblem(false);
+    }
+  };
+
+  const handleSaveProblemEdit = async () => {
+    if (!editingProblem || !editingProblem.title.trim() || !editingProblem.description.trim()) {
+      toast.error('Title and description are required');
+      return;
+    }
+
+    const payload = {
+      title: editingProblem.title.trim(),
+      slug: editingProblem.slug.trim() || undefined,
+      difficulty: editingProblem.difficulty,
+      tags: typeof editingProblem.tags === 'string'
+        ? editingProblem.tags.split(',').map((t) => t.trim()).filter(Boolean)
+        : editingProblem.tags,
+      description: editingProblem.description,
+      constraints: (editingProblem.constraints || []).filter((c) => c && c.trim()),
+      hints: (editingProblem.hints || []).filter((h) => h && h.trim()),
+      editorial: editingProblem.editorial || '',
+      status: editingProblem.status,
+      timeLimitMs: Number(editingProblem.timeLimitMs) || 1000,
+      memoryLimitMb: Number(editingProblem.memoryLimitMb) || 256,
+      visibleTestcases: (editingProblem.visibleTestcases || []).filter((tc) => tc.expectedOutput && tc.expectedOutput.trim()),
+      hiddenTestcases: (editingProblem.hiddenTestcases || []).filter((tc) => tc.expectedOutput && tc.expectedOutput.trim()),
+      starterCode: editingProblem.starterCode || {},
+      solutions: editingProblem.solutions || {},
+      driverCode: editingProblem.driverCode || {},
+    };
+
+    setIsSavingProblemEdit(true);
+    try {
+      const res = await judgeService.updateProblem(editingProblem._id, payload);
+      toast.success(res.message || 'Problem updated successfully! 🚀');
+      setEditingProblem(null);
+      fetchAdminProblems();
+      fetchPendingProblems();
+    } catch (err) {
+      console.error('Failed to update problem:', err);
+      toast.error(err.response?.data?.message || 'Failed to update problem');
+    } finally {
+      setIsSavingProblemEdit(false);
     }
   };
 
@@ -1269,13 +1378,22 @@ const Admin = () => {
                                 <Eye size={14} />
                               </a>
 
-                              {/* Edit in Studio */}
+                              {/* Quick Edit in Admin */}
+                              <button
+                                onClick={() => openEditProblemModal(prob)}
+                                className="p-1.5 rounded-lg bg-cyan-500/10 hover:bg-cyan-500 text-cyan-400 hover:text-dark-950 transition border border-cyan-500/20 cursor-pointer"
+                                title="Edit Problem (Statement, Test Cases, Limits, Solutions)"
+                              >
+                                <Edit3 size={14} />
+                              </button>
+
+                              {/* Edit in Full Studio */}
                               <a
-                                href={`/studio`}
+                                href={`/studio?edit=${prob._id}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="p-1.5 rounded-lg bg-dark-700 hover:bg-dark-600 text-cyan-400 transition border border-white/5 cursor-pointer"
-                                title="Edit in Studio"
+                                className="p-1.5 rounded-lg bg-dark-700 hover:bg-dark-600 text-dark-300 hover:text-white transition border border-white/5 cursor-pointer"
+                                title="Open in Full Screen Studio IDE"
                               >
                                 <ExternalLink size={14} />
                               </a>
@@ -1379,6 +1497,553 @@ const Admin = () => {
                       {isDeletingProblem ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
                       {isDeletingProblem ? 'Deleting...' : 'Yes, Delete Problem'}
                     </button>
+                  </div>
+                </motion.div>
+              </div>
+            )}
+          </AnimatePresence>
+
+          {/* Edit Problem Modal */}
+          <AnimatePresence>
+            {editingProblem && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/80 backdrop-blur-md overflow-y-auto">
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.96 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.96 }}
+                  className="bg-dark-900 border border-dark-700/80 rounded-2xl max-w-4xl w-full flex flex-col max-h-[92vh] shadow-2xl overflow-hidden"
+                >
+                  {/* Modal Header */}
+                  <div className="px-6 py-4 border-b border-dark-700/60 bg-dark-950/60 flex items-center justify-between gap-4 shrink-0">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 rounded-xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-400">
+                        <Edit3 size={18} />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h3 className="text-base font-bold text-white">Edit Problem</h3>
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase ${
+                            editingProblem.difficulty === 'Easy' ? 'bg-emerald-500/15 text-emerald-400' :
+                            editingProblem.difficulty === 'Medium' ? 'bg-amber-500/15 text-amber-400' :
+                            'bg-rose-500/15 text-rose-400'
+                          }`}>
+                            {editingProblem.difficulty}
+                          </span>
+                        </div>
+                        <p className="text-xs text-dark-400 font-mono mt-0.5 truncate max-w-md">
+                          {editingProblem.title} • /solve/{editingProblem.slug}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <select
+                        value={editingProblem.status}
+                        onChange={(e) => setEditingProblem({ ...editingProblem, status: e.target.value })}
+                        className="bg-dark-800 border border-dark-600 rounded-xl px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-neon-green font-semibold"
+                      >
+                        <option value="published">Status: Published (Live) ✨</option>
+                        <option value="pending">Status: Pending Review</option>
+                        <option value="draft">Status: Draft (Hidden)</option>
+                      </select>
+                      <button
+                        type="button"
+                        onClick={() => setEditingProblem(null)}
+                        className="p-1.5 rounded-lg bg-dark-800 hover:bg-dark-700 text-dark-400 hover:text-white transition"
+                      >
+                        <X size={18} />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Modal Sub-Tabs */}
+                  <div className="px-6 border-b border-dark-700/60 bg-dark-900 flex gap-2 overflow-x-auto shrink-0 scrollbar-none pt-2">
+                    {[
+                      { id: 'statement', label: '1. Statement & Details', icon: FileText },
+                      { id: 'testcases', label: `2. Test Cases (${(editingProblem.visibleTestcases?.length || 0) + (editingProblem.hiddenTestcases?.length || 0)})`, icon: ListPlus },
+                      { id: 'code', label: '3. Starter Code & Solutions', icon: Code },
+                      { id: 'editorial', label: '4. Editorial & Limits', icon: HardDrive },
+                    ].map((tab) => {
+                      const Icon = tab.icon;
+                      return (
+                        <button
+                          key={tab.id}
+                          type="button"
+                          onClick={() => setEditProblemTab(tab.id)}
+                          className={`flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold border-b-2 transition whitespace-nowrap ${
+                            editProblemTab === tab.id
+                              ? 'border-neon-green text-neon-green bg-neon-green/5 rounded-t-lg'
+                              : 'border-transparent text-dark-400 hover:text-white'
+                          }`}
+                        >
+                          <Icon size={14} />
+                          {tab.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Modal Body */}
+                  <div className="p-6 overflow-y-auto flex-1 space-y-6">
+                    {/* 1. Statement Tab */}
+                    {editProblemTab === 'statement' && (
+                      <div className="space-y-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                          <div className="sm:col-span-2">
+                            <label className="block text-xs font-semibold text-dark-300 mb-1">Problem Title *</label>
+                            <input
+                              type="text"
+                              value={editingProblem.title}
+                              onChange={(e) => setEditingProblem({ ...editingProblem, title: e.target.value })}
+                              className="w-full px-3.5 py-2 bg-dark-950 border border-dark-700 rounded-xl text-white text-xs focus:outline-none focus:border-neon-green"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-semibold text-dark-300 mb-1">Difficulty</label>
+                            <select
+                              value={editingProblem.difficulty}
+                              onChange={(e) => setEditingProblem({ ...editingProblem, difficulty: e.target.value })}
+                              className="w-full px-3.5 py-2 bg-dark-950 border border-dark-700 rounded-xl text-white text-xs focus:outline-none focus:border-neon-green"
+                            >
+                              <option value="Easy">Easy</option>
+                              <option value="Medium">Medium</option>
+                              <option value="Hard">Hard</option>
+                            </select>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-xs font-semibold text-dark-300 mb-1">URL Slug</label>
+                            <input
+                              type="text"
+                              value={editingProblem.slug}
+                              onChange={(e) => setEditingProblem({ ...editingProblem, slug: e.target.value })}
+                              className="w-full px-3.5 py-2 bg-dark-950 border border-dark-700 rounded-xl text-white text-xs font-mono focus:outline-none focus:border-neon-green"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-semibold text-dark-300 mb-1">Tags (Comma-separated)</label>
+                            <input
+                              type="text"
+                              value={editingProblem.tags}
+                              onChange={(e) => setEditingProblem({ ...editingProblem, tags: e.target.value })}
+                              placeholder="e.g. Array, Hash Table, Two Pointers"
+                              className="w-full px-3.5 py-2 bg-dark-950 border border-dark-700 rounded-xl text-white text-xs focus:outline-none focus:border-neon-green"
+                            />
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-semibold text-dark-300 mb-1">Problem Description (Markdown + LaTeX Math supported) *</label>
+                          <textarea
+                            rows={10}
+                            value={editingProblem.description}
+                            onChange={(e) => setEditingProblem({ ...editingProblem, description: e.target.value })}
+                            className="w-full p-3.5 bg-dark-950 border border-dark-700 rounded-xl text-white text-xs font-mono focus:outline-none focus:border-neon-green leading-relaxed"
+                          />
+                        </div>
+
+                        {/* Constraints */}
+                        <div>
+                          <div className="flex items-center justify-between mb-1.5">
+                            <label className="text-xs font-semibold text-dark-300">Constraints</label>
+                            <button
+                              type="button"
+                              onClick={() => setEditingProblem({ ...editingProblem, constraints: [...(editingProblem.constraints || []), ''] })}
+                              className="text-[11px] text-neon-green hover:underline flex items-center gap-1"
+                            >
+                              <Plus size={12} /> Add Constraint
+                            </button>
+                          </div>
+                          <div className="space-y-2">
+                            {(editingProblem.constraints || []).map((c, idx) => (
+                              <div key={idx} className="flex items-center gap-2">
+                                <input
+                                  type="text"
+                                  value={c}
+                                  onChange={(e) => {
+                                    const updated = [...editingProblem.constraints];
+                                    updated[idx] = e.target.value;
+                                    setEditingProblem({ ...editingProblem, constraints: updated });
+                                  }}
+                                  placeholder="1 <= nums.length <= 10^5"
+                                  className="flex-1 px-3 py-1.5 bg-dark-950 border border-dark-700 rounded-lg text-white text-xs font-mono focus:outline-none focus:border-neon-green"
+                                />
+                                {editingProblem.constraints.length > 1 && (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const updated = editingProblem.constraints.filter((_, i) => i !== idx);
+                                      setEditingProblem({ ...editingProblem, constraints: updated });
+                                    }}
+                                    className="text-dark-500 hover:text-rose-400 p-1"
+                                  >
+                                    <Trash2 size={13} />
+                                  </button>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* 2. Test Cases Tab */}
+                    {editProblemTab === 'testcases' && (
+                      <div className="space-y-6">
+                        {/* Visible Sample Testcases */}
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between border-b border-dark-700/60 pb-2">
+                            <div>
+                              <h4 className="text-xs font-bold text-white flex items-center gap-1.5">
+                                <Eye className="w-3.5 h-3.5 text-neon-green" />
+                                Visible Sample Cases (Run Code)
+                              </h4>
+                              <p className="text-[11px] text-dark-400">Visible to solvers in sample cases tab</p>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => setEditingProblem({
+                                ...editingProblem,
+                                visibleTestcases: [...(editingProblem.visibleTestcases || []), { input: '', expectedOutput: '' }]
+                              })}
+                              className="px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-white text-xs font-semibold border border-white/10 flex items-center gap-1"
+                            >
+                              <Plus size={13} /> Add Sample Case
+                            </button>
+                          </div>
+
+                          <div className="space-y-3">
+                            {(editingProblem.visibleTestcases || []).map((tc, idx) => (
+                              <div key={idx} className="p-3.5 rounded-xl border border-dark-700 bg-dark-950 space-y-2">
+                                <div className="flex items-center justify-between text-xs font-semibold text-dark-300">
+                                  <span>Sample Case #{idx + 1}</span>
+                                  {editingProblem.visibleTestcases.length > 1 && (
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        const updated = editingProblem.visibleTestcases.filter((_, i) => i !== idx);
+                                        setEditingProblem({ ...editingProblem, visibleTestcases: updated });
+                                      }}
+                                      className="text-dark-500 hover:text-rose-400"
+                                    >
+                                      <Trash2 size={13} />
+                                    </button>
+                                  )}
+                                </div>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                  <div>
+                                    <label className="text-[10px] text-dark-400 font-semibold block mb-1">Input (stdin)</label>
+                                    <textarea
+                                      rows={2}
+                                      value={tc.input}
+                                      onChange={(e) => {
+                                        const updated = [...editingProblem.visibleTestcases];
+                                        updated[idx].input = e.target.value;
+                                        setEditingProblem({ ...editingProblem, visibleTestcases: updated });
+                                      }}
+                                      placeholder="[2, 7, 11, 15]&#10;9"
+                                      className="w-full p-2 bg-dark-900 border border-dark-700 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-neon-green whitespace-pre"
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="text-[10px] text-dark-400 font-semibold block mb-1">Expected Output (stdout)</label>
+                                    <textarea
+                                      rows={2}
+                                      value={tc.expectedOutput}
+                                      onChange={(e) => {
+                                        const updated = [...editingProblem.visibleTestcases];
+                                        updated[idx].expectedOutput = e.target.value;
+                                        setEditingProblem({ ...editingProblem, visibleTestcases: updated });
+                                      }}
+                                      placeholder="[0, 1]"
+                                      className="w-full p-2 bg-dark-900 border border-dark-700 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-neon-green whitespace-pre"
+                                    />
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Hidden Testcases */}
+                        <div className="space-y-3 pt-4 border-t border-dark-700/60">
+                          <div className="flex items-center justify-between border-b border-dark-700/60 pb-2">
+                            <div>
+                              <h4 className="text-xs font-bold text-amber-400 flex items-center gap-1.5">
+                                <AlertTriangle className="w-3.5 h-3.5" />
+                                Hidden Judge Test Cases (Submit Code)
+                              </h4>
+                              <p className="text-[11px] text-dark-400">Evaluated securely by backend compiler</p>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => setEditingProblem({
+                                ...editingProblem,
+                                hiddenTestcases: [...(editingProblem.hiddenTestcases || []), { input: '', expectedOutput: '' }]
+                              })}
+                              className="px-2.5 py-1 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 text-xs font-semibold border border-amber-500/30 flex items-center gap-1"
+                            >
+                              <Plus size={13} /> Add Hidden Case
+                            </button>
+                          </div>
+
+                          <div className="space-y-3 max-h-[380px] overflow-y-auto pr-1">
+                            {(editingProblem.hiddenTestcases || []).map((tc, idx) => (
+                              <div key={idx} className="p-3.5 rounded-xl border border-dark-700 bg-dark-950 space-y-2">
+                                <div className="flex items-center justify-between text-xs font-semibold text-dark-300">
+                                  <span className="text-amber-400/90">Hidden Judge Case #{idx + 1}</span>
+                                  {editingProblem.hiddenTestcases.length > 1 && (
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        const updated = editingProblem.hiddenTestcases.filter((_, i) => i !== idx);
+                                        setEditingProblem({ ...editingProblem, hiddenTestcases: updated });
+                                      }}
+                                      className="text-dark-500 hover:text-rose-400"
+                                    >
+                                      <Trash2 size={13} />
+                                    </button>
+                                  )}
+                                </div>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                  <div>
+                                    <label className="text-[10px] text-dark-400 font-semibold block mb-1">Input (stdin)</label>
+                                    <textarea
+                                      rows={2}
+                                      value={tc.input}
+                                      onChange={(e) => {
+                                        const updated = [...editingProblem.hiddenTestcases];
+                                        updated[idx].input = e.target.value;
+                                        setEditingProblem({ ...editingProblem, hiddenTestcases: updated });
+                                      }}
+                                      placeholder="Large array input..."
+                                      className="w-full p-2 bg-dark-900 border border-dark-700 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-neon-green whitespace-pre"
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="text-[10px] text-dark-400 font-semibold block mb-1">Expected Output (stdout)</label>
+                                    <textarea
+                                      rows={2}
+                                      value={tc.expectedOutput}
+                                      onChange={(e) => {
+                                        const updated = [...editingProblem.hiddenTestcases];
+                                        updated[idx].expectedOutput = e.target.value;
+                                        setEditingProblem({ ...editingProblem, hiddenTestcases: updated });
+                                      }}
+                                      placeholder="Expected solution output..."
+                                      className="w-full p-2 bg-dark-900 border border-dark-700 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-neon-green whitespace-pre"
+                                    />
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* 3. Code & Solutions Tab */}
+                    {editProblemTab === 'code' && (
+                      <div className="space-y-4">
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-dark-950 p-3 rounded-xl border border-dark-700">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <button
+                              type="button"
+                              onClick={() => setEditProblemCodeMode('starter')}
+                              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
+                                editProblemCodeMode === 'starter'
+                                  ? 'bg-neon-green text-dark-950 shadow-sm'
+                                  : 'bg-dark-800 text-dark-300 hover:text-white'
+                              }`}
+                            >
+                              Starter Code (Solvers)
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setEditProblemCodeMode('solution')}
+                              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
+                                editProblemCodeMode === 'solution'
+                                  ? 'bg-cyan-500 text-dark-950 shadow-sm'
+                                  : 'bg-dark-800 text-dark-300 hover:text-white'
+                              }`}
+                            >
+                              Official Solution (Editorial)
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setEditProblemCodeMode('driver')}
+                              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1 ${
+                                editProblemCodeMode === 'driver'
+                                  ? 'bg-amber-400 text-dark-950 shadow-sm'
+                                  : 'bg-dark-800 text-dark-300 hover:text-white'
+                              }`}
+                            >
+                              <Terminal size={13} />
+                              Driver Code (Hidden Main Harness)
+                            </button>
+                          </div>
+
+                          <div className="flex items-center gap-1.5">
+                            {['python', 'cpp', 'java', 'javascript'].map((lang) => (
+                              <button
+                                key={lang}
+                                type="button"
+                                onClick={() => setEditProblemCodeLang(lang)}
+                                className={`px-2.5 py-1 rounded-lg text-xs font-semibold uppercase transition border ${
+                                  editProblemCodeLang === lang
+                                    ? editProblemCodeMode === 'solution'
+                                      ? 'bg-cyan-500 text-dark-950 border-cyan-500'
+                                      : editProblemCodeMode === 'driver'
+                                      ? 'bg-amber-400 text-dark-950 border-amber-400'
+                                      : 'bg-neon-green text-dark-950 border-neon-green'
+                                    : 'bg-dark-900 text-dark-300 border-dark-700 hover:border-dark-600'
+                                }`}
+                              >
+                                {lang === 'cpp' ? 'C++' : lang}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        {editProblemCodeMode === 'driver' && (
+                          <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs">
+                            <span className="font-bold">Backend Driver Code (Hidden):</span> This is the harness executed behind the scenes to read <code className="bg-black/40 px-1 py-0.5 rounded font-mono">stdin</code>, pass test case arguments into the user's <code className="bg-black/40 px-1 py-0.5 rounded font-mono">Solution</code> method, and print the output to <code className="bg-black/40 px-1 py-0.5 rounded font-mono">stdout</code>. Leave blank if standard CP input/output with user-written main method is used.
+                          </div>
+                        )}
+
+                        <div className="h-[360px] rounded-xl overflow-hidden border border-dark-700 bg-dark-950">
+                          <CodeEditor
+                            value={
+                              editProblemCodeMode === 'solution'
+                                ? (editingProblem.solutions?.[editProblemCodeLang] || '')
+                                : editProblemCodeMode === 'driver'
+                                ? (editingProblem.driverCode?.[editProblemCodeLang] || '')
+                                : (editingProblem.starterCode?.[editProblemCodeLang] || '')
+                            }
+                            onChange={(val) => {
+                              if (editProblemCodeMode === 'solution') {
+                                setEditingProblem({
+                                  ...editingProblem,
+                                  solutions: {
+                                    ...(editingProblem.solutions || {}),
+                                    [editProblemCodeLang]: val,
+                                  },
+                                });
+                              } else if (editProblemCodeMode === 'driver') {
+                                setEditingProblem({
+                                  ...editingProblem,
+                                  driverCode: {
+                                    ...(editingProblem.driverCode || {}),
+                                    [editProblemCodeLang]: val,
+                                  },
+                                });
+                              } else {
+                                setEditingProblem({
+                                  ...editingProblem,
+                                  starterCode: {
+                                    ...(editingProblem.starterCode || {}),
+                                    [editProblemCodeLang]: val,
+                                  },
+                                });
+                              }
+                            }}
+                            language={editProblemCodeLang}
+                            theme="tokyoNight"
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {/* 4. Editorial & Limits Tab */}
+                    {editProblemTab === 'editorial' && (
+                      <div className="space-y-5">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-xs font-semibold text-dark-300 mb-1">Time Limit (ms)</label>
+                            <input
+                              type="number"
+                              value={editingProblem.timeLimitMs}
+                              onChange={(e) => setEditingProblem({ ...editingProblem, timeLimitMs: e.target.value })}
+                              min={100}
+                              max={10000}
+                              step={100}
+                              className="w-full px-3 py-2 bg-dark-950 border border-dark-700 rounded-xl text-white text-xs focus:outline-none focus:border-neon-green"
+                            />
+                            <p className="text-[10px] text-dark-400 mt-1">Default is 1000ms (1 second)</p>
+                          </div>
+                          <div>
+                            <label className="block text-xs font-semibold text-dark-300 mb-1">Memory Limit (MB)</label>
+                            <input
+                              type="number"
+                              value={editingProblem.memoryLimitMb}
+                              onChange={(e) => setEditingProblem({ ...editingProblem, memoryLimitMb: e.target.value })}
+                              min={16}
+                              max={1024}
+                              step={32}
+                              className="w-full px-3 py-2 bg-dark-950 border border-dark-700 rounded-xl text-white text-xs focus:outline-none focus:border-neon-green"
+                            />
+                            <p className="text-[10px] text-dark-400 mt-1">Default is 256MB</p>
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-semibold text-dark-300 mb-1">
+                            Official Editorial Explanation (Markdown + LaTeX)
+                          </label>
+                          <textarea
+                            rows={10}
+                            value={editingProblem.editorial}
+                            onChange={(e) => setEditingProblem({ ...editingProblem, editorial: e.target.value })}
+                            placeholder="Explain the intuition, approach, and time/space complexities..."
+                            className="w-full p-3.5 bg-dark-950 border border-dark-700 rounded-xl text-white text-xs font-mono focus:outline-none focus:border-neon-green leading-relaxed"
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Modal Footer */}
+                  <div className="px-6 py-4 border-t border-dark-700/60 bg-dark-950/60 flex flex-col sm:flex-row items-center justify-between gap-3 shrink-0">
+                    <div className="flex items-center gap-2 w-full sm:w-auto">
+                      <a
+                        href={`/studio?edit=${editingProblem._id}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-dark-800 hover:bg-dark-700 text-dark-300 hover:text-white text-xs font-semibold border border-dark-700 transition"
+                      >
+                        <ExternalLink size={13} /> Full Studio View
+                      </a>
+                      <a
+                        href={`/solve/${editingProblem.slug}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-dark-800 hover:bg-dark-700 text-emerald-400 hover:text-emerald-300 text-xs font-semibold border border-dark-700 transition"
+                      >
+                        <Eye size={13} /> Solve in Arena
+                      </a>
+                    </div>
+
+                    <div className="flex items-center gap-2.5 w-full sm:w-auto justify-end">
+                      <button
+                        type="button"
+                        onClick={() => setEditingProblem(null)}
+                        disabled={isSavingProblemEdit}
+                        className="px-4 py-2 rounded-xl bg-dark-800 hover:bg-dark-700 text-dark-300 hover:text-white text-xs font-semibold border border-dark-700 transition"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleSaveProblemEdit}
+                        disabled={isSavingProblemEdit}
+                        className="px-5 py-2 rounded-xl bg-neon-green hover:brightness-110 text-dark-950 text-xs font-bold transition shadow-lg shadow-neon-green/20 flex items-center gap-1.5 disabled:opacity-50"
+                      >
+                        {isSavingProblemEdit ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+                        {isSavingProblemEdit ? 'Saving Changes...' : 'Save Problem Changes ✨'}
+                      </button>
+                    </div>
                   </div>
                 </motion.div>
               </div>
