@@ -26,6 +26,41 @@ const normalizeOutput = (str = '') => {
 };
 
 /**
+ * Assembles user code with driver code and handles language-specific requirements
+ * (e.g. In Java, all imports must be at the very top before any class declarations,
+ * and the driver class with main() must precede the user Solution class).
+ */
+const assembleExecutableCode = (code = '', driver = '', language = '') => {
+  const hasMain = (
+    (language === 'java' && /public\s+static\s+void\s+main/i.test(code)) ||
+    (language === 'python' && /if\s+__name__\s*==\s*['"]__main__['"]/i.test(code)) ||
+    (language === 'cpp' && /int\s+main\s*\(/i.test(code)) ||
+    (language === 'javascript' && /main\s*\(\s*\)/i.test(code))
+  );
+
+  if (hasMain || !driver) {
+    return code;
+  }
+
+  if (language === 'java') {
+    const full = `${driver}\n\n${code}`;
+    const imports = new Set(['import java.util.*;', 'import java.io.*;']);
+    const nonImports = [];
+    for (const line of full.split('\n')) {
+      const trimmed = line.trim();
+      if (trimmed.startsWith('import ')) {
+        imports.add(trimmed);
+      } else {
+        nonImports.push(line);
+      }
+    }
+    return Array.from(imports).join('\n') + '\n\n' + nonImports.join('\n');
+  }
+
+  return `${code}\n\n${driver}`;
+};
+
+/**
  * @desc    Run code against visible sample testcases OR user custom input
  * @route   POST /api/judge/run
  * @access  Private
@@ -39,27 +74,8 @@ export const runCode = async (req, res) => {
     }
 
     const problem = problemId ? await JudgeProblem.findById(problemId) : null;
-    const hasMain = (
-      (language === 'java' && /public\s+static\s+void\s+main/i.test(code)) ||
-      (language === 'python' && /if\s+__name__\s*==\s*['"]__main__['"]/i.test(code)) ||
-      (language === 'cpp' && /int\s+main\s*\(/i.test(code)) ||
-      (language === 'javascript' && /main\s*\(\s*\)/i.test(code))
-    );
-    const driver = (!hasMain && problem?.driverCode?.[language]) ? problem.driverCode[language] : '';
-    let executableCode;
-    if (driver) {
-      if (language === 'java') {
-        executableCode = `${driver}\n\n${code}`;
-      } else {
-        executableCode = `${code}\n\n${driver}`;
-      }
-    } else {
-      executableCode = code;
-    }
-
-    if (language === 'java' && !/^\s*import\s+java\.util/m.test(executableCode)) {
-      executableCode = `import java.util.*;\nimport java.io.*;\n${executableCode}`;
-    }
+    const driver = problem?.driverCode?.[language] || '';
+    const executableCode = assembleExecutableCode(code, driver, language);
 
     // Case 1: Run against user's custom testcase input
     if (typeof customInput === 'string' && customInput.trim()) {
@@ -183,27 +199,8 @@ export const submitCode = async (req, res) => {
     let compileOutput = '';
     let runtimeError = '';
 
-    const hasMain = (
-      (language === 'java' && /public\s+static\s+void\s+main/i.test(code)) ||
-      (language === 'python' && /if\s+__name__\s*==\s*['"]__main__['"]/i.test(code)) ||
-      (language === 'cpp' && /int\s+main\s*\(/i.test(code)) ||
-      (language === 'javascript' && /main\s*\(\s*\)/i.test(code))
-    );
-    const driver = (!hasMain && problem?.driverCode?.[language]) ? problem.driverCode[language] : '';
-    let executableCode;
-    if (driver) {
-      if (language === 'java') {
-        executableCode = `${driver}\n\n${code}`;
-      } else {
-        executableCode = `${code}\n\n${driver}`;
-      }
-    } else {
-      executableCode = code;
-    }
-
-    if (language === 'java' && !/^\s*import\s+java\.util/m.test(executableCode)) {
-      executableCode = `import java.util.*;\nimport java.io.*;\n${executableCode}`;
-    }
+    const driver = problem?.driverCode?.[language] || '';
+    const executableCode = assembleExecutableCode(code, driver, language);
 
     for (let i = 0; i < allTestcases.length; i++) {
       const tc = allTestcases[i];
