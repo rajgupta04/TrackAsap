@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Plus,
@@ -21,6 +22,8 @@ import {
   Sparkles,
   ChevronRight,
   X,
+  ExternalLink,
+  RotateCcw,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import CodeEditor from '../components/editor/CodeEditor';
@@ -31,6 +34,9 @@ import { useAuthStore } from '../store/authStore';
 const ProblemSetterStudio = () => {
   const { user } = useAuthStore();
   const isAdmin = user?.role === 'admin';
+  const [searchParams, setSearchParams] = useSearchParams();
+  const editParam = searchParams.get('edit') || searchParams.get('slug');
+
   const [activeTab, setActiveTab] = useState('statement'); // statement | examples | testcases | code | myProblems
   const [myProblems, setMyProblems] = useState([]);
   const [isLoadingProblems, setIsLoadingProblems] = useState(false);
@@ -62,14 +68,27 @@ const ProblemSetterStudio = () => {
   const [batchJsonInput, setBatchJsonInput] = useState('');
   const [showBatchModal, setShowBatchModal] = useState(false);
 
-  // Starter Code
+  // Starter Code & Official Solutions
   const [starterCode, setStarterCode] = useState({
     cpp: DEFAULT_TEMPLATES.cpp,
     python: DEFAULT_TEMPLATES.python,
     java: DEFAULT_TEMPLATES.java,
     javascript: DEFAULT_TEMPLATES.javascript,
   });
+  const [solutions, setSolutions] = useState({
+    cpp: '',
+    python: '',
+    java: '',
+    javascript: '',
+  });
+  const [driverCode, setDriverCode] = useState({
+    cpp: '',
+    python: '',
+    java: '',
+    javascript: '',
+  });
   const [activeCodeLang, setActiveCodeLang] = useState('python');
+  const [codeSubMode, setCodeSubMode] = useState('starter'); // 'starter' | 'solution' | 'driver'
 
   // Limits
   const [timeLimitMs, setTimeLimitMs] = useState(1000);
@@ -82,6 +101,26 @@ const ProblemSetterStudio = () => {
   useEffect(() => {
     fetchMyProblems();
   }, []);
+
+  useEffect(() => {
+    if (editParam) {
+      const loadFromParam = async () => {
+        try {
+          setIsLoadingProblems(true);
+          const res = await judgeService.getProblemBySlug(editParam);
+          if (res.success && res.data) {
+            loadProblemForEdit(res.data);
+          }
+        } catch (err) {
+          console.error('Failed to load problem for edit:', err);
+          toast.error('Problem not found for editing');
+        } finally {
+          setIsLoadingProblems(false);
+        }
+      };
+      loadFromParam();
+    }
+  }, [editParam]);
 
   const fetchMyProblems = async () => {
     try {
@@ -99,6 +138,7 @@ const ProblemSetterStudio = () => {
 
   const resetForm = () => {
     setEditingProblemId(null);
+    setSearchParams({});
     setTitle('');
     setSlug('');
     setDifficulty('Medium');
@@ -115,6 +155,18 @@ const ProblemSetterStudio = () => {
       python: DEFAULT_TEMPLATES.python,
       java: DEFAULT_TEMPLATES.java,
       javascript: DEFAULT_TEMPLATES.javascript,
+    });
+    setSolutions({
+      cpp: '',
+      python: '',
+      java: '',
+      javascript: '',
+    });
+    setDriverCode({
+      cpp: '',
+      python: '',
+      java: '',
+      javascript: '',
     });
     setTimeLimitMs(1000);
     setMemoryLimitMb(256);
@@ -147,6 +199,22 @@ const ProblemSetterStudio = () => {
         : [{ input: '', expectedOutput: '' }]
     );
     setStarterCode(problem.starterCode || DEFAULT_TEMPLATES);
+    setSolutions(
+      problem.solutions || {
+        cpp: '',
+        python: '',
+        java: '',
+        javascript: '',
+      }
+    );
+    setDriverCode(
+      problem.driverCode || {
+        cpp: '',
+        python: '',
+        java: '',
+        javascript: '',
+      }
+    );
     setTimeLimitMs(problem.timeLimitMs || 1000);
     setMemoryLimitMb(problem.memoryLimitMb || 256);
     setActiveTab('statement');
@@ -202,6 +270,8 @@ const ProblemSetterStudio = () => {
       visibleTestcases: visibleTestcases.filter((tc) => tc.expectedOutput.trim()),
       hiddenTestcases: hiddenTestcases.filter((tc) => tc.expectedOutput.trim()),
       starterCode,
+      solutions,
+      driverCode,
       timeLimitMs: Number(timeLimitMs),
       memoryLimitMb: Number(memoryLimitMb),
       status,
@@ -302,6 +372,39 @@ const ProblemSetterStudio = () => {
           </button>
         </div>
       </div>
+
+      {/* Editing Mode Banner */}
+      {editingProblemId && (
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 text-cyan-300 text-xs shadow-md">
+          <div className="flex items-center gap-2.5">
+            <Edit3 className="w-4 h-4 text-cyan-400 shrink-0" />
+            <div>
+              <span className="font-bold text-white">Currently Editing Problem: </span>
+              <span className="font-semibold text-cyan-300">"{title || 'Untitled'}"</span>
+              {slug && <span className="text-dark-400 ml-2 font-mono">(/solve/{slug})</span>}
+            </div>
+          </div>
+          <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+            {slug && (
+              <a
+                href={`/solve/${slug}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-dark-900 hover:bg-dark-800 text-white font-semibold border border-white/10 transition text-[11px]"
+              >
+                <Eye className="w-3.5 h-3.5 text-neon-green" /> Preview in Arena
+              </a>
+            )}
+            <button
+              type="button"
+              onClick={resetForm}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/15 text-dark-200 hover:text-white font-semibold transition text-[11px]"
+            >
+              <RotateCcw className="w-3.5 h-3.5" /> Clear & Author New
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Tabs Navigation */}
       <div className="flex items-center gap-2 border-b border-white/10 overflow-x-auto pb-1 scrollbar-none">
@@ -821,20 +924,59 @@ const ProblemSetterStudio = () => {
             </div>
           </div>
 
-          {/* Starter Code Editor */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <h3 className="text-xs font-bold text-white uppercase tracking-wider">
-                Language Boilerplates & Starter Code
-              </h3>
+          {/* Starter Code, Official Solution & Driver Code Editor */}
+          <div className="space-y-4">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-dark-900/60 p-3.5 rounded-2xl border border-white/10">
+              <div className="flex items-center gap-2 flex-wrap">
+                <button
+                  type="button"
+                  onClick={() => setCodeSubMode('starter')}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition ${
+                    codeSubMode === 'starter'
+                      ? 'bg-neon-green text-dark-950 shadow-sm'
+                      : 'bg-white/5 text-dark-300 hover:text-white'
+                  }`}
+                >
+                  Starter Code (Solvers)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCodeSubMode('solution')}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition ${
+                    codeSubMode === 'solution'
+                      ? 'bg-cyan-500 text-dark-950 shadow-sm'
+                      : 'bg-white/5 text-dark-300 hover:text-white'
+                  }`}
+                >
+                  Official Solution (Editorial)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCodeSubMode('driver')}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1 ${
+                    codeSubMode === 'driver'
+                      ? 'bg-amber-400 text-dark-950 shadow-sm'
+                      : 'bg-white/5 text-dark-300 hover:text-white'
+                  }`}
+                >
+                  <Code2 className="w-3.5 h-3.5" />
+                  Driver Code (Hidden Main Harness)
+                </button>
+              </div>
+
               <div className="flex items-center gap-1.5">
                 {['python', 'cpp', 'java', 'javascript'].map((lang) => (
                   <button
                     key={lang}
+                    type="button"
                     onClick={() => setActiveCodeLang(lang)}
                     className={`px-3 py-1.5 rounded-lg text-xs font-semibold uppercase transition border ${
                       activeCodeLang === lang
-                        ? 'bg-neon-green text-dark-950 border-neon-green'
+                        ? codeSubMode === 'solution'
+                          ? 'bg-cyan-500 text-dark-950 border-cyan-500'
+                          : codeSubMode === 'driver'
+                          ? 'bg-amber-400 text-dark-950 border-amber-400'
+                          : 'bg-neon-green text-dark-950 border-neon-green'
                         : 'bg-dark-900 text-dark-300 border-white/10 hover:border-white/20'
                     }`}
                   >
@@ -844,12 +986,30 @@ const ProblemSetterStudio = () => {
               </div>
             </div>
 
-            <div className="h-[400px] rounded-2xl overflow-hidden border border-white/10">
+            {codeSubMode === 'driver' && (
+              <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs">
+                <span className="font-bold">Backend Driver Code (Hidden):</span> This is the harness attached behind the scenes to read <code className="bg-black/40 px-1 py-0.5 rounded font-mono">stdin</code>, pass test case arguments into the user's <code className="bg-black/40 px-1 py-0.5 rounded font-mono">Solution</code> method, and print the output to <code className="bg-black/40 px-1 py-0.5 rounded font-mono">stdout</code>. Leave blank if standard CP input/output with user-written main method is used.
+              </div>
+            )}
+
+            <div className="h-[420px] rounded-2xl overflow-hidden border border-white/10">
               <CodeEditor
-                value={starterCode[activeCodeLang] || ''}
-                onChange={(val) =>
-                  setStarterCode({ ...starterCode, [activeCodeLang]: val })
+                value={
+                  codeSubMode === 'solution'
+                    ? solutions[activeCodeLang] || ''
+                    : codeSubMode === 'driver'
+                    ? driverCode[activeCodeLang] || ''
+                    : starterCode[activeCodeLang] || ''
                 }
+                onChange={(val) => {
+                  if (codeSubMode === 'solution') {
+                    setSolutions({ ...solutions, [activeCodeLang]: val });
+                  } else if (codeSubMode === 'driver') {
+                    setDriverCode({ ...driverCode, [activeCodeLang]: val });
+                  } else {
+                    setStarterCode({ ...starterCode, [activeCodeLang]: val });
+                  }
+                }}
                 language={activeCodeLang}
                 theme="tokyoNight"
               />

@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import JudgeProblem from '../models/JudgeProblem.model.js';
 import Submission from '../models/Submission.model.js';
 
@@ -109,7 +110,10 @@ export const getProblemBySlug = async (req, res) => {
   try {
     const { slug } = req.params;
 
-    let query = JudgeProblem.findOne({ slug });
+    const isObjectId = mongoose.Types.ObjectId.isValid(slug);
+    let query = isObjectId
+      ? JudgeProblem.findOne({ $or: [{ slug }, { _id: slug }] })
+      : JudgeProblem.findOne({ slug });
 
     // If requester is author or admin, include hidden testcases for editing/previewing
     const isPrivileged =
