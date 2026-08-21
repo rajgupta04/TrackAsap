@@ -26,11 +26,13 @@ router.get('/admin/all', protect, requireAdmin, getAllAdminProblems);
 router.get('/admin/pending', protect, requireAdmin, getPendingProblems);
 router.put('/admin/review/:id', protect, requireAdmin, reviewProblem);
 
+// Setter Routes (must be before /:slug so it doesn't get captured as a slug)
+router.get('/setter/my-problems', protect, requireSetter, getMyAuthoredProblems);
+
 router.get('/:slug', optionalProtect, getProblemBySlug);
 
 // Setter / Admin protected routes
 router.post('/', protect, requireSetter, createProblem);
-router.get('/setter/my-problems', protect, requireSetter, getMyAuthoredProblems);
 router.put('/:id', protect, requireSetter, updateProblem);
 router.delete('/:id', protect, requireSetter, deleteProblem);
 router.post(

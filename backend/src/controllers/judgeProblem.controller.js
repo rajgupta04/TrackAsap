@@ -389,6 +389,12 @@ export const updateProblem = async (req, res) => {
     }
 
     const updates = { ...req.body };
+    delete updates._id;
+    delete updates.__v;
+    delete updates.author;
+    delete updates.totalSubmissions;
+    delete updates.acceptedSubmissions;
+
     if (updates.title && !updates.slug) {
       updates.slug = generateSlug(updates.title);
     }
@@ -396,6 +402,34 @@ export const updateProblem = async (req, res) => {
     // Non-admin publishing requires approval
     if (req.user.role !== 'admin' && updates.status === 'published') {
       updates.status = 'pending';
+    }
+
+    // Protect critical code fields from being wiped by incomplete payloads.
+    // If the frontend sends an empty object/array (e.g. because getProblemBySlug
+    // failed and fell back to partial list data), preserve the existing DB values.
+    const isEmptyCodeObj = (obj) => {
+      if (!obj || typeof obj !== 'object') return true;
+      return Object.values(obj).every((v) => !v || (typeof v === 'string' && v.trim() === ''));
+    };
+
+    if (isEmptyCodeObj(updates.starterCode) && !isEmptyCodeObj(problem.starterCode?.toObject?.() || problem.starterCode)) {
+      delete updates.starterCode;
+    }
+    if (isEmptyCodeObj(updates.solutions) && !isEmptyCodeObj(problem.solutions?.toObject?.() || problem.solutions)) {
+      delete updates.solutions;
+    }
+    if (isEmptyCodeObj(updates.driverCode) && !isEmptyCodeObj(problem.driverCode?.toObject?.() || problem.driverCode)) {
+      delete updates.driverCode;
+    }
+
+    // Protect hidden testcases from being replaced with empty placeholder
+    if (
+      Array.isArray(updates.hiddenTestcases) &&
+      (updates.hiddenTestcases.length === 0 ||
+        (updates.hiddenTestcases.length === 1 && !updates.hiddenTestcases[0]?.expectedOutput?.trim())) &&
+      problem.hiddenTestcases?.length > 0
+    ) {
+      delete updates.hiddenTestcases;
     }
 
     Object.assign(problem, updates);

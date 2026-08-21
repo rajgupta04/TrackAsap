@@ -635,7 +635,7 @@ const ProblemSolve = () => {
                           <span className="font-mono text-white">{ex.output}</span>
                         </div>
                         {ex.explanation && (
-                          <div className="text-dark-300 pt-1 border-t border-white/5">
+                          <div className="text-dark-300 pt-1 border-t border-white/5 whitespace-pre-wrap">
                             <span className="font-semibold text-dark-400">Explanation: </span>
                             {ex.explanation}
                           </div>
