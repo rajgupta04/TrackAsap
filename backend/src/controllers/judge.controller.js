@@ -46,7 +46,16 @@ export const runCode = async (req, res) => {
       (language === 'javascript' && /main\s*\(\s*\)/i.test(code))
     );
     const driver = (!hasMain && problem?.driverCode?.[language]) ? problem.driverCode[language] : '';
-    let executableCode = driver ? `${code}\n\n${driver}` : code;
+    let executableCode;
+    if (driver) {
+      if (language === 'java') {
+        executableCode = `${driver}\n\n${code}`;
+      } else {
+        executableCode = `${code}\n\n${driver}`;
+      }
+    } else {
+      executableCode = code;
+    }
 
     if (language === 'java' && !/^\s*import\s+java\.util/m.test(executableCode)) {
       executableCode = `import java.util.*;\nimport java.io.*;\n${executableCode}`;
@@ -181,7 +190,16 @@ export const submitCode = async (req, res) => {
       (language === 'javascript' && /main\s*\(\s*\)/i.test(code))
     );
     const driver = (!hasMain && problem?.driverCode?.[language]) ? problem.driverCode[language] : '';
-    let executableCode = driver ? `${code}\n\n${driver}` : code;
+    let executableCode;
+    if (driver) {
+      if (language === 'java') {
+        executableCode = `${driver}\n\n${code}`;
+      } else {
+        executableCode = `${code}\n\n${driver}`;
+      }
+    } else {
+      executableCode = code;
+    }
 
     if (language === 'java' && !/^\s*import\s+java\.util/m.test(executableCode)) {
       executableCode = `import java.util.*;\nimport java.io.*;\n${executableCode}`;
