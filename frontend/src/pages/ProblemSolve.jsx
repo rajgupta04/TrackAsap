@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import confetti from 'canvas-confetti';
 import {
   Play,
@@ -31,6 +32,7 @@ import {
   ArchiveRestore,
   Zap,
   Palette,
+  Loader2,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useThemeStore } from '../store/themeStore';
@@ -504,8 +506,12 @@ const ProblemSolve = () => {
             disabled={isRunning || isSubmitting}
             className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-white/10 hover:bg-white/15 text-white text-xs font-semibold border border-white/10 transition disabled:opacity-50"
           >
-            <Play className="w-3.5 h-3.5 text-neon-green fill-neon-green" />
-            {isRunning ? 'Running...' : 'Run'}
+            {isRunning ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin text-cyan-300" />
+            ) : (
+              <Play className="w-3.5 h-3.5 text-neon-green fill-neon-green" />
+            )}
+            <span>{isRunning ? 'Running...' : 'Run'}</span>
           </button>
 
           {/* Submit Button */}
@@ -514,8 +520,12 @@ const ProblemSolve = () => {
             disabled={isSubmitting || isRunning}
             className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-neon-green hover:brightness-110 text-dark-950 text-xs font-bold transition shadow-md shadow-neon-green/20 disabled:opacity-50"
           >
-            <Send className="w-3.5 h-3.5" />
-            {isSubmitting ? 'Evaluating...' : 'Submit'}
+            {isSubmitting ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin text-dark-950" />
+            ) : (
+              <Send className="w-3.5 h-3.5" />
+            )}
+            <span>{isSubmitting ? 'Judging...' : 'Submit'}</span>
           </button>
         </div>
       </header>
@@ -1152,7 +1162,9 @@ const ProblemSolve = () => {
                   }`}
                 >
                   Verdict & Console
-                  {(runResult || submissionResult) && (
+                  {(isRunning || isSubmitting) ? (
+                    <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping" />
+                  ) : (runResult || submissionResult) && (
                     <span className="w-2 h-2 rounded-full bg-neon-green" />
                   )}
                 </button>
@@ -1234,9 +1246,73 @@ const ProblemSolve = () => {
 
                 {/* 3. VERDICT & RESULT TAB */}
                 {consoleTab === 'result' && (
-                  <div>
-                    {/* RUN RESULTS */}
-                    {runResult && (
+                  <div className="h-full">
+                    {/* EXECUTING ANIMATION (MAC STYLE SCANNER & COMPILER RING) */}
+                    {(isRunning || isSubmitting) ? (
+                      <div className="flex-1 flex flex-col items-center justify-center gap-4 text-dark-300 py-8 min-h-[220px]">
+                        {/* Sleek Glowing Compiler Ring & Laser Scanner */}
+                        <div className="relative flex items-center justify-center">
+                          <motion.div
+                            className={`absolute w-16 h-16 rounded-full blur-md ${
+                              isSubmitting ? 'bg-purple-500/20' : 'bg-cyan-500/20'
+                            }`}
+                            animate={{ scale: [1, 1.35, 1], opacity: [0.3, 0.75, 0.3] }}
+                            transition={{ repeat: Infinity, duration: 1.5 }}
+                          />
+                          <motion.div
+                            className={`w-12 h-12 rounded-full border-2 border-transparent p-1 ${
+                              isSubmitting
+                                ? 'border-t-purple-400 border-r-neon-green'
+                                : 'border-t-cyan-400 border-r-emerald-400'
+                            }`}
+                            animate={{ rotate: 360 }}
+                            transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}
+                          >
+                            <div className="w-full h-full rounded-full bg-dark-950/80 backdrop-blur-sm flex items-center justify-center shadow-inner">
+                              <Sparkles
+                                className={`w-5 h-5 animate-pulse ${
+                                  isSubmitting ? 'text-purple-300' : 'text-cyan-300'
+                                }`}
+                              />
+                            </div>
+                          </motion.div>
+                        </div>
+
+                        {/* Animated Laser Scanner Line */}
+                        <div className="w-52 h-1 rounded-full bg-white/5 overflow-hidden relative border border-white/10 shadow-inner">
+                          <motion.div
+                            className={`h-full rounded-full w-24 ${
+                              isSubmitting
+                                ? 'bg-gradient-to-r from-purple-500 via-pink-500 to-neon-green'
+                                : 'bg-gradient-to-r from-cyan-500 via-emerald-400 to-purple-500'
+                            }`}
+                            animate={{ x: [-100, 220] }}
+                            transition={{ repeat: Infinity, duration: 1.2, ease: 'easeInOut' }}
+                          />
+                        </div>
+
+                        {/* Pulsing Status Badges */}
+                        <div className="flex flex-col items-center gap-1 font-mono text-xs text-center">
+                          <span
+                            className={`font-bold tracking-wide flex items-center gap-2 ${
+                              isSubmitting ? 'text-purple-300' : 'text-cyan-300'
+                            }`}
+                          >
+                            <span
+                              className={`w-2 h-2 rounded-full animate-ping ${
+                                isSubmitting ? 'bg-neon-green' : 'bg-emerald-400'
+                              }`}
+                            />
+                            {isSubmitting ? 'Judging Solution...' : 'Executing Code...'}
+                          </span>
+                          <span className="text-[11px] text-dark-400">
+                            {isSubmitting
+                              ? 'Evaluating against all visible & hidden judge testcases'
+                              : 'Evaluating testcases & memory limits on compiler engine'}
+                          </span>
+                        </div>
+                      </div>
+                    ) : runResult ? (
                       <div className="space-y-3">
                         <div className="flex items-center justify-between border-b border-white/10 pb-2">
                           <span
@@ -1326,18 +1402,15 @@ const ProblemSolve = () => {
                           </div>
                         ))}
                       </div>
-                    )}
-
-                    {/* SUBMIT RESULTS */}
-                    {submissionResult && (
+                    ) : submissionResult ? (
                       <div className="space-y-4">
                         <div className="flex items-center justify-between border-b border-white/10 pb-2">
                           <div className="flex items-center gap-2">
                             <span
                               className={`text-base font-bold flex items-center gap-1.5 ${
                                 submissionResult.status === 'AC'
-                                  ? 'text-emerald-400'
-                                  : 'text-rose-400'
+                                    ? 'text-emerald-400'
+                                    : 'text-rose-400'
                               }`}
                             >
                               {submissionResult.status === 'AC' ? (
@@ -1444,11 +1517,14 @@ const ProblemSolve = () => {
                           </div>
                         )}
                       </div>
-                    )}
-
-                    {!runResult && !submissionResult && (
-                      <div className="text-center text-dark-500 py-6">
-                        Click "Run" to test sample cases or "Submit" to evaluate code.
+                    ) : (
+                      <div className="flex-1 flex flex-col items-center justify-center text-dark-500 text-xs gap-2.5 text-center py-10">
+                        <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-dark-400">
+                          <Terminal className="w-5 h-5 stroke-[1.75]" />
+                        </div>
+                        <p className="text-dark-400">
+                          Click <strong className="text-white">Run</strong> to test sample cases or <strong className="text-neon-green">Submit</strong> for official judge evaluation.
+                        </p>
                       </div>
                     )}
                   </div>
