@@ -1,6 +1,179 @@
 const LEETCODE_API_URL = process.env.LEETCODE_API_URL || 'http://localhost:3000';
 
-// Fetch LeetCode stats using self-hosted alfa-leetcode-api on Azure VM
+// Helper to calculate streak and total active days from LeetCode submissionCalendar JSON
+function calculateLeetCodeStreak(calendarJson) {
+  if (!calendarJson) return { streak: 0, totalActiveDays: 0, submissionCalendar: {} };
+  let calendar = {};
+  try {
+    calendar = typeof calendarJson === 'string' ? JSON.parse(calendarJson) : calendarJson;
+  } catch {
+    return { streak: 0, totalActiveDays: 0, submissionCalendar: {} };
+  }
+
+  const timestamps = Object.keys(calendar)
+    .map(Number)
+    .filter((t) => !isNaN(t) && calendar[t] > 0)
+    .sort((a, b) => b - a);
+
+  if (timestamps.length === 0) {
+    return { streak: 0, totalActiveDays: 0, submissionCalendar: calendar };
+  }
+
+  const dateSet = new Set(
+    timestamps.map((t) => new Date(t * 1000).toISOString().split('T')[0])
+  );
+
+  let currentStreak = 0;
+  const now = new Date();
+  let checkDate = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+
+  const todayStr = checkDate.toISOString().split('T')[0];
+  const yesterday = new Date(checkDate.getTime() - 86400000);
+  const yesterdayStr = yesterday.toISOString().split('T')[0];
+
+  if (!dateSet.has(todayStr)) {
+    if (dateSet.has(yesterdayStr)) {
+      checkDate = yesterday;
+    } else {
+      return { streak: 0, totalActiveDays: dateSet.size, submissionCalendar: calendar };
+    }
+  }
+
+  while (true) {
+    const dStr = checkDate.toISOString().split('T')[0];
+    if (dateSet.has(dStr)) {
+      currentStreak++;
+      checkDate = new Date(checkDate.getTime() - 86400000);
+    } else {
+      break;
+    }
+  }
+
+  return {
+    streak: currentStreak,
+    totalActiveDays: dateSet.size,
+    submissionCalendar: calendar,
+  };
+}
+
+// Direct official LeetCode GraphQL Scraper
+async function fetchLeetCodeDirectGraphQL(username) {
+  const query = `
+    query getUserProfile($username: String!) {
+      allQuestionsCount {
+        difficulty
+        count
+      }
+      matchedUser(username: $username) {
+        username
+        submitStats: submitStatsGlobal {
+          acSubmissionNum {
+            difficulty
+            count
+          }
+        }
+        profile {
+          ranking
+          reputation
+          starRating
+          userAvatar
+        }
+        submissionCalendar
+      }
+      userContestRanking(username: $username) {
+        attendedContestsCount
+        rating
+        globalRanking
+      }
+      userContestRankingHistory(username: $username) {
+        attended
+        rating
+        ranking
+        contest {
+          title
+          startTime
+        }
+      }
+    }
+  `;
+
+  const res = await fetch('https://leetcode.com/graphql', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'User-Agent':
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+      Referer: 'https://leetcode.com',
+    },
+    body: JSON.stringify({ query, variables: { username } }),
+  });
+
+  if (!res.ok) {
+    throw new Error(`LeetCode GraphQL responded with status ${res.status}`);
+  }
+
+  const json = await res.json();
+  if (json.errors || !json.data?.matchedUser) {
+    throw new Error('User not found on LeetCode');
+  }
+
+  const data = json.data;
+  const user = data.matchedUser;
+  const submitStats = user.submitStats?.acSubmissionNum || [];
+  const allCounts = data.allQuestionsCount || [];
+
+  const getCount = (arr, diff) =>
+    arr.find((x) => x.difficulty.toLowerCase() === diff.toLowerCase())?.count || 0;
+
+  const totalSolved = getCount(submitStats, 'all');
+  const easySolved = getCount(submitStats, 'easy');
+  const mediumSolved = getCount(submitStats, 'medium');
+  const hardSolved = getCount(submitStats, 'hard');
+
+  const totalQuestions = getCount(allCounts, 'all');
+  const totalEasy = getCount(allCounts, 'easy');
+  const totalMedium = getCount(allCounts, 'medium');
+  const totalHard = getCount(allCounts, 'hard');
+
+  const calendarStats = calculateLeetCodeStreak(user.submissionCalendar);
+
+  const contestRanking = data.userContestRanking;
+  const contestHistory = data.userContestRankingHistory || [];
+
+  const attendedHistory = contestHistory.filter((c) => c.attended);
+  const ratingHistory = attendedHistory.slice(-15).map((c, idx, arr) => {
+    const prevRating = idx > 0 ? arr[idx - 1].rating : c.rating;
+    return {
+      contestName: c.contest?.title || 'Contest',
+      rank: c.ranking,
+      oldRating: Math.round(prevRating),
+      newRating: Math.round(c.rating),
+    };
+  });
+
+  return {
+    totalSolved,
+    easySolved,
+    mediumSolved,
+    hardSolved,
+    totalEasy: totalEasy || 850,
+    totalMedium: totalMedium || 1800,
+    totalHard: totalHard || 800,
+    ranking: user.profile?.ranking || null,
+    reputation: user.profile?.reputation || 0,
+    contributionPoints: user.profile?.reputation || 0,
+    avatar: user.profile?.userAvatar || null,
+    streak: calendarStats.streak,
+    totalActiveDays: calendarStats.totalActiveDays,
+    submissionCalendar: calendarStats.submissionCalendar,
+    contestsParticipated: contestRanking?.attendedContestsCount || attendedHistory.length,
+    contestRating: contestRanking ? Math.round(contestRanking.rating) : null,
+    globalContestRanking: contestRanking?.globalRanking || null,
+    ratingHistory,
+  };
+}
+
+// Fetch LeetCode stats with direct GraphQL + fallback proxies
 export const getLeetCodeStats = async (req, res) => {
   const { username } = req.params;
 
@@ -8,85 +181,88 @@ export const getLeetCodeStats = async (req, res) => {
     return res.status(400).json({ message: 'Username is required' });
   }
 
+  // 1. Primary: Direct official LeetCode GraphQL API
   try {
-    // Fetch solved problems count
-    const solvedResponse = await fetch(`${LEETCODE_API_URL}/${username}/solved`);
-
-    if (!solvedResponse.ok) {
-      throw new Error('Failed to fetch LeetCode data');
-    }
-
-    const solvedData = await solvedResponse.json();
-
-    // Fetch user profile for additional details
-    const profileResponse = await fetch(`${LEETCODE_API_URL}/${username}`);
-
-    let profileData = {};
-    if (profileResponse.ok) {
-      profileData = await profileResponse.json();
-    }
-
-    // Fetch submission calendar/streak data
-    const calendarResponse = await fetch(`${LEETCODE_API_URL}/${username}/calendar`);
-
-    let calendarData = {};
-    if (calendarResponse.ok) {
-      calendarData = await calendarResponse.json();
-    }
-
-    // Fetch contest data
-    const contestResponse = await fetch(`${LEETCODE_API_URL}/${username}/contest`);
-
-    let contestData = {};
-    let contestsParticipated = 0;
-    let ratingHistory = [];
-
-    if (contestResponse.ok) {
-      contestData = await contestResponse.json();
-      if (contestData?.contestParticipation) {
-        contestsParticipated = contestData.contestParticipation.length;
-        // Map to standard format, keeping last 10-15 contests to match Codeforces
-        ratingHistory = contestData.contestParticipation.slice(-15).map(c => ({
-          contestName: c.contest.title,
-          rank: c.ranking,
-          oldRating: Math.round(c.rating - (c.trendDirection === 'UP' ? 1 : -1)), // Just an approximation since API might only return current
-          newRating: Math.round(c.rating)
-        }));
-      }
-    }
-
-    res.json({
+    const stats = await fetchLeetCodeDirectGraphQL(username);
+    return res.json({
       success: true,
       platform: 'leetcode',
       username,
-      data: {
-        totalSolved: solvedData.solvedProblem || 0,
-        easySolved: solvedData.easySolved || 0,
-        mediumSolved: solvedData.mediumSolved || 0,
-        hardSolved: solvedData.hardSolved || 0,
-        totalEasy: solvedData.totalEasy || 0,
-        totalMedium: solvedData.totalMedium || 0,
-        totalHard: solvedData.totalHard || 0,
-        ranking: profileData.ranking || null,
-        reputation: profileData.reputation || 0,
-        contributionPoints: profileData.contributionPoints || 0,
-        avatar: profileData.avatar || null,
-        streak: calendarData.streak || 0,
-        totalActiveDays: calendarData.totalActiveDays || 0,
-        submissionCalendar: calendarData.submissionCalendar || {},
-        contestsParticipated,
-        ratingHistory,
-      },
+      data: stats,
     });
-  } catch (error) {
-    console.error('LeetCode API Error:', error.message);
-    res.status(500).json({
-      success: false,
-      platform: 'leetcode',
-      username,
-      error: 'Failed to fetch LeetCode stats. Please check if the username is correct.',
-    });
+  } catch (directErr) {
+    console.warn(`[LeetCode] Direct GraphQL fetch failed for ${username}:`, directErr.message);
   }
+
+  // 2. Fallback: Proxy / self-hosted alfa-leetcode-api
+  const fallbackUrls = [
+    LEETCODE_API_URL,
+    'https://alfa-leetcode-api.onrender.com',
+  ].filter(Boolean);
+
+  for (const baseUrl of fallbackUrls) {
+    try {
+      const solvedResponse = await fetch(`${baseUrl}/${username}/solved`);
+      if (!solvedResponse.ok) continue;
+
+      const solvedData = await solvedResponse.json();
+
+      const profileResponse = await fetch(`${baseUrl}/${username}`);
+      const profileData = profileResponse.ok ? await profileResponse.json() : {};
+
+      const calendarResponse = await fetch(`${baseUrl}/${username}/calendar`);
+      const calendarData = calendarResponse.ok ? await calendarResponse.json() : {};
+
+      const contestResponse = await fetch(`${baseUrl}/${username}/contest`);
+      const contestData = contestResponse.ok ? await contestResponse.json() : {};
+
+      let contestsParticipated = 0;
+      let ratingHistory = [];
+
+      if (contestData?.contestParticipation) {
+        contestsParticipated = contestData.contestParticipation.length;
+        ratingHistory = contestData.contestParticipation.slice(-15).map((c) => ({
+          contestName: c.contest.title,
+          rank: c.ranking,
+          oldRating: Math.round(c.rating - (c.trendDirection === 'UP' ? 1 : -1)),
+          newRating: Math.round(c.rating),
+        }));
+      }
+
+      return res.json({
+        success: true,
+        platform: 'leetcode',
+        username,
+        data: {
+          totalSolved: solvedData.solvedProblem || 0,
+          easySolved: solvedData.easySolved || 0,
+          mediumSolved: solvedData.mediumSolved || 0,
+          hardSolved: solvedData.hardSolved || 0,
+          totalEasy: solvedData.totalEasy || 850,
+          totalMedium: solvedData.totalMedium || 1800,
+          totalHard: solvedData.totalHard || 800,
+          ranking: profileData.ranking || null,
+          reputation: profileData.reputation || 0,
+          contributionPoints: profileData.contributionPoints || 0,
+          avatar: profileData.avatar || null,
+          streak: calendarData.streak || 0,
+          totalActiveDays: calendarData.totalActiveDays || 0,
+          submissionCalendar: calendarData.submissionCalendar || {},
+          contestsParticipated,
+          ratingHistory,
+        },
+      });
+    } catch (fallbackErr) {
+      console.warn(`[LeetCode] Fallback ${baseUrl} failed for ${username}:`, fallbackErr.message);
+    }
+  }
+
+  res.status(500).json({
+    success: false,
+    platform: 'leetcode',
+    username,
+    error: 'Failed to fetch LeetCode stats. Please check if the username is correct.',
+  });
 };
 
 // Fetch Codeforces stats using official API
