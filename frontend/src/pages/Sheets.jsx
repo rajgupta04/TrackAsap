@@ -159,6 +159,15 @@ const Sheets = () => {
   };
 
   // Calculate overall stats
+  const getSheetProgress = (sheet) => {
+    if (typeof sheet?.completionPercentage === 'number' && !isNaN(sheet.completionPercentage)) {
+      return sheet.completionPercentage;
+    }
+    const total = sheet?.totalProblems || 0;
+    const solved = sheet?.solvedProblems || 0;
+    return total > 0 ? Math.round((solved / total) * 100) : 0;
+  };
+
   const totalProblems = sheets.reduce((acc, s) => acc + (s.totalProblems || 0), 0);
   const solvedProblems = sheets.reduce((acc, s) => acc + (s.solvedProblems || 0), 0);
   const overallProgress = totalProblems > 0 ? Math.round((solvedProblems / totalProblems) * 100) : 0;
@@ -223,7 +232,7 @@ const Sheets = () => {
                   sheets.map((sheet) => {
                     const Icon = CATEGORY_ICONS[sheet.category] || BookOpen;
                     const isSelected = selectedSheet === sheet._id;
-                    const progress = sheet.completionPercentage || 0;
+                    const progress = getSheetProgress(sheet);
 
                     return (
                       <motion.div
@@ -323,7 +332,7 @@ const Sheets = () => {
                   {sheets.map((sheet) => {
                     const Icon = CATEGORY_ICONS[sheet.category] || BookOpen;
                     const isSelected = selectedSheet === sheet._id;
-                    const progress = sheet.completionPercentage || 0;
+                    const progress = getSheetProgress(sheet);
 
                     return (
                       <motion.div
@@ -457,7 +466,7 @@ const Sheets = () => {
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       {sheets.map((sheet) => {
                         const Icon = CATEGORY_ICONS[sheet.category] || BookOpen;
-                        const progress = sheet.completionPercentage || 0;
+                        const progress = getSheetProgress(sheet);
                         return (
                           <button
                             key={sheet._id}
@@ -594,7 +603,7 @@ const Sheets = () => {
             <p className="text-[11px] text-dark-300 font-medium truncate mb-1.5">{currentSheet.name}</p>
             <div className="flex justify-between text-[10px]">
               <span className="text-dark-400 font-medium">Progress</span>
-              <span className="text-white font-bold">{currentSheet.completionPercentage || 0}%</span>
+              <span className="text-white font-bold">{getSheetProgress(currentSheet)}%</span>
             </div>
             <div className="flex justify-between text-[10px] mt-1">
               <span className="text-dark-400 font-medium">Solved</span>

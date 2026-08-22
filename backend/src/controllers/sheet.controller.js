@@ -1,4 +1,6 @@
+import mongoose from 'mongoose';
 import Sheet from '../models/Sheet.model.js';
+import SheetProblem from '../models/SheetProblem.model.js';
 import Problem from '../models/Problem.model.js';
 
 // Default templates for each category
@@ -153,10 +155,48 @@ export const createSheet = async (req, res) => {
 // @access  Private
 export const getSheets = async (req, res) => {
   try {
+    const userObjectId = new mongoose.Types.ObjectId(req.user._id);
     const sheets = await Sheet.find({ user: req.user._id, isActive: true })
       .sort({ createdAt: -1 });
 
-    res.json(sheets);
+    // Aggregate real-time stats from SheetProblem to guarantee 100% accuracy
+    const sheetStats = await SheetProblem.aggregate([
+      { $match: { user: userObjectId } },
+      {
+        $group: {
+          _id: '$sheet',
+          totalProblems: { $sum: 1 },
+          solvedProblems: {
+            $sum: { $cond: [{ $eq: ['$status', 'solved'] }, 1, 0] },
+          },
+        },
+      },
+    ]);
+
+    const statsMap = new Map();
+    for (const stat of sheetStats) {
+      if (stat._id) {
+        statsMap.set(stat._id.toString(), {
+          totalProblems: stat.totalProblems,
+          solvedProblems: stat.solvedProblems,
+        });
+      }
+    }
+
+    const enrichedSheets = sheets.map((sheet) => {
+      const sheetObj = sheet.toObject();
+      const spStats = statsMap.get(sheet._id.toString());
+      if (spStats) {
+        sheetObj.totalProblems = spStats.totalProblems;
+        sheetObj.solvedProblems = spStats.solvedProblems;
+      }
+      const total = sheetObj.totalProblems || 0;
+      const solved = sheetObj.solvedProblems || 0;
+      sheetObj.completionPercentage = total > 0 ? Math.round((solved / total) * 100) : 0;
+      return sheetObj;
+    });
+
+    res.json(enrichedSheets);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -176,13 +216,34 @@ export const getSheet = async (req, res) => {
       return res.status(404).json({ message: 'Sheet not found' });
     }
 
+    const sheetObjectId = new mongoose.Types.ObjectId(req.params.id);
+    const sheetStats = await SheetProblem.aggregate([
+      { $match: { sheet: sheetObjectId } },
+      {
+        $group: {
+          _id: null,
+          total: { $sum: 1 },
+          solved: { $sum: { $cond: [{ $eq: ['$status', 'solved'] }, 1, 0] } },
+        },
+      },
+    ]);
+
+    const sheetObj = sheet.toObject();
+    if (sheetStats.length > 0) {
+      sheetObj.totalProblems = sheetStats[0].total;
+      sheetObj.solvedProblems = sheetStats[0].solved;
+      sheetObj.completionPercentage = sheetStats[0].total > 0
+        ? Math.round((sheetStats[0].solved / sheetStats[0].total) * 100)
+        : 0;
+    }
+
     // Get problems for this sheet
     const problems = await Problem.find({
       user: req.user._id,
       sheet: sheet._id,
     }).sort({ solvedAt: -1 });
 
-    res.json({ sheet, problems });
+    res.json({ sheet: sheetObj, problems });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

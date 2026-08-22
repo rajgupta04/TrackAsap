@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import SheetProblem from '../models/SheetProblem.model.js';
 import Sheet from '../models/Sheet.model.js';
 import Problem from '../models/Problem.model.js';
@@ -417,23 +418,31 @@ export const deleteTopicProblems = async (req, res) => {
 
 // Helper function to update sheet totals
 const updateSheetTotals = async (sheetId) => {
-  const stats = await SheetProblem.aggregate([
-    { $match: { sheet: sheetId } },
-    {
-      $group: {
-        _id: null,
-        total: { $sum: 1 },
-        solved: { $sum: { $cond: [{ $eq: ['$status', 'solved'] }, 1, 0] } },
+  try {
+    const sheetObjectId = mongoose.Types.ObjectId.isValid(sheetId)
+      ? new mongoose.Types.ObjectId(sheetId)
+      : sheetId;
+
+    const stats = await SheetProblem.aggregate([
+      { $match: { sheet: sheetObjectId } },
+      {
+        $group: {
+          _id: null,
+          total: { $sum: 1 },
+          solved: { $sum: { $cond: [{ $eq: ['$status', 'solved'] }, 1, 0] } },
+        },
       },
-    },
-  ]);
+    ]);
 
-  const { total = 0, solved = 0 } = stats[0] || {};
+    const { total = 0, solved = 0 } = stats[0] || {};
 
-  await Sheet.findByIdAndUpdate(sheetId, {
-    totalProblems: total,
-    solvedProblems: solved,
-  });
+    await Sheet.findByIdAndUpdate(sheetId, {
+      totalProblems: total,
+      solvedProblems: solved,
+    });
+  } catch (err) {
+    console.error('Error updating sheet totals:', err);
+  }
 };
 
 // Helper to detect platform from URL

@@ -41,6 +41,7 @@ import { useLeaderboardStore } from '../store/leaderboardStore';
 import { useThemeStore } from '../store/themeStore';
 import githubService from '../services/githubService';
 import GlassCard from '../components/ui/GlassCard';
+import GitSyncModal from '../components/github/GitSyncModal';
 import NumberInput from '../components/ui/NumberInput';
 import ElectricBorder from '../components/ui/ElectricBorder';
 import ProfileShareCard from '../components/ui/ProfileShareCard';
@@ -86,6 +87,7 @@ const Profile = () => {
   const [syncing, setSyncing] = useState(false);
   const [connectingGithub, setConnectingGithub] = useState(false);
   const [showTrackExGuide, setShowTrackExGuide] = useState(false);
+  const [showGitSyncModal, setShowGitSyncModal] = useState(false);
   const avatarSrc =
     user?.profilePicture ||
     user?.googlePicture ||
@@ -210,18 +212,8 @@ const Profile = () => {
     }
   };
 
-  const handleSyncGithub = async () => {
-    setSyncing(true);
-    try {
-      const result = await githubService.sync();
-      toast.success(`Synced ${result.filesCount} files to GitHub!`);
-      fetchGitHubStatus();
-    } catch (error) {
-      const msg = error.response?.data?.message || 'Sync failed';
-      toast.error(msg);
-    } finally {
-      setSyncing(false);
-    }
+  const handleSyncGithub = () => {
+    setShowGitSyncModal(true);
   };
 
   const handleImageChange = async (e) => {
@@ -874,6 +866,13 @@ const Profile = () => {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Git Sync Modal */}
+      <GitSyncModal
+        isOpen={showGitSyncModal}
+        onClose={() => setShowGitSyncModal(false)}
+        onSuccess={fetchGitHubStatus}
+      />
     </div>
   );
 };

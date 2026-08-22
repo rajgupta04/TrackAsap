@@ -7,6 +7,7 @@ import {
   disconnect,
   initRepo,
   syncToGitHub,
+  getSyncDiff,
 } from '../controllers/github.controller.js';
 
 const router = express.Router();
@@ -20,7 +21,8 @@ router.get('/status', protect, getStatus);
 router.delete('/disconnect', protect, disconnect);
 router.post('/init-repo', protect, initRepo);
 
-// Sync
+// Diff & Sync
+router.get('/diff', protect, getSyncDiff);
 router.post('/sync', protect, syncToGitHub);
 
 export default router;
