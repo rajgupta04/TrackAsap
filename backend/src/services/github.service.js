@@ -353,11 +353,94 @@ export function buildFileTree(sheetProblems, standaloneProblems, username, lastS
 }
 
 /**
- * Push multiple files to the repo in a single commit using the Git Data API.
- *
- * Flow: get HEAD ref → get base tree → create blobs → create new tree → create commit → update ref
+ * Compute the exact Git blob SHA-1 hash for a given string content.
+ * Git calculates blob SHAs as sha1("blob " + length + "\0" + content).
  */
-export async function pushFiles(token, username, files, message, repoName = REPO_NAME) {
+export function computeGitBlobSha(content = '') {
+  const buffer = Buffer.from(content, 'utf-8');
+  const header = `blob ${buffer.length}\0`;
+  return crypto
+    .createHash('sha1')
+    .update(Buffer.concat([Buffer.from(header), buffer]))
+    .digest('hex');
+}
+
+/**
+ * Fetch the remote Git tree from GitHub repository.
+ */
+export async function getRemoteTree(token, repo) {
+  const headers = {
+    Authorization: `Bearer ${token}`,
+    Accept: 'application/json',
+  };
+
+  try {
+    const refRes = await fetch(`${GITHUB_API}/repos/${repo}/git/ref/heads/main`, { headers });
+    if (!refRes.ok) return { exists: false, baseSha: null, baseTreeSha: null, filesMap: new Map() };
+    const ref = await refRes.json();
+    const baseSha = ref.object?.sha;
+    if (!baseSha) return { exists: false, baseSha: null, baseTreeSha: null, filesMap: new Map() };
+
+    const commitRes = await fetch(`${GITHUB_API}/repos/${repo}/git/commits/${baseSha}`, { headers });
+    if (!commitRes.ok) return { exists: false, baseSha: null, baseTreeSha: null, filesMap: new Map() };
+    const commit = await commitRes.json();
+    const baseTreeSha = commit.tree?.sha;
+    if (!baseTreeSha) return { exists: false, baseSha: null, baseTreeSha: null, filesMap: new Map() };
+
+    const treeRes = await fetch(`${GITHUB_API}/repos/${repo}/git/trees/${baseTreeSha}?recursive=1`, { headers });
+    if (!treeRes.ok) return { exists: true, baseSha, baseTreeSha, filesMap: new Map() };
+    const tree = await treeRes.json();
+
+    const filesMap = new Map();
+    for (const item of (tree.tree || [])) {
+      if (item.type === 'blob') {
+        filesMap.set(item.path, item.sha);
+      }
+    }
+    return { exists: true, baseSha, baseTreeSha, filesMap };
+  } catch (err) {
+    console.warn('[GitHub Service] Error fetching remote tree:', err.message);
+    return { exists: false, baseSha: null, baseTreeSha: null, filesMap: new Map() };
+  }
+}
+
+/**
+ * Compare local files against the remote Git repository tree to compute precise diffs.
+ */
+export function calculateFileDiff(localFiles = [], remoteFilesMap = new Map()) {
+  const added = [];
+  const modified = [];
+  const unchanged = [];
+  const localPaths = new Set();
+
+  for (const f of localFiles) {
+    localPaths.add(f.path);
+    const localSha = computeGitBlobSha(f.content);
+    if (!remoteFilesMap.has(f.path)) {
+      added.push({ ...f, localSha });
+    } else {
+      const remoteSha = remoteFilesMap.get(f.path);
+      if (remoteSha !== localSha) {
+        modified.push({ ...f, localSha, remoteSha });
+      } else {
+        unchanged.push({ ...f, localSha });
+      }
+    }
+  }
+
+  return {
+    added,
+    modified,
+    unchanged,
+    totalLocal: localFiles.length,
+    changedCount: added.length + modified.length,
+  };
+}
+
+/**
+ * Push only modified/added files to the repo incrementally.
+ */
+export async function pushFilesIncremental(token, username, changedFiles, message, baseSha, baseTreeSha, repoName = REPO_NAME) {
   const repo = `${username}/${repoName}`;
   const headers = {
     Authorization: `Bearer ${token}`,
@@ -374,17 +457,19 @@ export async function pushFiles(token, username, files, message, repoName = REPO
     return res.json();
   };
 
-  // 1. Get HEAD reference
-  const ref = await gh(`/repos/${repo}/git/ref/heads/main`);
-  const baseSha = ref.object.sha;
+  // 1. If baseSha / baseTreeSha not passed, get them from HEAD
+  let currentBaseSha = baseSha;
+  let currentBaseTreeSha = baseTreeSha;
+  if (!currentBaseSha || !currentBaseTreeSha) {
+    const ref = await gh(`/repos/${repo}/git/ref/heads/main`);
+    currentBaseSha = ref.object.sha;
+    const baseCommit = await gh(`/repos/${repo}/git/commits/${currentBaseSha}`);
+    currentBaseTreeSha = baseCommit.tree.sha;
+  }
 
-  // 2. Get base commit's tree
-  const baseCommit = await gh(`/repos/${repo}/git/commits/${baseSha}`);
-  const baseTreeSha = baseCommit.tree.sha;
-
-  // 3. Create blobs for all files
+  // 2. Create blobs ONLY for changed files
   const treeItems = await Promise.all(
-    files.map(async (f) => {
+    changedFiles.map(async (f) => {
       const blob = await gh(`/repos/${repo}/git/blobs`, {
         method: 'POST',
         body: JSON.stringify({
@@ -401,30 +486,42 @@ export async function pushFiles(token, username, files, message, repoName = REPO
     })
   );
 
-  // 4. Create new tree
+  // 3. Create new tree referencing the base tree (preserves all unchanged files automatically!)
   const newTree = await gh(`/repos/${repo}/git/trees`, {
     method: 'POST',
     body: JSON.stringify({
-      base_tree: baseTreeSha,
+      base_tree: currentBaseTreeSha,
       tree: treeItems,
     }),
   });
 
-  // 5. Create commit
+  // 4. Create commit
   const newCommit = await gh(`/repos/${repo}/git/commits`, {
     method: 'POST',
     body: JSON.stringify({
       message,
       tree: newTree.sha,
-      parents: [baseSha],
+      parents: [currentBaseSha],
     }),
   });
 
-  // 6. Update HEAD reference
+  // 5. Update HEAD reference
   await gh(`/repos/${repo}/git/refs/heads/main`, {
     method: 'PATCH',
     body: JSON.stringify({ sha: newCommit.sha }),
   });
 
-  return { commitSha: newCommit.sha, filesCount: files.length };
+  return {
+    commitSha: newCommit.sha,
+    commitUrl: `https://github.com/${repo}/commit/${newCommit.sha}`,
+    filesCount: changedFiles.length,
+  };
 }
+
+/**
+ * Backward-compatible pushFiles
+ */
+export async function pushFiles(token, username, files, message, repoName = REPO_NAME) {
+  return pushFilesIncremental(token, username, files, message, null, null, repoName);
+}
+

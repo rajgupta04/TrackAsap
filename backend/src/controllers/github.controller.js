@@ -9,11 +9,18 @@ import {
   ensureRepo,
   buildFileTree,
   pushFiles,
+  pushFilesIncremental,
+  getRemoteTree,
+  calculateFileDiff,
   REPO_NAME,
   getInstallationAccessToken,
   getInstallation,
   listInstallationRepositories,
 } from '../services/github.service.js';
+import {
+  generateAICommitMessage,
+  generateHeuristicCommitMessage,
+} from '../services/aiCommit.service.js';
 import {
   decryptText,
   encryptText,
@@ -354,11 +361,126 @@ export const initRepo = async (req, res) => {
   }
 };
 
-// @desc    Sync all code & notes to GitHub
+// @desc    Get incremental Git diff & AI-generated commit message preview
+// @route   GET /api/github/diff
+// @access  Private
+export const getSyncDiff = async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id).select(
+      '+githubAccessToken +githubAccessTokenEnc +githubAccessTokenIv +githubAccessTokenTag'
+    );
+
+    if (!user.githubConnected) {
+      return res.status(400).json({ message: 'GitHub not connected. Please connect your account first.' });
+    }
+
+    const authMode = getUserGitHubAuthMode(user);
+    let githubToken = '';
+    let repoOwner = user.githubRepoOwner || user.githubUsername;
+    let repoName = user.githubRepoName || REPO_NAME;
+
+    if (authMode === 'app') {
+      if (!user.githubInstallationId) {
+        return res.status(400).json({ message: 'GitHub App is not installed for this account.' });
+      }
+      const tokenData = await getInstallationAccessToken(user.githubInstallationId);
+      githubToken = tokenData.token;
+    } else {
+      githubToken = getUserGitHubToken(user);
+      repoOwner = user.githubUsername;
+      repoName = REPO_NAME;
+    }
+
+    if (!githubToken) {
+      return res.status(400).json({ message: 'GitHub not connected. Please connect your account first.' });
+    }
+
+    // Ensure repo exists
+    await ensureRepo(githubToken, repoOwner, {
+      owner: repoOwner,
+      repoName,
+      canCreate: authMode !== 'app',
+    });
+
+    // Fetch all sheet problems with sheet names
+    const sheets = await Sheet.find({ user: user._id }).select('_id name');
+    const sheetMap = {};
+    for (const s of sheets) {
+      sheetMap[s._id.toString()] = s.name;
+    }
+
+    const sheetProblems = await SheetProblem.find({ user: user._id });
+    const enrichedSheetProblems = sheetProblems
+      .filter((sp) => sp.code || sp.notes)
+      .map((sp) => ({
+        ...sp.toObject(),
+        _sheetName: sheetMap[sp.sheet.toString()] || 'Unknown-Sheet',
+      }));
+
+    // Fetch standalone problems
+    const standaloneProblems = await Problem.find({
+      user: user._id,
+      sheetProblem: { $exists: false },
+    });
+    const filteredStandalone = standaloneProblems.filter(
+      (p) => p.code || p.notes
+    );
+
+    // Build local file tree
+    const { files } = buildFileTree(
+      enrichedSheetProblems,
+      filteredStandalone,
+      user.githubUsername,
+      user.lastGithubSync
+    );
+
+    if (files.length <= 1) {
+      return res.json({
+        diff: { added: [], modified: [], unchangedCount: 0, totalLocal: 0, changedCount: 0 },
+        suggestedCommit: {
+          title: 'chore: sync repository with TrackAsap',
+          body: 'No problems with code or notes found to sync.',
+        },
+        repoUrl: `https://github.com/${repoOwner}/${repoName}`,
+        isUpToDate: true,
+        lastSync: user.lastGithubSync,
+      });
+    }
+
+    // Remote tree & diff calculation
+    const repoFull = `${repoOwner}/${repoName}`;
+    const remoteTree = await getRemoteTree(githubToken, repoFull);
+    const diff = calculateFileDiff(files, remoteTree.filesMap);
+
+    // Generate AI Commit Message
+    const suggestedCommit = await generateAICommitMessage(diff);
+
+    res.json({
+      diff: {
+        added: diff.added.map(f => ({ path: f.path, size: (f.content || '').length })),
+        modified: diff.modified.map(f => ({ path: f.path, size: (f.content || '').length })),
+        unchangedCount: diff.unchanged.length,
+        totalLocal: diff.totalLocal,
+        changedCount: diff.changedCount,
+      },
+      suggestedCommit,
+      repoUrl: `https://github.com/${repoOwner}/${repoName}`,
+      isUpToDate: diff.changedCount === 0,
+      lastSync: user.lastGithubSync,
+    });
+  } catch (error) {
+    console.error('GitHub get diff error:', error.message);
+    res.status(500).json({ message: error.message || 'Failed to compute Git diff' });
+  }
+};
+
+// @desc    Sync all code & notes to GitHub incrementally
 // @route   POST /api/github/sync
 // @access  Private
 export const syncToGitHub = async (req, res) => {
   try {
+    const { customCommitTitle, customCommitBody } = req.body || {};
+
     // Fetch user with access token
     const user = await User.findById(req.user._id).select(
       '+githubAccessToken +githubAccessTokenEnc +githubAccessTokenIv +githubAccessTokenTag'
@@ -440,22 +562,48 @@ export const syncToGitHub = async (req, res) => {
     );
 
     if (files.length <= 1) {
-      // Only README, no actual code/notes
       return res.status(400).json({
         message: 'No code or notes to sync. Solve some problems first!',
       });
     }
 
-    const recentMsg = recentTitles.length > 0
-      ? `sync: ${recentTitles.length} updated problem(s) (${recentTitles.slice(0, 2).join(', ')}${recentTitles.length > 2 ? '...' : ''})`
-      : `sync: ${files.length - 1} files from TrackAsap`;
+    // Remote tree & diff calculation
+    const repoFull = `${repoOwner}/${repoName}`;
+    const remoteTree = await getRemoteTree(githubToken, repoFull);
+    const diff = calculateFileDiff(files, remoteTree.filesMap);
 
-    // Push to GitHub in a single commit
-    const result = await pushFiles(
+    const changedFiles = [...diff.added, ...diff.modified];
+
+    if (changedFiles.length === 0) {
+      return res.json({
+        success: true,
+        isUpToDate: true,
+        message: 'Your GitHub repository is already up to date! 🎉',
+        filesChanged: 0,
+        repoUrl: `https://github.com/${repoOwner}/${repoName}`,
+      });
+    }
+
+    // Build commit message
+    let commitMessage = '';
+    if (customCommitTitle && customCommitTitle.trim()) {
+      commitMessage = customCommitTitle.trim();
+      if (customCommitBody && customCommitBody.trim()) {
+        commitMessage += `\n\n${customCommitBody.trim()}`;
+      }
+    } else {
+      const aiCommit = await generateAICommitMessage(diff);
+      commitMessage = `${aiCommit.title}\n\n${aiCommit.body}`;
+    }
+
+    // Push incrementally to GitHub
+    const result = await pushFilesIncremental(
       githubToken,
       repoOwner,
-      files,
-      `${recentMsg} — ${new Date().toISOString().split('T')[0]}`,
+      changedFiles,
+      commitMessage,
+      remoteTree.baseSha,
+      remoteTree.baseTreeSha,
       repoName
     );
 
@@ -465,13 +613,14 @@ export const syncToGitHub = async (req, res) => {
 
     res.json({
       success: true,
-      message: recentTitles.length > 0
-        ? `Synced ${recentTitles.length} problem(s): ${recentTitles.join(', ')}`
-        : `Synced ${files.length - 1} total files`,
+      message: `Successfully synced ${changedFiles.length} changed file(s) to GitHub! 🚀`,
       filesCount: result.filesCount,
-      recentFilesCount,
-      recentTitles,
+      filesChanged: changedFiles.length,
+      addedCount: diff.added.length,
+      modifiedCount: diff.modified.length,
+      unchangedCount: diff.unchanged.length,
       commitSha: result.commitSha,
+      commitUrl: result.commitUrl,
       repoUrl: `https://github.com/${repoOwner}/${repoName}`,
     });
   } catch (error) {
@@ -496,6 +645,7 @@ export const syncToGitHub = async (req, res) => {
       });
     }
 
-    res.status(500).json({ message: error.message });
+    res.status(500).json({ message: error.message || 'Failed to sync to GitHub' });
   }
 };
+

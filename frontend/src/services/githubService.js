@@ -11,8 +11,13 @@ const githubService = {
     return response.data;
   },
 
-  sync: async () => {
-    const response = await api.post('/github/sync');
+  getDiff: async () => {
+    const response = await api.get('/github/diff');
+    return response.data;
+  },
+
+  sync: async (options = {}) => {
+    const response = await api.post('/github/sync', options);
     return response.data;
   },
 
