@@ -162,31 +162,37 @@ const ProblemModal = ({ isOpen, onClose, platform, date, sheetId, sheetTopic, on
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-2">Platform</label>
-                  <select
-                    value={formData.platform}
-                    onChange={(e) => setFormData({ ...formData, platform: e.target.value })}
-                    className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white focus:border-neon-green focus:ring-1 focus:ring-neon-green outline-none transition-all"
-                  >
-                    {PLATFORMS.map((p) => (
-                      <option key={p.value} value={p.value} className="bg-gray-900">
-                        {p.label}
-                      </option>
-                    ))}
-                  </select>
+                  <div className="relative">
+                    <select
+                      value={formData.platform}
+                      onChange={(e) => setFormData({ ...formData, platform: e.target.value })}
+                      className="w-full bg-dark-900/90 border border-white/10 rounded-lg px-4 py-3 pr-10 text-white focus:border-neon-green focus:ring-1 focus:ring-neon-green outline-none appearance-none cursor-pointer transition-all"
+                    >
+                      {PLATFORMS.map((p) => (
+                        <option key={p.value} value={p.value} className="bg-[#11121c] text-white">
+                          {p.label}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown className="w-4 h-4 text-gray-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  </div>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-2">Difficulty</label>
-                  <select
-                    value={formData.difficulty}
-                    onChange={(e) => setFormData({ ...formData, difficulty: e.target.value })}
-                    className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white focus:border-neon-green focus:ring-1 focus:ring-neon-green outline-none transition-all"
-                  >
-                    {DIFFICULTIES.map((d) => (
-                      <option key={d.value} value={d.value} className="bg-gray-900">
-                        {d.label}
-                      </option>
-                    ))}
-                  </select>
+                  <div className="relative">
+                    <select
+                      value={formData.difficulty}
+                      onChange={(e) => setFormData({ ...formData, difficulty: e.target.value })}
+                      className="w-full bg-dark-900/90 border border-white/10 rounded-lg px-4 py-3 pr-10 text-white focus:border-neon-green focus:ring-1 focus:ring-neon-green outline-none appearance-none cursor-pointer transition-all"
+                    >
+                      {DIFFICULTIES.map((d) => (
+                        <option key={d.value} value={d.value} className="bg-[#11121c] text-white">
+                          {d.label}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown className="w-4 h-4 text-gray-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  </div>
                 </div>
               </div>
 
@@ -194,17 +200,20 @@ const ProblemModal = ({ isOpen, onClose, platform, date, sheetId, sheetTopic, on
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-2">Language</label>
-                  <select
-                    value={formData.language}
-                    onChange={(e) => setFormData({ ...formData, language: e.target.value })}
-                    className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white focus:border-neon-green focus:ring-1 focus:ring-neon-green outline-none transition-all"
-                  >
-                    {LANGUAGES.map((l) => (
-                      <option key={l.value} value={l.value} className="bg-gray-900">
-                        {l.label}
-                      </option>
-                    ))}
-                  </select>
+                  <div className="relative">
+                    <select
+                      value={formData.language}
+                      onChange={(e) => setFormData({ ...formData, language: e.target.value })}
+                      className="w-full bg-dark-900/90 border border-white/10 rounded-lg px-4 py-3 pr-10 text-white focus:border-neon-green focus:ring-1 focus:ring-neon-green outline-none appearance-none cursor-pointer transition-all"
+                    >
+                      {LANGUAGES.map((l) => (
+                        <option key={l.value} value={l.value} className="bg-[#11121c] text-white">
+                          {l.label}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown className="w-4 h-4 text-gray-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  </div>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-2">
