@@ -662,26 +662,32 @@ const SheetProblemsView = ({ sheet, onStatsUpdate, onDelete }) => {
           />
         </div>
         <div className="grid grid-cols-2 sm:flex gap-2.5 sm:gap-3">
-          <select
-            value={filterDifficulty}
-            onChange={(e) => setFilterDifficulty(e.target.value)}
-            className="px-3 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm bg-white/5 border border-white/10 rounded-xl text-white outline-none focus:border-neon-green w-full sm:w-auto"
-          >
-            <option value="all">All Difficulty</option>
-            <option value="easy">Easy</option>
-            <option value="medium">Medium</option>
-            <option value="hard">Hard</option>
-          </select>
-          <select
-            value={filterStatus}
-            onChange={(e) => setFilterStatus(e.target.value)}
-            className="px-3 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm bg-white/5 border border-white/10 rounded-xl text-white outline-none focus:border-neon-green w-full sm:w-auto"
-          >
-            <option value="all">All Status</option>
-            <option value="pending">Pending</option>
-            <option value="solved">Solved</option>
-            <option value="revision">Revision</option>
-          </select>
+          <div className="relative w-full sm:w-auto">
+            <select
+              value={filterDifficulty}
+              onChange={(e) => setFilterDifficulty(e.target.value)}
+              className="px-3 sm:px-4 py-2 sm:py-2.5 pr-8 text-xs sm:text-sm bg-dark-900/90 border border-white/10 rounded-xl text-white outline-none focus:border-neon-green appearance-none cursor-pointer w-full transition-colors"
+            >
+              <option value="all" className="bg-[#11121c] text-white">All Difficulty</option>
+              <option value="easy" className="bg-[#11121c] text-white">Easy</option>
+              <option value="medium" className="bg-[#11121c] text-white">Medium</option>
+              <option value="hard" className="bg-[#11121c] text-white">Hard</option>
+            </select>
+            <ChevronDown className="w-3.5 h-3.5 text-gray-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+          </div>
+          <div className="relative w-full sm:w-auto">
+            <select
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value)}
+              className="px-3 sm:px-4 py-2 sm:py-2.5 pr-8 text-xs sm:text-sm bg-dark-900/90 border border-white/10 rounded-xl text-white outline-none focus:border-neon-green appearance-none cursor-pointer w-full transition-colors"
+            >
+              <option value="all" className="bg-[#11121c] text-white">All Status</option>
+              <option value="pending" className="bg-[#11121c] text-white">Pending</option>
+              <option value="solved" className="bg-[#11121c] text-white">Solved</option>
+              <option value="revision" className="bg-[#11121c] text-white">Revision</option>
+            </select>
+            <ChevronDown className="w-3.5 h-3.5 text-gray-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+          </div>
         </div>
       </div>
 
@@ -1852,31 +1858,37 @@ const AddProblemModal = ({ sheet, onClose, onSuccess }) => {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-1.5">Difficulty</label>
-                <select
-                  value={formData.difficulty}
-                  onChange={(e) => setFormData({ ...formData, difficulty: e.target.value })}
-                  className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white outline-none focus:border-neon-green"
-                >
-                  <option value="easy">Easy</option>
-                  <option value="medium">Medium</option>
-                  <option value="hard">Hard</option>
-                </select>
+                <div className="relative">
+                  <select
+                    value={formData.difficulty}
+                    onChange={(e) => setFormData({ ...formData, difficulty: e.target.value })}
+                    className="w-full bg-dark-900/90 border border-white/10 rounded-lg px-4 py-2.5 pr-10 text-white outline-none focus:border-neon-green appearance-none cursor-pointer transition-colors"
+                  >
+                    <option value="easy" className="bg-[#11121c] text-white">Easy</option>
+                    <option value="medium" className="bg-[#11121c] text-white">Medium</option>
+                    <option value="hard" className="bg-[#11121c] text-white">Hard</option>
+                  </select>
+                  <ChevronDown className="w-4 h-4 text-gray-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                </div>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-1.5">Platform</label>
-                <select
-                  value={formData.platform}
-                  onChange={(e) => setFormData({ ...formData, platform: e.target.value })}
-                  className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white outline-none focus:border-neon-green"
-                >
-                  <option value="leetcode">LeetCode</option>
-                  <option value="geeksforgeeks">GeeksForGeeks</option>
-                  <option value="codeforces">Codeforces</option>
-                  <option value="codechef">CodeChef</option>
-                  <option value="hackerrank">HackerRank</option>
-                  <option value="interviewbit">InterviewBit</option>
-                  <option value="other">Other</option>
-                </select>
+                <div className="relative">
+                  <select
+                    value={formData.platform}
+                    onChange={(e) => setFormData({ ...formData, platform: e.target.value })}
+                    className="w-full bg-dark-900/90 border border-white/10 rounded-lg px-4 py-2.5 pr-10 text-white outline-none focus:border-neon-green appearance-none cursor-pointer transition-colors"
+                  >
+                    <option value="leetcode" className="bg-[#11121c] text-white">LeetCode</option>
+                    <option value="geeksforgeeks" className="bg-[#11121c] text-white">GeeksForGeeks</option>
+                    <option value="codeforces" className="bg-[#11121c] text-white">Codeforces</option>
+                    <option value="codechef" className="bg-[#11121c] text-white">CodeChef</option>
+                    <option value="hackerrank" className="bg-[#11121c] text-white">HackerRank</option>
+                    <option value="interviewbit" className="bg-[#11121c] text-white">InterviewBit</option>
+                    <option value="other" className="bg-[#11121c] text-white">Other</option>
+                  </select>
+                  <ChevronDown className="w-4 h-4 text-gray-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                </div>
               </div>
             </div>
 

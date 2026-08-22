@@ -178,3 +178,22 @@ body {
 .recharts-text {
   fill: #94a3b8;
 }
+
+/* Global Dark Theme Form Controls */
+select, input, textarea {
+  color-scheme: dark;
+}
+
+select option {
+  background-color: #11121c !important;
+  color: #e2e8f0 !important;
+  padding: 8px 12px;
+}
+
+select option:hover,
+select option:focus,
+select option:checked {
+  background-color: #1e1f31 !important;
+  color: #39ff14 !important;
+}
+
