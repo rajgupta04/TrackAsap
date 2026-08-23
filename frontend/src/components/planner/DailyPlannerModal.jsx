@@ -91,6 +91,7 @@ export const DailyPlannerModal = () => {
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [newTaskDuration, setNewTaskDuration] = useState(45);
   const [remainingSeconds, setRemainingSeconds] = useState(0);
+  const [glitchModalData, setGlitchModalData] = useState(null);
 
   useEffect(() => {
     fetchActiveSession();
@@ -140,6 +141,32 @@ export const DailyPlannerModal = () => {
       return;
     }
     addSubject(sample);
+  };
+
+  // Easter egg Matrix glitch check on checking off tasks too early
+  const handleTaskCheckClick = (task) => {
+    if (task.completed) {
+      toggleTask(task.id);
+      return;
+    }
+
+    const sessionStartMs = currentPlan?.sessionStartedAt
+      ? new Date(currentPlan.sessionStartedAt).getTime()
+      : Date.now();
+    const elapsedMinutes = Math.max(0, Math.floor((Date.now() - sessionStartMs) / 60000));
+    const taskDuration = Math.max(1, Number(task.duration) || 30);
+
+    // If task duration >= 15 min and checked when < 25% of required duration has passed
+    if (taskDuration >= 15 && elapsedMinutes < Math.floor(taskDuration * 0.25)) {
+      setGlitchModalData({
+        task,
+        elapsedMinutes,
+        taskDuration,
+      });
+      return;
+    }
+
+    toggleTask(task.id);
   };
 
   // Reorder task helper (move up / down)
@@ -1075,7 +1102,7 @@ export const DailyPlannerModal = () => {
                   {currentPlan.plan.tasks?.map((t) => (
                     <div
                       key={t.id}
-                      onClick={() => toggleTask(t.id)}
+                      onClick={() => handleTaskCheckClick(t)}
                       className={`cursor-pointer flex items-center justify-between p-3 rounded-xl border transition-all ${
                         t.completed
                           ? 'bg-neon-green/10 border-neon-green/30 text-dark-300'
@@ -1340,6 +1367,81 @@ export const DailyPlannerModal = () => {
           )}
         </div>
       </motion.div>
+
+      {/* ════════════════════════════════════════════════════════════════ */}
+      {/* ── MATRIX GLITCH EASTER EGG POPUP ────────────────────────────── */}
+      {/* ════════════════════════════════════════════════════════════════ */}
+      <AnimatePresence>
+        {glitchModalData && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/90 backdrop-blur-xl select-none"
+          >
+            {/* Matrix Digital Scanlines Backdrop */}
+            <div className="absolute inset-0 bg-[radial-gradient(#00FF66_1px,transparent_1px)] [background-size:16px_16px] opacity-15 pointer-events-none" />
+
+            <motion.div
+              initial={{ scale: 0.85, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.85, y: 20 }}
+              transition={{ type: 'spring', damping: 20 }}
+              className="relative max-w-md w-full p-6 sm:p-7 rounded-3xl bg-dark-950/95 border-2 border-emerald-500/50 shadow-[0_0_60px_rgba(0,255,102,0.3)] text-center space-y-5 overflow-hidden"
+            >
+              {/* Pulsing Status Badge */}
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-400/40 text-emerald-400 font-mono text-[11px] font-bold tracking-widest uppercase animate-pulse">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+                <span>Matrix Anomaly Detected</span>
+              </div>
+
+              <div className="space-y-2">
+                <div className="text-4xl">🕶️ 💊</div>
+                <h3 className="text-xl font-mono font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-teal-300 to-cyan-400 tracking-tight">
+                  Is there a glitch in the Matrix or what?
+                </h3>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-black/80 border border-emerald-500/20 font-mono text-xs text-left space-y-2.5">
+                <div className="text-emerald-400/80 text-[10px]">&gt; ERROR: TEMPORAL FLOW MISMATCH</div>
+                <div className="text-white text-xs leading-relaxed">
+                  Timer says only <span className="text-emerald-400 font-extrabold underline">{glitchModalData.elapsedMinutes} minute{glitchModalData.elapsedMinutes === 1 ? '' : 's'}</span> {glitchModalData.elapsedMinutes === 0 ? 'have barely' : 'have'} passed, but you're checking off a task that requires <span className="text-pink-400 font-extrabold underline">{glitchModalData.taskDuration} minutes</span>:
+                </div>
+                <div className="p-2.5 rounded-xl bg-white/5 border border-white/10 text-emerald-300 font-bold flex items-center gap-2">
+                  <span>{glitchModalData.task.icon || '📝'}</span>
+                  <span className="truncate flex-1">{glitchModalData.task.title}</span>
+                  <span className="text-[10px] text-dark-400 font-mono">({glitchModalData.taskDuration}m)</span>
+                </div>
+                <div className="text-amber-300 text-[11px] pt-1">
+                  Are there any other pills except <span className="text-rose-400 font-bold">Red</span> and <span className="text-cyan-400 font-bold">Blue</span>? 🤔
+                </div>
+              </div>
+
+              {/* Pill Choices */}
+              <div className="flex flex-col sm:flex-row gap-2.5 pt-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    toggleTask(glitchModalData.task.id);
+                    setGlitchModalData(null);
+                    toast('🔴 Red Pill taken. Reality bent.', { icon: '🕶️' });
+                  }}
+                  className="flex-1 py-3 px-3 rounded-xl bg-gradient-to-r from-rose-600 to-red-500 hover:from-rose-500 hover:to-red-400 text-white font-mono font-bold text-xs shadow-lg shadow-red-500/30 border border-red-400/50 active:scale-95 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                >
+                  <span>🔴 Red Pill (I'm that fast)</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setGlitchModalData(null)}
+                  className="flex-1 py-3 px-3 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white font-mono font-bold text-xs shadow-lg shadow-cyan-500/30 border border-cyan-400/50 active:scale-95 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                >
+                  <span>🔵 Blue Pill (Back to reality)</span>
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
