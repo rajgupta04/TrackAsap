@@ -24,6 +24,7 @@ import judgeProblemRoutes from './routes/judgeProblem.routes.js';
 import judgeRoutes from './routes/judge.routes.js';
 import featureRoutes from './routes/feature.routes.js';
 import telemetryRoutes from './routes/telemetry.routes.js';
+import dailyPlanRoutes from './routes/dailyPlan.routes.js';
 import { initLeaderboardCron } from './cron/leaderboard.cron.js';
 import { requestLogger } from './analytics/middlewares/requestLogger.js';
 import { startAnalyticsCronJobs } from './analytics/cron/aggregateDaily.js';
@@ -82,6 +83,7 @@ app.use('/api/judge-problems', judgeProblemRoutes);
 app.use('/api/judge', judgeRoutes);
 app.use('/api/features', featureRoutes);
 app.use('/api/telemetry', telemetryRoutes);
+app.use('/api/daily-plan', dailyPlanRoutes);
 
 // System Analytics (Admin only)
 app.use('/api/system-analytics', systemAnalyticsRoutes);

@@ -24,11 +24,13 @@ import {
   Award,
   CheckCircle2,
   User as UserIcon,
+  Brain,
 } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { useAnalyticsStore } from '../store/analyticsStore';
 import useProblemStore from '../store/problemStore';
 import useSheetStore from '../store/sheetStore';
+import useDailyPlanStore from '../store/dailyPlanStore';
 import discussionService from '../services/discussionService';
 import { getAvatarSrc } from '../utils/avatar';
 import GlassCard from '../components/ui/GlassCard';
@@ -209,6 +211,7 @@ const Dashboard = () => {
   const { dashboard, fetchDashboard, isLoading } = useAnalyticsStore();
   const { problems, fetchProblems } = useProblemStore();
   const { sheets, fetchSheets } = useSheetStore();
+  const { openModal, currentPlan } = useDailyPlanStore();
   const [posts, setPosts] = useState([]);
   const [postsLoading, setPostsLoading] = useState(true);
 
@@ -308,8 +311,27 @@ const Dashboard = () => {
             </p>
           </div>
 
-          {/* Quick Stats Badges */}
+          {/* Quick Stats Badges & Planner Button */}
           <div className="flex items-center gap-3 flex-wrap">
+            <button
+              type="button"
+              onClick={() => openModal()}
+              className="flex items-center gap-2.5 px-4 py-2 rounded-xl bg-gradient-to-r from-neon-green/15 via-emerald-500/10 to-cyan-500/15 border border-neon-green/40 hover:border-neon-green/80 backdrop-blur-md transition-all shadow-lg shadow-neon-green/5 group text-left cursor-pointer active:scale-95"
+            >
+              <div className="w-8 h-8 rounded-lg bg-neon-green/20 border border-neon-green/30 flex items-center justify-center text-neon-green group-hover:scale-110 transition-transform">
+                <Brain className="w-4 h-4" />
+              </div>
+              <div>
+                <div className="text-[10px] text-neon-green font-extrabold uppercase tracking-wider flex items-center gap-1">
+                  <span>AI Planner</span>
+                  <Sparkles className="w-2.5 h-2.5" />
+                </div>
+                <div className="text-sm font-bold text-white">
+                  {currentPlan?.status === 'active' ? 'Active Session' : 'Plan Your Day'}
+                </div>
+              </div>
+            </button>
+
             <div className="flex items-center gap-2.5 px-4 py-2 rounded-xl bg-dark-900/80 border border-white/10 backdrop-blur-md">
               <div className="w-8 h-8 rounded-lg bg-amber-500/15 border border-amber-500/25 flex items-center justify-center text-amber-400">
                 <Flame className="w-4 h-4" />
