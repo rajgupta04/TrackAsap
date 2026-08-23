@@ -32,6 +32,16 @@
 - `GET /api/analytics/codeforces-rating` - CF rating history (Protected)
 - `GET /api/analytics/weight-progress` - Weight trend (Protected)
 
+### AI Daily Study Planner
+- `POST /api/daily-plan/generate` - Generate dual AI study plans via Gemini (Protected)
+- `POST /api/daily-plan` - Save chosen/customized daily plan draft (Protected)
+- `GET /api/daily-plan/active` - Fetch current active session or latest draft (Protected)
+- `GET /api/daily-plan/history` - Fetch completed study session history (Protected)
+- `PATCH /api/daily-plan/:id/start-session` - Launch non-stop session & snapshot sheets (Protected)
+- `PATCH /api/daily-plan/:id/tasks` - Update and re-sequence tasks in plan (Protected)
+- `PATCH /api/daily-plan/:id/toggle-task` - Toggle completion status of a task (Protected)
+- `POST /api/daily-plan/:id/end-session` - Complete session & generate report (Protected)
+
 ## Setup
 
 ```bash
@@ -41,11 +51,14 @@ cp .env.example .env
 npm run dev
 ```
 
-Google OAuth env:
+Google OAuth & Gemini AI env:
 
 ```bash
 # Server-side verification audience
 GOOGLE_CLIENT_ID=your_google_oauth_client_id
+
+# Google Gemini AI Key (Required for AI Daily Study Planner)
+GEMINI_API_KEY=your_gemini_api_key_here
 ```
 
 ## Striver A2Z Bucket Seeding
