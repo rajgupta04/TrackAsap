@@ -1140,67 +1140,126 @@ export const DailyPlannerModal = () => {
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
                 {/* Left Column: Clock & Actions */}
                 <div className="lg:col-span-5 space-y-4">
-                  {/* Header Clock */}
-                  <div className="p-6 sm:p-8 rounded-3xl bg-gradient-to-br from-dark-950 to-dark-900 border border-neon-green/30 text-center space-y-4 relative overflow-hidden shadow-2xl">
+                  {/* Header Clock Cockpit */}
+                  <div className="p-5 sm:p-6 rounded-3xl bg-gradient-to-br from-dark-950 via-dark-900 to-dark-950 border border-neon-green/30 text-center space-y-4 relative overflow-hidden shadow-2xl shadow-neon-green/5">
                     <div className="flex items-center justify-between text-xs text-dark-400">
-                      <div className="flex items-center gap-1.5 text-neon-green font-semibold">
-                        <span className="w-2 h-2 rounded-full bg-neon-green animate-ping" />
-                        <span>SESSION ACTIVE • NON-STOP</span>
+                      <div className="flex items-center gap-2 text-neon-green font-bold text-[11px] uppercase tracking-wider">
+                        <span className="relative flex h-2 w-2">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-neon-green opacity-75"></span>
+                          <span className="relative inline-flex rounded-full h-2 w-2 bg-neon-green"></span>
+                        </span>
+                        <span>SESSION ACTIVE</span>
                       </div>
-                      <span>Mode: <strong className="capitalize text-white">{currentPlan.mode}</strong></span>
+                      <span className="px-2 py-0.5 rounded-full bg-white/5 border border-white/10 text-[10px] text-dark-300 font-medium">
+                        Mode: <strong className="capitalize text-neon-green">{currentPlan.mode}</strong>
+                      </span>
                     </div>
 
-                    <div className="font-mono text-4xl sm:text-5xl lg:text-6xl font-extrabold text-white tracking-widest drop-shadow-[0_0_25px_rgba(57,255,20,0.35)] py-2">
-                      {formatCountdown(remainingSeconds)}
+                    {/* Responsive Digit Blocks Clock */}
+                    <div className="flex items-center justify-center gap-1.5 sm:gap-2.5 font-mono py-1">
+                      {/* Hours */}
+                      <div className="flex-1 max-w-[85px] flex flex-col items-center bg-dark-950/80 border border-white/15 rounded-2xl py-2.5 px-2 shadow-inner">
+                        <span className="text-2xl sm:text-3xl lg:text-4xl font-black text-white tracking-tight">
+                          {String(Math.floor(remainingSeconds / 3600)).padStart(2, '0')}
+                        </span>
+                        <span className="text-[9px] uppercase tracking-widest text-dark-400 font-bold mt-0.5">
+                          Hours
+                        </span>
+                      </div>
+
+                      <span className="text-xl sm:text-2xl font-black text-neon-green/80 animate-pulse select-none">
+                        :
+                      </span>
+
+                      {/* Minutes */}
+                      <div className="flex-1 max-w-[85px] flex flex-col items-center bg-dark-950/80 border border-white/15 rounded-2xl py-2.5 px-2 shadow-inner">
+                        <span className="text-2xl sm:text-3xl lg:text-4xl font-black text-white tracking-tight">
+                          {String(Math.floor((remainingSeconds % 3600) / 60)).padStart(2, '0')}
+                        </span>
+                        <span className="text-[9px] uppercase tracking-widest text-dark-400 font-bold mt-0.5">
+                          Mins
+                        </span>
+                      </div>
+
+                      <span className="text-xl sm:text-2xl font-black text-neon-green/80 animate-pulse select-none">
+                        :
+                      </span>
+
+                      {/* Seconds */}
+                      <div className="flex-1 max-w-[85px] flex flex-col items-center bg-dark-950/80 border border-neon-green/40 rounded-2xl py-2.5 px-2 shadow-inner shadow-neon-green/10">
+                        <span className="text-2xl sm:text-3xl lg:text-4xl font-black text-neon-green tracking-tight">
+                          {String(remainingSeconds % 60).padStart(2, '0')}
+                        </span>
+                        <span className="text-[9px] uppercase tracking-widest text-neon-green/80 font-bold mt-0.5">
+                          Secs
+                        </span>
+                      </div>
                     </div>
 
-                    <p className="text-xs text-dark-300 font-medium">
+                    <div className="text-xs text-dark-300 font-semibold px-2 truncate">
                       {currentPlan.plan.title}
-                    </p>
+                    </div>
 
-                    {/* Progress bar */}
-                    <div className="w-full h-2.5 bg-white/10 rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-gradient-to-r from-neon-green to-emerald-400 rounded-full transition-all duration-500"
-                        style={{
-                          width: `${
-                            currentPlan.plan.tasks?.length > 0
-                              ? Math.round(
-                                  ((currentPlan.plan.tasks.filter((t) => t.completed).length) /
-                                    currentPlan.plan.tasks.length) *
-                                    100
-                                )
-                              : 0
-                          }%`,
-                        }}
-                      />
+                    {/* Progress Bar & Stats */}
+                    <div className="space-y-1.5 pt-1 text-left">
+                      <div className="flex justify-between items-center text-[11px]">
+                        <span className="text-dark-400 font-medium">Session Progress</span>
+                        <span className="font-mono text-neon-green font-bold">
+                          {currentPlan.plan.tasks?.filter((t) => t.completed).length || 0} /{' '}
+                          {currentPlan.plan.tasks?.length || 0} Done (
+                          {currentPlan.plan.tasks?.length > 0
+                            ? Math.round(
+                                ((currentPlan.plan.tasks.filter((t) => t.completed).length) /
+                                  currentPlan.plan.tasks.length) *
+                                  100
+                              )
+                            : 0}
+                          %)
+                        </span>
+                      </div>
+                      <div className="w-full h-2 bg-black/50 border border-white/10 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-gradient-to-r from-neon-green via-emerald-400 to-cyan-400 rounded-full transition-all duration-500"
+                          style={{
+                            width: `${
+                              currentPlan.plan.tasks?.length > 0
+                                ? Math.round(
+                                    ((currentPlan.plan.tasks.filter((t) => t.completed).length) /
+                                      currentPlan.plan.tasks.length) *
+                                      100
+                                  )
+                                : 0
+                            }%`,
+                          }}
+                        />
+                      </div>
                     </div>
                   </div>
 
                   {/* Monitored Sheets Bar */}
                   {currentPlan.sheetSnapshotsStart?.length > 0 && (
-                    <div className="p-4 rounded-2xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-between gap-3 text-xs">
-                      <div className="flex items-center gap-2">
+                    <div className="p-3.5 rounded-2xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-between gap-3 text-xs">
+                      <div className="flex items-center gap-2 min-w-0">
                         <BarChart3 className="w-4 h-4 text-cyan-400 shrink-0" />
-                        <div>
-                          <span className="font-bold text-white">Live Sheet Monitoring: </span>
-                          <span className="text-cyan-300">
+                        <div className="min-w-0">
+                          <span className="font-bold text-white">Monitoring: </span>
+                          <span className="text-cyan-300 font-medium truncate">
                             {currentPlan.sheetSnapshotsStart.map((s) => s.sheetName).join(', ')}
                           </span>
                         </div>
                       </div>
-                      <span className="text-[10px] px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-200 font-mono font-bold shrink-0">
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-200 font-mono font-bold shrink-0 border border-cyan-400/30">
                         Syncing
                       </span>
                     </div>
                   )}
 
                   {/* Action Buttons */}
-                  <div className="flex flex-col gap-2.5 pt-1">
+                  <div className="flex flex-col gap-2 pt-1">
                     <button
                       type="button"
                       onClick={endSession}
-                      className="w-full py-3.5 px-4 rounded-2xl bg-gradient-to-r from-red-600/90 to-rose-600/90 hover:from-red-500 hover:to-rose-500 text-white font-extrabold text-xs shadow-lg shadow-red-500/20 border border-red-400/30 transition-all flex items-center justify-center gap-2 cursor-pointer"
+                      className="w-full py-3.5 px-4 rounded-2xl bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white font-extrabold text-xs shadow-lg shadow-red-500/20 border border-red-400/30 transition-all flex items-center justify-center gap-2 cursor-pointer"
                     >
                       <span>Finish Session & View Report 🏁</span>
                     </button>
@@ -1215,60 +1274,93 @@ export const DailyPlannerModal = () => {
                 </div>
 
                 {/* Right Column: Task Checklist */}
-                <div className="lg:col-span-7 space-y-2">
+                <div className="lg:col-span-7 space-y-3">
                   <div className="flex justify-between items-center px-1">
-                    <h4 className="text-xs font-bold text-dark-400 uppercase tracking-wider">
-                      Task Checklist ({currentPlan.plan.tasks?.filter((t) => t.completed).length} / {currentPlan.plan.tasks?.length} Done)
+                    <h4 className="text-xs font-bold text-dark-400 uppercase tracking-wider flex items-center gap-1.5">
+                      <span>Task Checklist</span>
+                      <span className="px-2 py-0.5 rounded-full bg-white/5 text-white font-mono text-[10px]">
+                        {currentPlan.plan.tasks?.filter((t) => t.completed).length} /{' '}
+                        {currentPlan.plan.tasks?.length}
+                      </span>
                     </h4>
-                    <span className="text-[11px] text-neon-green">Check off as you complete</span>
+                    <span className="text-[11px] text-neon-green font-medium">
+                      Check off as you complete
+                    </span>
                   </div>
 
                   <div
-                    className={`space-y-2 overflow-y-auto pr-1 scrollbar-thin ${
-                      isFullScreen ? 'max-h-[calc(100vh-230px)]' : 'max-h-72'
+                    className={`space-y-2.5 overflow-y-auto pr-1 scrollbar-thin ${
+                      isFullScreen ? 'max-h-[calc(100vh-230px)]' : 'max-h-[420px]'
                     }`}
                   >
                     {currentPlan.plan.tasks?.map((t) => (
                       <div
                         key={t.id}
                         onClick={() => handleTaskCheckClick(t)}
-                        className={`cursor-pointer flex items-center justify-between p-3.5 rounded-2xl border transition-all ${
+                        className={`group cursor-pointer flex items-center justify-between p-3.5 rounded-2xl border transition-all ${
                           t.completed
-                            ? 'bg-neon-green/10 border-neon-green/30 text-dark-300'
-                            : 'bg-dark-800/80 border-white/10 hover:border-white/20 text-white shadow-sm'
+                            ? 'bg-neon-green/5 border-neon-green/30 text-dark-400'
+                            : 'bg-dark-800/85 hover:bg-dark-800 border-white/10 hover:border-white/20 text-white shadow-sm'
                         }`}
                       >
-                        <div className="flex items-center gap-3 min-w-0">
+                        <div className="flex items-center gap-3.5 min-w-0 flex-1">
+                          {/* Checkbox */}
                           <button
                             type="button"
-                            className={`w-5 h-5 rounded-lg flex items-center justify-center border transition-all ${
+                            className={`w-5 h-5 rounded-lg flex items-center justify-center border transition-all shrink-0 ${
                               t.completed
-                                ? 'bg-neon-green border-neon-green text-black font-bold'
-                                : 'border-white/30 hover:border-white'
+                                ? 'bg-neon-green border-neon-green text-black font-extrabold shadow-sm shadow-neon-green/30'
+                                : 'border-white/25 bg-white/5 group-hover:border-neon-green/60'
                             }`}
                           >
-                            {t.completed && <Check className="w-3.5 h-3.5" />}
+                            {t.completed && <Check className="w-3.5 h-3.5 stroke-[3]" />}
                           </button>
-                          <span className="text-base">{t.icon || '📝'}</span>
-                          <div className="min-w-0">
+
+                          <span className="text-xl shrink-0 select-none">{t.icon || '📝'}</span>
+
+                          <div className="min-w-0 flex-1">
                             <span
-                              className={`text-xs font-semibold truncate block ${
-                                t.completed ? 'line-through text-dark-400' : 'text-white'
+                              className={`text-xs font-bold truncate block transition-all ${
+                                t.completed ? 'line-through text-dark-400' : 'text-white group-hover:text-neon-green'
                               }`}
                             >
                               {t.title}
                             </span>
-                            <span className="text-[10px] text-dark-400 font-mono">{t.time}</span>
+                            <div className="flex items-center gap-2 mt-1">
+                              <span className="text-[10px] text-dark-400 font-mono flex items-center gap-1">
+                                <Clock className="w-2.5 h-2.5 text-dark-500" />
+                                {t.time}
+                              </span>
+                            </div>
                           </div>
                         </div>
 
-                        <div className="flex items-center gap-2 shrink-0">
+                        {/* Badges & Duration */}
+                        <div className="flex items-center gap-2 shrink-0 ml-2">
                           {t.category === 'study' && t.linkedSheetName && (
-                            <span className="text-[9px] px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-300 font-medium">
+                            <span className="text-[10px] px-2 py-0.5 rounded-md bg-cyan-500/15 border border-cyan-500/30 text-cyan-300 font-medium">
                               📊 {t.linkedSheetName}
                             </span>
                           )}
-                          <span className="text-[10px] text-dark-400 font-mono">{t.duration}m</span>
+                          {t.category === 'break' && (
+                            <span className="text-[10px] px-2 py-0.5 rounded-md bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 font-medium">
+                              ☕ Break
+                            </span>
+                          )}
+                          {t.category === 'meal' && (
+                            <span className="text-[10px] px-2 py-0.5 rounded-md bg-amber-500/15 border border-amber-500/30 text-amber-400 font-medium">
+                              🍽️ Meal
+                            </span>
+                          )}
+                          {t.category === 'nap' && (
+                            <span className="text-[10px] px-2 py-0.5 rounded-md bg-indigo-500/15 border border-indigo-500/30 text-indigo-300 font-medium">
+                              💤 Nap
+                            </span>
+                          )}
+
+                          <span className="px-2.5 py-1 rounded-xl bg-dark-950/80 border border-white/10 text-xs font-mono font-bold text-neon-green/90 shadow-inner">
+                            {t.duration}m
+                          </span>
                         </div>
                       </div>
                     ))}
