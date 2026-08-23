@@ -1063,29 +1063,31 @@ export const DailyPlannerModal = () => {
                             />
                             <div className="flex items-center gap-2 mt-1 flex-wrap">
                               <span className="text-[10px] text-dark-400 font-mono">{t.time}</span>
-                              {/* Sheet Linker Selector */}
-                              <div className="flex items-center gap-1">
-                                <span className="text-[9px] text-dark-400">Sheet:</span>
-                                <select
-                                  value={t.linkedSheetId || ''}
-                                  onChange={(e) => {
-                                    const selectedId = e.target.value;
-                                    const selectedSheet = sheets.find((s) => s._id === selectedId);
-                                    const updated = [...currentPlan.plan.tasks];
-                                    updated[idx].linkedSheetId = selectedId || undefined;
-                                    updated[idx].linkedSheetName = selectedSheet?.name || undefined;
-                                    updateLocalTasks(updated);
-                                  }}
-                                  className="text-[10px] font-semibold bg-dark-900/90 border border-white/15 rounded-md px-1.5 py-0.5 text-cyan-300 focus:border-cyan-400 focus:outline-none cursor-pointer max-w-[140px] truncate"
-                                >
-                                  <option value="" className="text-dark-400">Auto (Platform Sync)</option>
-                                  {sheets.map((s) => (
-                                    <option key={s._id} value={s._id} className="text-white bg-dark-900">
-                                      📊 {s.name}
-                                    </option>
-                                  ))}
-                                </select>
-                              </div>
+                              {/* Sheet Linker Selector (Only for study tasks) */}
+                              {t.category === 'study' && (
+                                <div className="flex items-center gap-1">
+                                  <span className="text-[9px] text-dark-400">Sheet:</span>
+                                  <select
+                                    value={t.linkedSheetId || ''}
+                                    onChange={(e) => {
+                                      const selectedId = e.target.value;
+                                      const selectedSheet = sheets.find((s) => s._id === selectedId);
+                                      const updated = [...currentPlan.plan.tasks];
+                                      updated[idx].linkedSheetId = selectedId || undefined;
+                                      updated[idx].linkedSheetName = selectedSheet?.name || undefined;
+                                      updateLocalTasks(updated);
+                                    }}
+                                    className="text-[10px] font-semibold bg-dark-900/90 border border-white/15 rounded-md px-1.5 py-0.5 text-cyan-300 focus:border-cyan-400 focus:outline-none cursor-pointer max-w-[140px] truncate"
+                                  >
+                                    <option value="" className="text-dark-400">Auto (Platform Sync)</option>
+                                    {sheets.map((s) => (
+                                      <option key={s._id} value={s._id} className="text-white bg-dark-900">
+                                        📊 {s.name}
+                                      </option>
+                                    ))}
+                                  </select>
+                                </div>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -1261,7 +1263,7 @@ export const DailyPlannerModal = () => {
                         </div>
 
                         <div className="flex items-center gap-2 shrink-0">
-                          {t.linkedSheetName && (
+                          {t.category === 'study' && t.linkedSheetName && (
                             <span className="text-[9px] px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-300 font-medium">
                               📊 {t.linkedSheetName}
                             </span>
