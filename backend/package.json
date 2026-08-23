@@ -13,6 +13,7 @@
     "extract:a2z": "node src/seeding/extractStriverA2Z.js"
   },
   "dependencies": {
+    "@e965/xlsx": "^0.20.3",
     "@google/genai": "^2.12.0",
     "bcryptjs": "^2.4.3",
     "cloudinary": "^2.5.1",
@@ -33,5 +34,10 @@
   },
   "devDependencies": {
     "nodemon": "^3.0.2"
+  },
+  "overrides": {
+    "multer-storage-cloudinary": {
+      "cloudinary": "$cloudinary"
+    }
   }
 }

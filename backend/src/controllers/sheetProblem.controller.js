@@ -2,7 +2,7 @@ import mongoose from 'mongoose';
 import SheetProblem from '../models/SheetProblem.model.js';
 import Sheet from '../models/Sheet.model.js';
 import Problem from '../models/Problem.model.js';
-import xlsx from 'xlsx';
+import xlsx from '@e965/xlsx';
 
 // @desc    Get all problems for a sheet
 // @route   GET /api/sheet-problems/:sheetId
