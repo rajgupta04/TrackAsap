@@ -235,13 +235,24 @@ export const DailyPlannerModal = () => {
               >
                 <Minus className="w-2 h-2 text-black/80 opacity-0 group-hover/traffic:opacity-100 stroke-[3] transition-opacity" />
               </button>
-              {/* Green dot: Plus means Full Screen mode */}
+              {/* Green dot: Full Screen / Window Mode */}
               <button
                 type="button"
                 onClick={() => setIsFullScreen((prev) => !prev)}
                 className="w-3 h-3 rounded-full bg-[#28C840] hover:brightness-110 active:brightness-90 flex items-center justify-center transition-all cursor-pointer"
               >
-                <Plus className="w-2 h-2 text-black/80 opacity-0 group-hover/traffic:opacity-100 stroke-[3] transition-opacity" />
+                <svg
+                  className="w-2 h-2 text-black/80 opacity-0 group-hover/traffic:opacity-100 transition-opacity"
+                  viewBox="0 0 16 16"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M5 2h7a2 2 0 0 1 2 2v7" />
+                  <rect x="2" y="5" width="9" height="9" rx="1.5" />
+                </svg>
               </button>
             </div>
             <div className="flex items-center gap-2">
