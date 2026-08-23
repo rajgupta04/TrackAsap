@@ -11,6 +11,7 @@ import {
   CheckCircle2,
   Circle,
   Plus,
+  Minus,
   Trash2,
   ChevronRight,
   ArrowLeft,
@@ -92,6 +93,7 @@ export const DailyPlannerModal = () => {
   const [newTaskDuration, setNewTaskDuration] = useState(45);
   const [remainingSeconds, setRemainingSeconds] = useState(0);
   const [glitchModalData, setGlitchModalData] = useState(null);
+  const [isFullScreen, setIsFullScreen] = useState(false);
 
   useEffect(() => {
     fetchActiveSession();
@@ -205,36 +207,50 @@ export const DailyPlannerModal = () => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/80 backdrop-blur-md overflow-y-auto">
+    <div
+      className={`fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md overflow-y-auto ${
+        isFullScreen ? 'p-0' : 'p-2 sm:p-4'
+      }`}
+    >
       <motion.div
         initial={{ opacity: 0, scale: 0.95, y: 10 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95 }}
         transition={{ duration: 0.25 }}
-        className="w-full max-w-4xl max-h-[92vh] flex flex-col rounded-2xl bg-dark-900/95 border border-white/15 shadow-2xl shadow-neon-green/10 overflow-hidden text-white my-auto"
+        className={`flex flex-col bg-dark-900/95 border border-white/15 shadow-2xl shadow-neon-green/10 overflow-hidden text-white transition-all duration-200 ${
+          isFullScreen
+            ? 'w-screen h-screen max-w-full max-h-full rounded-none border-none'
+            : 'w-full max-w-4xl max-h-[92vh] rounded-2xl my-auto'
+        }`}
       >
         {/* ── macOS Window Header ── */}
         <div className="px-4 py-3 bg-dark-950 border-b border-white/10 flex items-center justify-between select-none">
           <div className="flex items-center gap-2">
-            <div className="flex items-center gap-1.5 mr-2">
+            <div className="group/traffic flex items-center gap-1.5 mr-2">
+              {/* Red dot: Cross back to Home */}
               <button
-                onClick={closeModal}
-                className="w-3 h-3 rounded-full bg-[#FF5F57] hover:opacity-80 transition-opacity"
-                title="Close"
-              />
-              <button
+                type="button"
                 onClick={() => setStep('greeting')}
-                className="w-3 h-3 rounded-full bg-[#FEBC2E] hover:opacity-80 transition-opacity"
-                title="Restart"
-              />
+                className="w-3 h-3 rounded-full bg-[#FF5F57] hover:brightness-110 active:brightness-90 flex items-center justify-center transition-all cursor-pointer"
+              >
+                <X className="w-2 h-2 text-black/80 opacity-0 group-hover/traffic:opacity-100 stroke-[3] transition-opacity" />
+              </button>
+              {/* Yellow dot: Minus means Minimize to floating bubble */}
               <button
-                onClick={() => {
-                  fetchHistory();
-                  setStep('history');
-                }}
-                className="w-3 h-3 rounded-full bg-[#28C840] hover:opacity-80 transition-opacity"
-                title="History"
-              />
+                type="button"
+                onClick={closeModal}
+                className="w-3 h-3 rounded-full bg-[#FEBC2E] hover:brightness-110 active:brightness-90 flex items-center justify-center transition-all cursor-pointer"
+              >
+                <Minus className="w-2 h-2 text-black/80 opacity-0 group-hover/traffic:opacity-100 stroke-[3] transition-opacity" />
+              </button>
+              {/* Green dot: Plus means Full Screen mode */}
+              <button
+                type="button"
+                onClick={() => setIsFullScreen((prev) => !prev)}
+                className="w-3 h-3 rounded-full bg-[#28C840] hover:brightness-110 active:brightness-90 flex items-center justify-center transition-all cursor-pointer"
+              >
+                <Plus className="w-2 h-2 text-black/80 opacity-0 group-hover/traffic:opacity-100 stroke-[3] transition-opacity" />
+              </button>
             </div>
             <div className="flex items-center gap-2">
               <Brain className="w-4 h-4 text-neon-green" />
@@ -620,8 +636,8 @@ export const DailyPlannerModal = () => {
               >
                 {isGenerating ? (
                   <>
-                    <Sparkles className="w-4 h-4 animate-spin" />
-                    <span>Gemini AI is crafting your study plans...</span>
+                    <Sparkles className="w-4 h-4 animate-spin text-black" />
+                    <span className="font-bold">🐇 Rabbit is Running... crafting your master schedule!</span>
                   </>
                 ) : (
                   <>

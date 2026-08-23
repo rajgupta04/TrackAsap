@@ -4,12 +4,15 @@ import dailyPlanService from '../services/dailyPlanService';
 import toast from 'react-hot-toast';
 
 // Dynamic sequential time slot calculator helper
-export const recalculateTaskTimeSlots = (tasks, sessionStart = null) => {
+export const recalculateTaskTimeSlots = (tasks, sessionStart = null, forceFromNow = false) => {
   if (!Array.isArray(tasks) || tasks.length === 0) return [];
 
   let baseDate = new Date();
   if (sessionStart) {
     baseDate = new Date(sessionStart);
+  } else if (forceFromNow) {
+    const mins = baseDate.getMinutes();
+    baseDate.setMinutes(Math.ceil(mins / 5) * 5, 0, 0);
   } else if (tasks[0]?.time && typeof tasks[0].time === 'string' && tasks[0].time.includes('-')) {
     const match = tasks[0].time.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)/i);
     if (match) {
@@ -18,7 +21,17 @@ export const recalculateTaskTimeSlots = (tasks, sessionStart = null) => {
       const m = parseInt(mStr, 10);
       if (meridiem.toUpperCase() === 'PM' && h < 12) h += 12;
       if (meridiem.toUpperCase() === 'AM' && h === 12) h = 0;
-      baseDate.setHours(h, m, 0, 0);
+
+      const candidateDate = new Date();
+      candidateDate.setHours(h, m, 0, 0);
+
+      // If the candidate date is in the past (more than 10 mins ago), restart timeline from current time!
+      if (candidateDate.getTime() < Date.now() - 10 * 60000) {
+        const mins = baseDate.getMinutes();
+        baseDate.setMinutes(Math.ceil(mins / 5) * 5, 0, 0);
+      } else {
+        baseDate = candidateDate;
+      }
     } else {
       const mins = baseDate.getMinutes();
       baseDate.setMinutes(Math.ceil(mins / 5) * 5, 0, 0);
@@ -221,8 +234,18 @@ export const useDailyPlanStore = create(
         const { currentPlan, mode, totalHours, subjects, meals, breaks, powerNap, beverage } = get();
         if (!currentPlan?.plan?.tasks) return;
 
+        // Freshly re-sequence timeline starting from NOW
+        const freshTasks = recalculateTaskTimeSlots(currentPlan.plan.tasks, new Date(), true);
+
         try {
-          let planDoc = currentPlan;
+          let planDoc = {
+            ...currentPlan,
+            plan: {
+              ...currentPlan.plan,
+              tasks: freshTasks,
+            },
+          };
+
           // If not saved on backend yet, save draft first
           if (!planDoc._id) {
             planDoc = await dailyPlanService.save({
@@ -233,9 +256,11 @@ export const useDailyPlanStore = create(
               breaks,
               powerNap,
               beverage,
-              chosenPlan: currentPlan.plan,
+              chosenPlan: planDoc.plan,
               altPlan: currentPlan.altPlan,
             });
+          } else {
+            await dailyPlanService.updateTasks(planDoc._id, freshTasks, planDoc.plan.title);
           }
 
           // Start session
@@ -327,7 +352,7 @@ export const useDailyPlanStore = create(
       // Repeat an existing plan from history or current session (Let's do this again)
       repeatPlan: (planToRepeat) => {
         if (!planToRepeat?.plan?.tasks) return;
-        const tasksWithNewTimes = recalculateTaskTimeSlots(planToRepeat.plan.tasks);
+        const tasksWithNewTimes = recalculateTaskTimeSlots(planToRepeat.plan.tasks, new Date(), true);
         const totalAllocatedMinutes = tasksWithNewTimes.reduce(
           (acc, t) => acc + (Math.max(1, Number(t.duration)) || 0),
           0
