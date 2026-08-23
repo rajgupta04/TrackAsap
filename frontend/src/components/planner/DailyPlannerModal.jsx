@@ -397,13 +397,14 @@ export const DailyPlannerModal = () => {
           )}
 
           {/* ════════════════════════════════════════════════════════════════ */}
+          {/* ════════════════════════════════════════════════════════════════ */}
           {/* ── STEP 2: INTERACTIVE PROMPT FORM ───────────────────────────── */}
           {/* ════════════════════════════════════════════════════════════════ */}
           {step === 'input' && (
             <motion.div
               initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
-              className="space-y-6"
+              className="max-w-6xl mx-auto w-full space-y-6"
             >
               <div className="flex items-center justify-between border-b border-white/10 pb-3">
                 <button
@@ -412,240 +413,316 @@ export const DailyPlannerModal = () => {
                 >
                   <ArrowLeft className="w-3.5 h-3.5" /> Back to Modes
                 </button>
-                <div className="text-xs font-semibold text-neon-green uppercase tracking-wider">
-                  Mode: {mode}
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-dark-400">Target Mode:</span>
+                  <span
+                    className={`text-xs font-extrabold uppercase px-2.5 py-0.5 rounded-full border ${
+                      mode === 'chill'
+                        ? 'bg-cyan-500/15 border-cyan-400/40 text-cyan-300'
+                        : mode === 'allin'
+                        ? 'bg-pink-500/15 border-pink-400/40 text-pink-300'
+                        : 'bg-amber-500/15 border-amber-400/40 text-amber-300'
+                    }`}
+                  >
+                    {mode}
+                  </span>
                 </div>
               </div>
 
-              {/* 1. Hours available */}
-              <div className="space-y-2">
-                <div className="flex justify-between items-center">
-                  <label className="text-sm font-bold text-white flex items-center gap-2">
-                    <Clock className="w-4 h-4 text-neon-green" /> How many hours do you have?
-                  </label>
-                  <span className="text-base font-extrabold text-neon-green">{totalHours} Hours</span>
-                </div>
-                <input
-                  type="range"
-                  min="1"
-                  max="14"
-                  step="0.5"
-                  value={totalHours}
-                  onChange={(e) => setTotalHours(parseFloat(e.target.value))}
-                  className="w-full h-2 bg-white/10 rounded-lg appearance-none cursor-pointer accent-neon-green"
-                />
-                <div className="flex gap-2 pt-1 flex-wrap">
-                  {[2, 3, 4, 6, 8, 10].map((h) => (
-                    <button
-                      key={h}
-                      type="button"
-                      onClick={() => setTotalHours(h)}
-                      className={`px-3 py-1 rounded-lg text-xs font-semibold border transition-all ${
-                        totalHours === h
-                          ? 'bg-neon-green text-black border-neon-green font-bold'
-                          : 'bg-white/5 border-white/10 text-dark-300 hover:text-white'
-                      }`}
-                    >
-                      {h}h
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* 2. Subjects to study */}
-              <div className="space-y-3">
-                <label className="text-sm font-bold text-white flex items-center gap-2">
-                  <Layers className="w-4 h-4 text-cyan-400" /> What are the subjects you want to study?
-                </label>
-
-                {/* Quick Add Samples */}
-                <div className="flex flex-wrap gap-2">
-                  <span className="text-xs text-dark-400 self-center">Quick add:</span>
-                  {SAMPLE_SUBJECTS.map((sample, i) => (
-                    <button
-                      key={i}
-                      type="button"
-                      onClick={() => handleAddSampleSubject(sample)}
-                      className="px-2.5 py-1 rounded-full bg-white/5 border border-white/10 hover:border-cyan-400/50 hover:bg-cyan-500/10 text-xs text-dark-200 hover:text-cyan-300 transition-all flex items-center gap-1"
-                    >
-                      <span>+ {sample.name}</span>
-                      <span className="text-[10px] text-dark-400">({sample.type})</span>
-                    </button>
-                  ))}
-                </div>
-
-                {/* Custom Input */}
-                <form onSubmit={handleAddCustomSubject} className="flex gap-2">
-                  <input
-                    type="text"
-                    placeholder="e.g. Graph revision, System design, Redis..."
-                    value={customSubjectName}
-                    onChange={(e) => setCustomSubjectName(e.target.value)}
-                    className="flex-1 px-3.5 py-2 rounded-xl bg-white/5 border border-white/10 text-sm text-white placeholder:text-dark-500 focus:outline-none focus:border-neon-green"
-                  />
-                  <select
-                    value={customSubjectType}
-                    onChange={(e) => setCustomSubjectType(e.target.value)}
-                    className="px-3 py-2 rounded-xl bg-dark-800 border border-white/10 text-xs text-dark-200 focus:outline-none focus:border-neon-green"
-                  >
-                    <option value="revision">Revision</option>
-                    <option value="new">New Topic</option>
-                    <option value="practice">Practice Qs</option>
-                  </select>
-                  <button
-                    type="submit"
-                    className="px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/15 rounded-xl text-xs font-bold text-white transition-all flex items-center gap-1"
-                  >
-                    <Plus className="w-3.5 h-3.5" /> Add
-                  </button>
-                </form>
-
-                {/* Added Subjects List */}
-                <div className="flex flex-wrap gap-2 pt-1">
-                  {subjects.map((sub, idx) => (
-                    <div
-                      key={idx}
-                      className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-cyan-500/10 border border-cyan-500/25 text-xs text-cyan-300 font-medium"
-                    >
-                      <span>{sub.name}</span>
-                      <span className="text-[10px] uppercase px-1.5 py-0.5 rounded bg-cyan-500/20 font-bold">
-                        {sub.type}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => removeSubject(idx)}
-                        className="hover:text-red-400 transition-colors ml-1"
-                      >
-                        <X className="w-3 h-3" />
-                      </button>
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                {/* Left Column: Form Controls */}
+                <div className="lg:col-span-7 space-y-5">
+                  {/* 1. Hours available */}
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center">
+                      <label className="text-sm font-bold text-white flex items-center gap-2">
+                        <Clock className="w-4 h-4 text-neon-green" /> How many hours do you have?
+                      </label>
+                      <span className="text-base font-extrabold text-neon-green">{totalHours} Hours</span>
                     </div>
-                  ))}
+                    <input
+                      type="range"
+                      min="1"
+                      max="14"
+                      step="0.5"
+                      value={totalHours}
+                      onChange={(e) => setTotalHours(parseFloat(e.target.value))}
+                      className="w-full h-2 bg-white/10 rounded-lg appearance-none cursor-pointer accent-neon-green"
+                    />
+                    <div className="flex gap-2 pt-1 flex-wrap">
+                      {[2, 3, 4, 6, 8, 10].map((h) => (
+                        <button
+                          key={h}
+                          type="button"
+                          onClick={() => setTotalHours(h)}
+                          className={`px-3 py-1 rounded-lg text-xs font-semibold border transition-all ${
+                            totalHours === h
+                              ? 'bg-neon-green text-black border-neon-green font-bold'
+                              : 'bg-white/5 border-white/10 text-dark-300 hover:text-white'
+                          }`}
+                        >
+                          {h}h
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* 2. Subjects to study */}
+                  <div className="space-y-3">
+                    <label className="text-sm font-bold text-white flex items-center gap-2">
+                      <Layers className="w-4 h-4 text-cyan-400" /> What are the subjects you want to study?
+                    </label>
+
+                    {/* Custom Input */}
+                    <form onSubmit={handleAddCustomSubject} className="flex gap-2">
+                      <input
+                        type="text"
+                        placeholder="e.g. Graph revision, System design, Redis..."
+                        value={customSubjectName}
+                        onChange={(e) => setCustomSubjectName(e.target.value)}
+                        className="flex-1 px-3.5 py-2 rounded-xl bg-white/5 border border-white/10 text-sm text-white placeholder:text-dark-500 focus:outline-none focus:border-neon-green"
+                      />
+                      <select
+                        value={customSubjectType}
+                        onChange={(e) => setCustomSubjectType(e.target.value)}
+                        className="px-3 py-2 rounded-xl bg-dark-800 border border-white/10 text-xs text-dark-200 focus:outline-none focus:border-neon-green"
+                      >
+                        <option value="revision">Revision</option>
+                        <option value="new">New Topic</option>
+                        <option value="practice">Practice Qs</option>
+                      </select>
+                      <button
+                        type="submit"
+                        className="px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/15 rounded-xl text-xs font-bold text-white transition-all flex items-center gap-1"
+                      >
+                        <Plus className="w-3.5 h-3.5" /> Add
+                      </button>
+                    </form>
+
+                    {/* Added Subjects List */}
+                    <div className="flex flex-wrap gap-2 pt-1">
+                      {subjects.map((sub, idx) => (
+                        <div
+                          key={idx}
+                          className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-cyan-500/10 border border-cyan-500/25 text-xs text-cyan-300 font-medium"
+                        >
+                          <span>{sub.name}</span>
+                          <span className="text-[10px] uppercase px-1.5 py-0.5 rounded bg-cyan-500/20 font-bold">
+                            {sub.type}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => removeSubject(idx)}
+                            className="hover:text-red-400 transition-colors ml-1"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* 3. Breaks, Meals, Nap, Beverage Grid */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 pt-1">
+                    {/* Meals */}
+                    <div className="p-3 rounded-xl bg-dark-800/50 border border-white/10 space-y-1.5">
+                      <label className="text-[11px] font-bold text-dark-300 flex items-center gap-1">
+                        <Utensils className="w-3 h-3 text-amber-400" /> Meals Left
+                      </label>
+                      <div className="flex gap-1">
+                        {[0, 1, 2, 3].map((m) => (
+                          <button
+                            key={m}
+                            type="button"
+                            onClick={() => setMeals(m)}
+                            className={`flex-1 py-1 rounded-lg text-xs font-bold transition-all ${
+                              meals === m
+                                ? 'bg-amber-500 text-black'
+                                : 'bg-white/5 text-dark-400 hover:text-white'
+                            }`}
+                          >
+                            {m}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Breaks */}
+                    <div className="p-3 rounded-xl bg-dark-800/50 border border-white/10 space-y-1.5">
+                      <label className="text-[11px] font-bold text-dark-300 flex items-center gap-1">
+                        <Coffee className="w-3 h-3 text-emerald-400" /> Breaks
+                      </label>
+                      <div className="flex gap-1">
+                        {[1, 2, 3, 4].map((b) => (
+                          <button
+                            key={b}
+                            type="button"
+                            onClick={() => setBreaks(b)}
+                            className={`flex-1 py-1 rounded-lg text-xs font-bold transition-all ${
+                              breaks === b
+                                ? 'bg-emerald-500 text-black'
+                                : 'bg-white/5 text-dark-400 hover:text-white'
+                            }`}
+                          >
+                            {b}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Power Nap */}
+                    <div className="p-3 rounded-xl bg-dark-800/50 border border-white/10 space-y-1.5">
+                      <label className="text-[11px] font-bold text-dark-300 flex items-center gap-1">
+                        <Moon className="w-3 h-3 text-indigo-400" /> Power Nap?
+                      </label>
+                      <div className="flex gap-1">
+                        <button
+                          type="button"
+                          onClick={() => setPowerNap(false)}
+                          className={`flex-1 py-1 rounded-lg text-xs font-bold transition-all ${
+                            !powerNap ? 'bg-white/20 text-white' : 'bg-white/5 text-dark-400'
+                          }`}
+                        >
+                          No
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setPowerNap(true)}
+                          className={`flex-1 py-1 rounded-lg text-xs font-bold transition-all ${
+                            powerNap ? 'bg-indigo-500 text-white' : 'bg-white/5 text-dark-400'
+                          }`}
+                        >
+                          20m 💤
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Beverage */}
+                    <div className="p-3 rounded-xl bg-dark-800/50 border border-white/10 space-y-1.5">
+                      <label className="text-[11px] font-bold text-dark-300 flex items-center gap-1">
+                        ☕ Beverage
+                      </label>
+                      <div className="grid grid-cols-4 gap-1 text-[11px]">
+                        {[
+                          { id: 'chai', label: '🍵' },
+                          { id: 'coffee', label: '☕' },
+                          { id: 'water', label: '💧' },
+                          { id: 'none', label: '🚫' },
+                        ].map((bev) => (
+                          <button
+                            key={bev.id}
+                            type="button"
+                            onClick={() => setBeverage(bev.id)}
+                            className={`py-1 rounded-lg font-bold transition-all ${
+                              beverage === bev.id
+                                ? 'bg-amber-400/20 border border-amber-400/50 text-amber-300'
+                                : 'bg-white/5 text-dark-400 hover:text-white'
+                            }`}
+                          >
+                            {bev.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Generate Button */}
+                  <button
+                    type="button"
+                    disabled={isGenerating}
+                    onClick={generatePlans}
+                    className="w-full py-3.5 rounded-xl bg-gradient-to-r from-neon-green to-emerald-400 text-black font-extrabold text-sm shadow-lg shadow-neon-green/20 hover:brightness-110 active:scale-[0.99] transition-all flex items-center justify-center gap-2 cursor-pointer"
+                  >
+                    {isGenerating ? (
+                      <>
+                        <Sparkles className="w-4 h-4 animate-spin text-black" />
+                        <span className="font-bold">🐇 Rabbit is Running... crafting your master schedule!</span>
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="w-4 h-4" />
+                        <span>Generate AI Plans ✨</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+
+                {/* Right Column: Mode Architecture & Live Calculation Breakdown */}
+                <div className="lg:col-span-5 space-y-4">
+                  {/* Architecture Card */}
+                  <div className="p-5 rounded-2xl bg-dark-800/80 border border-white/15 space-y-3.5 shadow-xl">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                        <Sparkles className="w-3.5 h-3.5 text-neon-green" /> Session Architecture
+                      </span>
+                      <span className="text-xs font-mono text-neon-green font-bold">
+                        {totalHours}h Session
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-2 text-center text-xs">
+                      <div className="p-2.5 rounded-xl bg-white/5 border border-white/5">
+                        <div className="font-mono text-sm font-extrabold text-white">
+                          {Math.max(
+                            1,
+                            Math.round(
+                              ((totalHours * 60 -
+                                (meals * 35 +
+                                  breaks * (mode === 'allin' ? 5 : mode === 'chill' ? 15 : 10) +
+                                  (powerNap ? 20 : 0) +
+                                  Math.max(1, Math.ceil(totalHours / 6)) * 15 +
+                                  20)) /
+                                60) *
+                                10
+                            ) / 10
+                          )}h
+                        </div>
+                        <div className="text-[10px] text-dark-400 mt-0.5">Deep Focus</div>
+                      </div>
+                      <div className="p-2.5 rounded-xl bg-white/5 border border-white/5">
+                        <div className="font-mono text-sm font-extrabold text-emerald-400">
+                          {breaks * (mode === 'allin' ? 5 : mode === 'chill' ? 15 : 10) +
+                            Math.max(1, Math.ceil(totalHours / 6)) * 15}m
+                        </div>
+                        <div className="text-[10px] text-dark-400 mt-0.5">Breaks & Tea</div>
+                      </div>
+                      <div className="p-2.5 rounded-xl bg-white/5 border border-white/5">
+                        <div className="font-mono text-sm font-extrabold text-amber-400">
+                          {meals * 35 + (powerNap ? 20 : 0)}m
+                        </div>
+                        <div className="text-[10px] text-dark-400 mt-0.5">Meals & Nap</div>
+                      </div>
+                    </div>
+
+                    <p className="text-xs text-dark-300 leading-relaxed border-t border-white/5 pt-3">
+                      {mode === 'chill' &&
+                        '☕ Relaxed 45m study blocks interspersed with 15m rejuvenation breaks to prevent burnout.'}
+                      {mode === 'grind' &&
+                        '🔥 Classic 60m Pomodoro power sessions with 10m agile breaks and synchronized sheet tracking.'}
+                      {mode === 'allin' &&
+                        '⚡ High-intensity 90m deep-work blocks with rapid 5m recharge intervals. Maximum velocity.'}
+                    </p>
+                  </div>
+
+                  {/* Quick Add Curated Subjects */}
+                  <div className="p-4 rounded-2xl bg-dark-800/50 border border-white/10 space-y-2.5">
+                    <div className="text-xs font-bold text-dark-300">Quick Subject & Sheet Suggestions:</div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {SAMPLE_SUBJECTS.map((sample, i) => (
+                        <button
+                          key={i}
+                          type="button"
+                          onClick={() => handleAddSampleSubject(sample)}
+                          className="px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 hover:border-cyan-400/40 text-xs text-dark-300 hover:text-cyan-300 transition-all flex items-center gap-1 cursor-pointer"
+                        >
+                          <span>+ {sample.name}</span>
+                          <span className="text-[10px] text-dark-500">({sample.type})</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               </div>
-
-              {/* 3. Breaks, Meals, Nap, Beverage Grid */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 pt-2">
-                {/* Meals */}
-                <div className="p-3.5 rounded-xl bg-dark-800/50 border border-white/10 space-y-2">
-                  <label className="text-xs font-bold text-dark-300 flex items-center gap-1.5">
-                    <Utensils className="w-3.5 h-3.5 text-amber-400" /> Meals Left
-                  </label>
-                  <div className="flex gap-1.5">
-                    {[0, 1, 2, 3].map((m) => (
-                      <button
-                        key={m}
-                        type="button"
-                        onClick={() => setMeals(m)}
-                        className={`flex-1 py-1 rounded-lg text-xs font-bold transition-all ${
-                          meals === m
-                            ? 'bg-amber-500 text-black'
-                            : 'bg-white/5 text-dark-400 hover:text-white'
-                        }`}
-                      >
-                        {m}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Breaks */}
-                <div className="p-3.5 rounded-xl bg-dark-800/50 border border-white/10 space-y-2">
-                  <label className="text-xs font-bold text-dark-300 flex items-center gap-1.5">
-                    <Coffee className="w-3.5 h-3.5 text-emerald-400" /> Short Breaks
-                  </label>
-                  <div className="flex gap-1.5">
-                    {[1, 2, 3, 4].map((b) => (
-                      <button
-                        key={b}
-                        type="button"
-                        onClick={() => setBreaks(b)}
-                        className={`flex-1 py-1 rounded-lg text-xs font-bold transition-all ${
-                          breaks === b
-                            ? 'bg-emerald-500 text-black'
-                            : 'bg-white/5 text-dark-400 hover:text-white'
-                        }`}
-                      >
-                        {b}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Power Nap */}
-                <div className="p-3.5 rounded-xl bg-dark-800/50 border border-white/10 space-y-2">
-                  <label className="text-xs font-bold text-dark-300 flex items-center gap-1.5">
-                    <Moon className="w-3.5 h-3.5 text-indigo-400" /> Power Nap?
-                  </label>
-                  <div className="flex gap-1.5">
-                    <button
-                      type="button"
-                      onClick={() => setPowerNap(false)}
-                      className={`flex-1 py-1 rounded-lg text-xs font-bold transition-all ${
-                        !powerNap ? 'bg-white/20 text-white' : 'bg-white/5 text-dark-400'
-                      }`}
-                    >
-                      No
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setPowerNap(true)}
-                      className={`flex-1 py-1 rounded-lg text-xs font-bold transition-all ${
-                        powerNap ? 'bg-indigo-500 text-white' : 'bg-white/5 text-dark-400'
-                      }`}
-                    >
-                      20m 💤
-                    </button>
-                  </div>
-                </div>
-
-                {/* Beverage */}
-                <div className="p-3.5 rounded-xl bg-dark-800/50 border border-white/10 space-y-2">
-                  <label className="text-xs font-bold text-dark-300 flex items-center gap-1.5">
-                    ☕ Beverage Break
-                  </label>
-                  <div className="grid grid-cols-4 gap-1 text-[11px]">
-                    {[
-                      { id: 'chai', label: '🍵' },
-                      { id: 'coffee', label: '☕' },
-                      { id: 'water', label: '💧' },
-                      { id: 'none', label: '🚫' },
-                    ].map((bev) => (
-                      <button
-                        key={bev.id}
-                        type="button"
-                        onClick={() => setBeverage(bev.id)}
-                        className={`py-1 rounded-lg font-bold transition-all ${
-                          beverage === bev.id
-                            ? 'bg-amber-400/20 border border-amber-400/50 text-amber-300'
-                            : 'bg-white/5 text-dark-400 hover:text-white'
-                        }`}
-                      >
-                        {bev.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              {/* Generate Button */}
-              <button
-                type="button"
-                disabled={isGenerating}
-                onClick={generatePlans}
-                className="w-full py-3.5 rounded-xl bg-gradient-to-r from-neon-green to-emerald-400 text-black font-extrabold text-sm shadow-lg shadow-neon-green/20 hover:brightness-110 active:scale-[0.99] transition-all flex items-center justify-center gap-2"
-              >
-                {isGenerating ? (
-                  <>
-                    <Sparkles className="w-4 h-4 animate-spin text-black" />
-                    <span className="font-bold">🐇 Rabbit is Running... crafting your master schedule!</span>
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="w-4 h-4" />
-                    <span>Generate AI Plans ✨</span>
-                  </>
-                )}
-              </button>
             </motion.div>
           )}
 
@@ -808,7 +885,7 @@ export const DailyPlannerModal = () => {
             <motion.div
               initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
-              className="space-y-5"
+              className="max-w-6xl mx-auto w-full space-y-5"
             >
               <div className="flex items-center justify-between border-b border-white/10 pb-3">
                 <button
@@ -822,221 +899,226 @@ export const DailyPlannerModal = () => {
                 </span>
               </div>
 
-              {/* Title & Timing Info */}
-              <div className="p-4 rounded-xl bg-white/5 border border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div className="flex-1">
-                  <input
-                    type="text"
-                    value={currentPlan.plan.title}
-                    onChange={(e) => updateLocalTasks(currentPlan.plan.tasks, e.target.value)}
-                    className="text-base font-extrabold bg-transparent text-white border-b border-white/20 focus:border-neon-green outline-none w-full"
-                  />
-                  <p className="text-xs text-dark-300 mt-1">
-                    Mode: <span className="text-neon-green capitalize font-semibold">{mode}</span> • Sheet Monitoring active
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={startSession}
-                    className="px-5 py-2.5 rounded-xl bg-neon-green text-black font-extrabold text-xs shadow-md shadow-neon-green/20 hover:brightness-110 active:scale-95 transition-all flex items-center gap-2 shrink-0"
-                  >
-                    <span>Start Non-Stop Session</span>
-                    <ChevronRight className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                {/* Left Column: Plan Control & Actions */}
+                <div className="lg:col-span-5 space-y-4">
+                  {/* Title & Timing Info */}
+                  <div className="p-4 rounded-2xl bg-dark-800/90 border border-white/15 space-y-2 shadow-lg">
+                    <label className="text-[11px] font-bold text-dark-400 uppercase tracking-wider">Plan Name</label>
+                    <input
+                      type="text"
+                      value={currentPlan.plan.title}
+                      onChange={(e) => updateLocalTasks(currentPlan.plan.tasks, e.target.value)}
+                      className="text-base font-extrabold bg-transparent text-white border-b border-white/20 focus:border-neon-green outline-none w-full"
+                    />
+                    <p className="text-xs text-dark-300 pt-1">
+                      Mode: <span className="text-neon-green capitalize font-semibold">{mode}</span> • Sheet Monitoring active
+                    </p>
+                  </div>
 
-              {/* Dynamic Surplus / Deficit Live Indicator Bar */}
-              {(() => {
-                const totalPlannedMins = Math.round((totalHours || 4) * 60);
-                const totalAllocatedMins = (currentPlan.plan.tasks || []).reduce(
-                  (sum, t) => sum + (Math.max(1, Number(t.duration)) || 0),
-                  0
-                );
-                const diffMins = totalAllocatedMins - totalPlannedMins;
-                const formatHM = (mins) => {
-                  const h = Math.floor(mins / 60);
-                  const m = mins % 60;
-                  if (h > 0 && m > 0) return `${h}h ${m}m`;
-                  if (h > 0) return `${h}h`;
-                  return `${m}m`;
-                };
+                  {/* Dynamic Surplus / Deficit Live Indicator Bar */}
+                  {(() => {
+                    const totalPlannedMins = Math.round((totalHours || 4) * 60);
+                    const totalAllocatedMins = (currentPlan.plan.tasks || []).reduce(
+                      (sum, t) => sum + (Math.max(1, Number(t.duration)) || 0),
+                      0
+                    );
+                    const diffMins = totalAllocatedMins - totalPlannedMins;
+                    const formatHM = (mins) => {
+                      const h = Math.floor(mins / 60);
+                      const m = mins % 60;
+                      if (h > 0 && m > 0) return `${h}h ${m}m`;
+                      if (h > 0) return `${h}h`;
+                      return `${m}m`;
+                    };
 
-                return (
-                  <div className="p-3.5 rounded-xl bg-dark-950/80 border border-white/10 flex flex-wrap items-center justify-between gap-2 shadow-inner">
-                    <div className="flex items-center gap-2">
-                      <Clock className="w-4 h-4 text-neon-green" />
-                      <span className="text-xs text-dark-300">
-                        Planned: <strong className="text-white">{totalHours} hrs</strong> ({totalPlannedMins}m) • Allocated:{' '}
-                        <strong className="text-neon-green">{formatHM(totalAllocatedMins)}</strong> ({currentPlan.plan.tasks?.length || 0} tasks)
-                      </span>
-                    </div>
-                    <div>
-                      {diffMins > 0 ? (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-500/15 border border-amber-500/30 text-amber-400 text-xs font-bold font-mono">
-                          ⚡ Surplus: +{diffMins}m ({formatHM(totalAllocatedMins)} total)
-                        </span>
-                      ) : diffMins < 0 ? (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-cyan-500/15 border border-cyan-500/30 text-cyan-400 text-xs font-bold font-mono">
-                          ⏳ Deficit: -{Math.abs(diffMins)}m unallocated
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-xs font-bold font-mono">
-                          ✓ Balanced ({totalHours}h)
-                        </span>
-                      )}
+                    return (
+                      <div className="p-4 rounded-2xl bg-dark-950/80 border border-white/10 space-y-2.5 shadow-inner">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-dark-300 flex items-center gap-1.5 font-bold">
+                            <Clock className="w-3.5 h-3.5 text-neon-green" /> Schedule Balance
+                          </span>
+                          <span className="font-mono text-white font-extrabold">
+                            {formatHM(totalAllocatedMins)} / {totalHours}h
+                          </span>
+                        </div>
+                        <div>
+                          {diffMins > 0 ? (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-500/15 border border-amber-500/30 text-amber-400 text-xs font-bold font-mono">
+                              ⚡ Surplus: +{diffMins}m ({formatHM(totalAllocatedMins)} total)
+                            </span>
+                          ) : diffMins < 0 ? (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-cyan-500/15 border border-cyan-500/30 text-cyan-400 text-xs font-bold font-mono">
+                              ⏳ Deficit: -{Math.abs(diffMins)}m unallocated
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-xs font-bold font-mono">
+                              ✓ Balanced ({totalHours}h)
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* Add Custom Task Card */}
+                  <div className="p-4 rounded-2xl bg-dark-800/80 border border-white/10 space-y-2.5">
+                    <label className="text-xs font-bold text-dark-300">Add Task to Sequence</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Solve 2 Hard LeetCode problems..."
+                      value={newTaskTitle}
+                      onChange={(e) => setNewTaskTitle(e.target.value)}
+                      className="w-full px-3.5 py-2 rounded-xl bg-white/5 border border-white/10 text-xs text-white placeholder:text-dark-500 focus:outline-none focus:border-neon-green"
+                    />
+                    <div className="flex gap-2">
+                      <input
+                        type="number"
+                        min="5"
+                        max="180"
+                        step="5"
+                        value={newTaskDuration}
+                        onChange={(e) => setNewTaskDuration(e.target.value)}
+                        className="w-20 px-2 py-2 rounded-xl bg-white/5 border border-white/10 text-xs text-center text-neon-green font-bold focus:outline-none focus:border-neon-green"
+                        title="Duration in minutes"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleAddNewTaskToPlan}
+                        className="flex-1 py-2 bg-white/10 hover:bg-white/20 border border-white/15 rounded-xl text-xs font-bold text-white transition-all flex items-center justify-center gap-1 cursor-pointer"
+                      >
+                        <Plus className="w-3.5 h-3.5" /> Add Task
+                      </button>
                     </div>
                   </div>
-                );
-              })()}
 
-              {/* Task Items Table (Editable & Reorderable) */}
-              <div className="space-y-2">
-                <div className="flex justify-between items-center px-1">
-                  <h4 className="text-xs font-bold text-dark-400 uppercase tracking-wider">
-                    Task Sequence & Allocations
-                  </h4>
-                  <span className="text-[11px] text-dark-400">
-                    Moving or editing adjusts all sequential times automatically
-                  </span>
+                  {/* Big Start Button */}
+                  <button
+                    onClick={startSession}
+                    className="w-full py-4 rounded-2xl bg-gradient-to-r from-neon-green via-emerald-400 to-cyan-400 text-black font-extrabold text-sm shadow-xl shadow-neon-green/20 hover:brightness-110 active:scale-[0.99] transition-all flex items-center justify-center gap-2 cursor-pointer"
+                  >
+                    <span>Start Non-Stop Session</span>
+                    <ChevronRight className="w-4 h-4 stroke-[3]" />
+                  </button>
                 </div>
 
-                <div className="space-y-2 max-h-80 overflow-y-auto pr-1 scrollbar-thin">
-                  {currentPlan.plan.tasks?.map((t, idx) => (
-                    <div
-                      key={t.id || idx}
-                      className="group flex items-center justify-between p-3 rounded-xl bg-dark-800/90 border border-white/10 hover:border-white/20 transition-all gap-3"
-                    >
-                      <div className="flex items-center gap-3 flex-1 min-w-0">
-                        {/* Reorder Buttons */}
-                        <div className="flex flex-col gap-0.5 opacity-40 group-hover:opacity-100 transition-opacity">
-                          <button
-                            type="button"
-                            onClick={() => moveTask(idx, idx - 1)}
-                            disabled={idx === 0}
-                            className="text-[10px] hover:text-neon-green disabled:opacity-20"
-                          >
-                            ▲
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => moveTask(idx, idx + 1)}
-                            disabled={idx === currentPlan.plan.tasks.length - 1}
-                            className="text-[10px] hover:text-neon-green disabled:opacity-20"
-                          >
-                            ▼
-                          </button>
-                        </div>
+                {/* Right Column: Task Items Table (Editable & Reorderable) */}
+                <div className="lg:col-span-7 space-y-2">
+                  <div className="flex justify-between items-center px-1">
+                    <h4 className="text-xs font-bold text-dark-400 uppercase tracking-wider">
+                      Task Sequence & Allocations ({currentPlan.plan.tasks?.length || 0})
+                    </h4>
+                    <span className="text-[11px] text-dark-400">
+                      Reordering auto-adjusts sequential times
+                    </span>
+                  </div>
 
-                        <span className="text-lg shrink-0">{t.icon || '📝'}</span>
+                  <div
+                    className={`space-y-2 overflow-y-auto pr-1 scrollbar-thin ${
+                      isFullScreen ? 'max-h-[calc(100vh-230px)]' : 'max-h-80'
+                    }`}
+                  >
+                    {currentPlan.plan.tasks?.map((t, idx) => (
+                      <div
+                        key={t.id || idx}
+                        className="group flex items-center justify-between p-3 rounded-xl bg-dark-800/90 border border-white/10 hover:border-white/20 transition-all gap-3"
+                      >
+                        <div className="flex items-center gap-3 flex-1 min-w-0">
+                          {/* Reorder Buttons */}
+                          <div className="flex flex-col gap-0.5 opacity-40 group-hover:opacity-100 transition-opacity">
+                            <button
+                              type="button"
+                              onClick={() => moveTask(idx, idx - 1)}
+                              disabled={idx === 0}
+                              className="text-[10px] hover:text-neon-green disabled:opacity-20"
+                            >
+                              ▲
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => moveTask(idx, idx + 1)}
+                              disabled={idx === currentPlan.plan.tasks.length - 1}
+                              className="text-[10px] hover:text-neon-green disabled:opacity-20"
+                            >
+                              ▼
+                            </button>
+                          </div>
 
-                        {/* Title & Time */}
-                        <div className="flex-1 min-w-0">
-                          <input
-                            type="text"
-                            value={t.title}
-                            onChange={(e) => {
-                              const updated = [...currentPlan.plan.tasks];
-                              updated[idx].title = e.target.value;
-                              updateLocalTasks(updated);
-                            }}
-                            className="text-xs font-semibold text-white bg-transparent border-b border-transparent hover:border-white/20 focus:border-neon-green outline-none w-full"
-                          />
-                          <div className="flex items-center gap-2 mt-1 flex-wrap">
-                            <span className="text-[10px] text-dark-400 font-mono">{t.time}</span>
-                            {/* Sheet Linker Selector */}
-                            <div className="flex items-center gap-1">
-                              <span className="text-[9px] text-dark-400">Sheet:</span>
-                              <select
-                                value={t.linkedSheetId || ''}
-                                onChange={(e) => {
-                                  const selectedId = e.target.value;
-                                  const selectedSheet = sheets.find((s) => s._id === selectedId);
-                                  const updated = [...currentPlan.plan.tasks];
-                                  updated[idx].linkedSheetId = selectedId || undefined;
-                                  updated[idx].linkedSheetName = selectedSheet?.name || undefined;
-                                  updateLocalTasks(updated);
-                                }}
-                                className="text-[10px] font-semibold bg-dark-900/90 border border-white/15 rounded-md px-1.5 py-0.5 text-cyan-300 focus:border-cyan-400 focus:outline-none cursor-pointer max-w-[140px] truncate"
-                              >
-                                <option value="" className="text-dark-400">Auto (Platform Sync)</option>
-                                {sheets.map((s) => (
-                                  <option key={s._id} value={s._id} className="text-white bg-dark-900">
-                                    📊 {s.name}
-                                  </option>
-                                ))}
-                              </select>
+                          <span className="text-lg shrink-0">{t.icon || '📝'}</span>
+
+                          {/* Title & Time */}
+                          <div className="flex-1 min-w-0">
+                            <input
+                              type="text"
+                              value={t.title}
+                              onChange={(e) => {
+                                const updated = [...currentPlan.plan.tasks];
+                                updated[idx].title = e.target.value;
+                                updateLocalTasks(updated);
+                              }}
+                              className="text-xs font-semibold text-white bg-transparent border-b border-transparent hover:border-white/20 focus:border-neon-green outline-none w-full"
+                            />
+                            <div className="flex items-center gap-2 mt-1 flex-wrap">
+                              <span className="text-[10px] text-dark-400 font-mono">{t.time}</span>
+                              {/* Sheet Linker Selector */}
+                              <div className="flex items-center gap-1">
+                                <span className="text-[9px] text-dark-400">Sheet:</span>
+                                <select
+                                  value={t.linkedSheetId || ''}
+                                  onChange={(e) => {
+                                    const selectedId = e.target.value;
+                                    const selectedSheet = sheets.find((s) => s._id === selectedId);
+                                    const updated = [...currentPlan.plan.tasks];
+                                    updated[idx].linkedSheetId = selectedId || undefined;
+                                    updated[idx].linkedSheetName = selectedSheet?.name || undefined;
+                                    updateLocalTasks(updated);
+                                  }}
+                                  className="text-[10px] font-semibold bg-dark-900/90 border border-white/15 rounded-md px-1.5 py-0.5 text-cyan-300 focus:border-cyan-400 focus:outline-none cursor-pointer max-w-[140px] truncate"
+                                >
+                                  <option value="" className="text-dark-400">Auto (Platform Sync)</option>
+                                  {sheets.map((s) => (
+                                    <option key={s._id} value={s._id} className="text-white bg-dark-900">
+                                      📊 {s.name}
+                                    </option>
+                                  ))}
+                                </select>
+                              </div>
                             </div>
                           </div>
                         </div>
-                      </div>
 
-                      {/* Duration & Delete */}
-                      <div className="flex items-center gap-2 shrink-0">
-                        <div className="flex items-center gap-1 bg-white/5 px-2 py-1 rounded-lg border border-white/10">
-                          <input
-                            type="number"
-                            min="5"
-                            max="300"
-                            step="5"
-                            value={t.duration}
-                            onChange={(e) => {
-                              const updated = [...currentPlan.plan.tasks];
-                              updated[idx].duration = Number(e.target.value);
-                              updateLocalTasks(updated);
-                            }}
-                            className="w-10 bg-transparent text-xs font-mono text-center text-neon-green font-bold outline-none"
-                          />
-                          <span className="text-[10px] text-dark-400">min</span>
+                        {/* Duration & Delete */}
+                        <div className="flex items-center gap-2 shrink-0">
+                          <div className="flex items-center gap-1 bg-white/5 px-2 py-1 rounded-lg border border-white/10">
+                            <input
+                              type="number"
+                              min="5"
+                              max="300"
+                              step="5"
+                              value={t.duration}
+                              onChange={(e) => {
+                                const updated = [...currentPlan.plan.tasks];
+                                updated[idx].duration = Number(e.target.value);
+                                updateLocalTasks(updated);
+                              }}
+                              className="w-10 bg-transparent text-xs font-mono text-center text-neon-green font-bold outline-none"
+                            />
+                            <span className="text-[10px] text-dark-400">min</span>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteTask(idx)}
+                            className="p-1.5 text-dark-400 hover:text-red-400 rounded-lg hover:bg-white/5 transition-all opacity-0 group-hover:opacity-100 cursor-pointer"
+                            title="Remove task"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
                         </div>
-
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteTask(idx)}
-                          className="p-1.5 text-dark-400 hover:text-red-400 rounded-lg hover:bg-white/5 transition-all opacity-0 group-hover:opacity-100"
-                          title="Remove task"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
                       </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
-
-                {/* Add Custom Task Row */}
-                <div className="flex gap-2 pt-2">
-                  <input
-                    type="text"
-                    placeholder="Add custom task (e.g. Solve 2 Hard LeetCode problems)..."
-                    value={newTaskTitle}
-                    onChange={(e) => setNewTaskTitle(e.target.value)}
-                    className="flex-1 px-3.5 py-2 rounded-xl bg-white/5 border border-white/10 text-xs text-white placeholder:text-dark-500 focus:outline-none focus:border-neon-green"
-                  />
-                  <input
-                    type="number"
-                    min="5"
-                    max="180"
-                    step="5"
-                    value={newTaskDuration}
-                    onChange={(e) => setNewTaskDuration(e.target.value)}
-                    className="w-16 px-2 py-2 rounded-xl bg-white/5 border border-white/10 text-xs text-center text-neon-green font-bold focus:outline-none focus:border-neon-green"
-                    title="Duration in minutes"
-                  />
-                  <button
-                    type="button"
-                    onClick={handleAddNewTaskToPlan}
-                    className="px-3.5 py-2 bg-white/10 hover:bg-white/20 border border-white/15 rounded-xl text-xs font-bold text-white transition-all flex items-center gap-1"
-                  >
-                    <Plus className="w-3.5 h-3.5" /> Add Task
-                  </button>
-                </div>
-              </div>
-
-              <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-start gap-2.5 text-xs text-amber-300">
-                <span className="text-base">⚡</span>
-                <p>
-                  <strong>Non-Stop Session Engine:</strong> Once you click start, the timer runs continuously. Any sheet questions solved or revised on TrackAsap during this session will be recorded!
-                </p>
               </div>
             </motion.div>
           )}
@@ -1048,136 +1130,145 @@ export const DailyPlannerModal = () => {
             <motion.div
               initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
-              className="space-y-6"
+              className="max-w-6xl mx-auto w-full space-y-6"
             >
-              {/* Header Clock */}
-              <div className="p-6 rounded-2xl bg-gradient-to-br from-dark-950 to-dark-900 border border-neon-green/30 text-center space-y-3 relative overflow-hidden shadow-xl">
-                <div className="flex items-center justify-between text-xs text-dark-400">
-                  <div className="flex items-center gap-1.5 text-neon-green font-semibold">
-                    <span className="w-2 h-2 rounded-full bg-neon-green animate-ping" />
-                    <span>SESSION ACTIVE • NON-STOP</span>
-                  </div>
-                  <span>Mode: <strong className="capitalize text-white">{currentPlan.mode}</strong></span>
-                </div>
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                {/* Left Column: Clock & Actions */}
+                <div className="lg:col-span-5 space-y-4">
+                  {/* Header Clock */}
+                  <div className="p-6 sm:p-8 rounded-3xl bg-gradient-to-br from-dark-950 to-dark-900 border border-neon-green/30 text-center space-y-4 relative overflow-hidden shadow-2xl">
+                    <div className="flex items-center justify-between text-xs text-dark-400">
+                      <div className="flex items-center gap-1.5 text-neon-green font-semibold">
+                        <span className="w-2 h-2 rounded-full bg-neon-green animate-ping" />
+                        <span>SESSION ACTIVE • NON-STOP</span>
+                      </div>
+                      <span>Mode: <strong className="capitalize text-white">{currentPlan.mode}</strong></span>
+                    </div>
 
-                <div className="font-mono text-4xl sm:text-5xl font-extrabold text-white tracking-widest drop-shadow-[0_0_20px_rgba(57,255,20,0.3)]">
-                  {formatCountdown(remainingSeconds)}
-                </div>
+                    <div className="font-mono text-4xl sm:text-5xl lg:text-6xl font-extrabold text-white tracking-widest drop-shadow-[0_0_25px_rgba(57,255,20,0.35)] py-2">
+                      {formatCountdown(remainingSeconds)}
+                    </div>
 
-                <p className="text-xs text-dark-300">
-                  {currentPlan.plan.title}
-                </p>
+                    <p className="text-xs text-dark-300 font-medium">
+                      {currentPlan.plan.title}
+                    </p>
 
-                {/* Progress bar */}
-                <div className="w-full h-2 bg-white/10 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-gradient-to-r from-neon-green to-emerald-400 rounded-full transition-all duration-500"
-                    style={{
-                      width: `${
-                        currentPlan.plan.tasks?.length > 0
-                          ? Math.round(
-                              ((currentPlan.plan.tasks.filter((t) => t.completed).length) /
-                                currentPlan.plan.tasks.length) *
-                                100
-                            )
-                          : 0
-                      }%`,
-                    }}
-                  />
-                </div>
-              </div>
-
-              {/* Monitored Sheets Bar */}
-              {currentPlan.sheetSnapshotsStart?.length > 0 && (
-                <div className="p-3.5 rounded-xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-between gap-3 text-xs">
-                  <div className="flex items-center gap-2">
-                    <BarChart3 className="w-4 h-4 text-cyan-400 shrink-0" />
-                    <div>
-                      <span className="font-bold text-white">Live Sheet Monitoring: </span>
-                      <span className="text-cyan-300">
-                        {currentPlan.sheetSnapshotsStart.map((s) => s.sheetName).join(', ')}
-                      </span>
+                    {/* Progress bar */}
+                    <div className="w-full h-2.5 bg-white/10 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-gradient-to-r from-neon-green to-emerald-400 rounded-full transition-all duration-500"
+                        style={{
+                          width: `${
+                            currentPlan.plan.tasks?.length > 0
+                              ? Math.round(
+                                  ((currentPlan.plan.tasks.filter((t) => t.completed).length) /
+                                    currentPlan.plan.tasks.length) *
+                                    100
+                                )
+                              : 0
+                          }%`,
+                        }}
+                      />
                     </div>
                   </div>
-                  <span className="text-[10px] px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-200 font-mono font-bold shrink-0">
-                    Activity Delta Syncing
-                  </span>
-                </div>
-              )}
 
-              {/* Task Checklist */}
-              <div className="space-y-2">
-                <div className="flex justify-between items-center px-1">
-                  <h4 className="text-xs font-bold text-dark-400 uppercase tracking-wider">
-                    Task Checklist ({currentPlan.plan.tasks?.filter((t) => t.completed).length} / {currentPlan.plan.tasks?.length} Done)
-                  </h4>
-                  <span className="text-[11px] text-neon-green">Check off as you complete</span>
-                </div>
-
-                <div className="space-y-2 max-h-72 overflow-y-auto pr-1 scrollbar-thin">
-                  {currentPlan.plan.tasks?.map((t) => (
-                    <div
-                      key={t.id}
-                      onClick={() => handleTaskCheckClick(t)}
-                      className={`cursor-pointer flex items-center justify-between p-3 rounded-xl border transition-all ${
-                        t.completed
-                          ? 'bg-neon-green/10 border-neon-green/30 text-dark-300'
-                          : 'bg-dark-800/80 border-white/10 hover:border-white/20 text-white'
-                      }`}
-                    >
-                      <div className="flex items-center gap-3 min-w-0">
-                        <button
-                          type="button"
-                          className={`w-5 h-5 rounded-lg flex items-center justify-center border transition-all ${
-                            t.completed
-                              ? 'bg-neon-green border-neon-green text-black font-bold'
-                              : 'border-white/30 hover:border-white'
-                          }`}
-                        >
-                          {t.completed && <Check className="w-3.5 h-3.5" />}
-                        </button>
-                        <span className="text-base">{t.icon || '📝'}</span>
-                        <div className="min-w-0">
-                          <span
-                            className={`text-xs font-semibold truncate block ${
-                              t.completed ? 'line-through text-dark-400' : 'text-white'
-                            }`}
-                          >
-                            {t.title}
+                  {/* Monitored Sheets Bar */}
+                  {currentPlan.sheetSnapshotsStart?.length > 0 && (
+                    <div className="p-4 rounded-2xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-between gap-3 text-xs">
+                      <div className="flex items-center gap-2">
+                        <BarChart3 className="w-4 h-4 text-cyan-400 shrink-0" />
+                        <div>
+                          <span className="font-bold text-white">Live Sheet Monitoring: </span>
+                          <span className="text-cyan-300">
+                            {currentPlan.sheetSnapshotsStart.map((s) => s.sheetName).join(', ')}
                           </span>
-                          <span className="text-[10px] text-dark-400 font-mono">{t.time}</span>
                         </div>
                       </div>
-
-                      <div className="flex items-center gap-2 shrink-0">
-                        {t.linkedSheetName && (
-                          <span className="text-[9px] px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-300 font-medium">
-                            📊 {t.linkedSheetName}
-                          </span>
-                        )}
-                        <span className="text-[10px] text-dark-400 font-mono">{t.duration}m</span>
-                      </div>
+                      <span className="text-[10px] px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-200 font-mono font-bold shrink-0">
+                        Syncing
+                      </span>
                     </div>
-                  ))}
-                </div>
-              </div>
+                  )}
 
-              {/* End Session Button */}
-              <div className="flex justify-between items-center pt-2 border-t border-white/10">
-                <button
-                  type="button"
-                  onClick={() => setStep('edit')}
-                  className="px-3.5 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs text-dark-300 hover:text-white transition-all flex items-center gap-1.5"
-                >
-                  <Edit3 className="w-3.5 h-3.5" /> Adjust Plan / Add Tasks
-                </button>
-                <button
-                  type="button"
-                  onClick={endSession}
-                  className="px-5 py-2 rounded-xl bg-red-500/20 hover:bg-red-500/30 border border-red-500/40 text-red-300 font-bold text-xs transition-all"
-                >
-                  Finish Session & View Report 🏁
-                </button>
+                  {/* Action Buttons */}
+                  <div className="flex flex-col gap-2.5 pt-1">
+                    <button
+                      type="button"
+                      onClick={endSession}
+                      className="w-full py-3.5 px-4 rounded-2xl bg-gradient-to-r from-red-600/90 to-rose-600/90 hover:from-red-500 hover:to-rose-500 text-white font-extrabold text-xs shadow-lg shadow-red-500/20 border border-red-400/30 transition-all flex items-center justify-center gap-2 cursor-pointer"
+                    >
+                      <span>Finish Session & View Report 🏁</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setStep('edit')}
+                      className="w-full py-2.5 px-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-semibold text-dark-300 hover:text-white transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                    >
+                      <Edit3 className="w-3.5 h-3.5" /> Adjust Plan / Add Tasks
+                    </button>
+                  </div>
+                </div>
+
+                {/* Right Column: Task Checklist */}
+                <div className="lg:col-span-7 space-y-2">
+                  <div className="flex justify-between items-center px-1">
+                    <h4 className="text-xs font-bold text-dark-400 uppercase tracking-wider">
+                      Task Checklist ({currentPlan.plan.tasks?.filter((t) => t.completed).length} / {currentPlan.plan.tasks?.length} Done)
+                    </h4>
+                    <span className="text-[11px] text-neon-green">Check off as you complete</span>
+                  </div>
+
+                  <div
+                    className={`space-y-2 overflow-y-auto pr-1 scrollbar-thin ${
+                      isFullScreen ? 'max-h-[calc(100vh-230px)]' : 'max-h-72'
+                    }`}
+                  >
+                    {currentPlan.plan.tasks?.map((t) => (
+                      <div
+                        key={t.id}
+                        onClick={() => handleTaskCheckClick(t)}
+                        className={`cursor-pointer flex items-center justify-between p-3.5 rounded-2xl border transition-all ${
+                          t.completed
+                            ? 'bg-neon-green/10 border-neon-green/30 text-dark-300'
+                            : 'bg-dark-800/80 border-white/10 hover:border-white/20 text-white shadow-sm'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          <button
+                            type="button"
+                            className={`w-5 h-5 rounded-lg flex items-center justify-center border transition-all ${
+                              t.completed
+                                ? 'bg-neon-green border-neon-green text-black font-bold'
+                                : 'border-white/30 hover:border-white'
+                            }`}
+                          >
+                            {t.completed && <Check className="w-3.5 h-3.5" />}
+                          </button>
+                          <span className="text-base">{t.icon || '📝'}</span>
+                          <div className="min-w-0">
+                            <span
+                              className={`text-xs font-semibold truncate block ${
+                                t.completed ? 'line-through text-dark-400' : 'text-white'
+                              }`}
+                            >
+                              {t.title}
+                            </span>
+                            <span className="text-[10px] text-dark-400 font-mono">{t.time}</span>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 shrink-0">
+                          {t.linkedSheetName && (
+                            <span className="text-[9px] px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-300 font-medium">
+                              📊 {t.linkedSheetName}
+                            </span>
+                          )}
+                          <span className="text-[10px] text-dark-400 font-mono">{t.duration}m</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
             </motion.div>
           )}
@@ -1311,7 +1402,7 @@ export const DailyPlannerModal = () => {
             <motion.div
               initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
-              className="space-y-5"
+              className="max-w-6xl mx-auto w-full space-y-5"
             >
               <div className="flex items-center justify-between border-b border-white/10 pb-3">
                 <h3 className="text-base font-extrabold text-white flex items-center gap-2">
@@ -1334,11 +1425,15 @@ export const DailyPlannerModal = () => {
                   No completed sessions yet. Start your first session today!
                 </div>
               ) : (
-                <div className="space-y-3 max-h-96 overflow-y-auto pr-1 scrollbar-thin">
+                <div
+                  className={`grid grid-cols-1 md:grid-cols-2 gap-4 overflow-y-auto pr-1 scrollbar-thin ${
+                    isFullScreen ? 'max-h-[calc(100vh-230px)]' : 'max-h-96'
+                  }`}
+                >
                   {history.map((h) => (
                     <div
                       key={h._id}
-                      className="p-4 rounded-xl bg-dark-800/80 border border-white/10 space-y-2 hover:border-white/20 transition-all"
+                      className="p-4 rounded-2xl bg-dark-800/80 border border-white/10 space-y-3 hover:border-white/20 transition-all flex flex-col justify-between"
                     >
                       <div className="flex justify-between items-start">
                         <div>
@@ -1363,14 +1458,14 @@ export const DailyPlannerModal = () => {
                       </div>
 
                       {/* Let's do this again button */}
-                      <div className="flex items-center justify-between pt-2.5 border-t border-white/10 mt-2">
-                        <span className="text-[10px] text-dark-400 font-mono">
+                      <div className="flex items-center justify-between pt-2.5 border-t border-white/10 mt-auto">
+                        <span className="text-[10px] text-dark-400 font-mono truncate max-w-[180px]">
                           {h.plan?.tasks?.length || 0} tasks • {h.subjects?.map((s) => s.name).join(', ') || 'General DSA'}
                         </span>
                         <button
                           type="button"
                           onClick={() => repeatPlan(h)}
-                          className="px-3.5 py-1.5 rounded-xl bg-neon-green text-black text-xs font-extrabold shadow-sm hover:brightness-110 transition-all flex items-center gap-1.5 active:scale-95 cursor-pointer"
+                          className="px-3 py-1.5 rounded-xl bg-neon-green text-black text-xs font-extrabold shadow-sm hover:brightness-110 transition-all flex items-center gap-1.5 active:scale-95 cursor-pointer shrink-0"
                         >
                           <RotateCcw className="w-3.5 h-3.5" /> Let's do this again 🔁
                         </button>
