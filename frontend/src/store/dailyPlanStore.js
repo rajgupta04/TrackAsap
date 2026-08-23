@@ -3,6 +3,51 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import dailyPlanService from '../services/dailyPlanService';
 import toast from 'react-hot-toast';
 
+// Dynamic sequential time slot calculator helper
+export const recalculateTaskTimeSlots = (tasks, sessionStart = null) => {
+  if (!Array.isArray(tasks) || tasks.length === 0) return [];
+
+  let baseDate = new Date();
+  if (sessionStart) {
+    baseDate = new Date(sessionStart);
+  } else if (tasks[0]?.time && typeof tasks[0].time === 'string' && tasks[0].time.includes('-')) {
+    const match = tasks[0].time.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)/i);
+    if (match) {
+      let [_, hStr, mStr, meridiem] = match;
+      let h = parseInt(hStr, 10);
+      const m = parseInt(mStr, 10);
+      if (meridiem.toUpperCase() === 'PM' && h < 12) h += 12;
+      if (meridiem.toUpperCase() === 'AM' && h === 12) h = 0;
+      baseDate.setHours(h, m, 0, 0);
+    } else {
+      const mins = baseDate.getMinutes();
+      baseDate.setMinutes(Math.ceil(mins / 5) * 5, 0, 0);
+    }
+  } else {
+    const mins = baseDate.getMinutes();
+    baseDate.setMinutes(Math.ceil(mins / 5) * 5, 0, 0);
+  }
+
+  let currentMinutesOffset = 0;
+
+  return tasks.map((t) => {
+    const dur = Math.max(1, Number(t.duration) || 30);
+    const s = new Date(baseDate.getTime() + currentMinutesOffset * 60000);
+    const e = new Date(baseDate.getTime() + (currentMinutesOffset + dur) * 60000);
+
+    const fmt = (d) =>
+      d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+
+    currentMinutesOffset += dur;
+
+    return {
+      ...t,
+      duration: dur,
+      time: `${fmt(s)} - ${fmt(e)}`,
+    };
+  });
+};
+
 export const useDailyPlanStore = create(
   persist(
     (set, get) => ({
@@ -81,6 +126,14 @@ export const useDailyPlanStore = create(
             beverage,
           });
 
+          // Ensure both plans have cleanly sequenced time slots
+          if (data.planA?.tasks) {
+            data.planA.tasks = recalculateTaskTimeSlots(data.planA.tasks);
+          }
+          if (data.planB?.tasks) {
+            data.planB.tasks = recalculateTaskTimeSlots(data.planB.tasks);
+          }
+
           set({
             generatedOptions: data,
             selectedPlanChoice: 'planA',
@@ -102,44 +155,57 @@ export const useDailyPlanStore = create(
         const chosenPlan = choice === 'planB' ? generatedOptions.planB : generatedOptions.planA;
         const altPlan = choice === 'planB' ? generatedOptions.planA : generatedOptions.planB;
 
+        const tasksWithTime = recalculateTaskTimeSlots(chosenPlan.tasks || []);
+        const totalAllocatedMinutes = tasksWithTime.reduce((acc, t) => acc + (Number(t.duration) || 0), 0);
+
         set({
           selectedPlanChoice: choice,
           currentPlan: {
             mode: get().mode,
-            totalHours: get().totalHours,
+            totalHours: Number((totalAllocatedMinutes / 60).toFixed(1)) || get().totalHours,
             subjects: get().subjects,
             meals: get().meals,
             breaks: get().breaks,
             powerNap: get().powerNap,
             beverage: get().beverage,
-            plan: JSON.parse(JSON.stringify(chosenPlan)),
+            plan: {
+              ...JSON.parse(JSON.stringify(chosenPlan)),
+              tasks: tasksWithTime,
+            },
             altPlan: JSON.parse(JSON.stringify(altPlan)),
             status: 'draft',
+            durationSecondsPlanned: totalAllocatedMinutes * 60,
           },
           step: 'edit',
         });
       },
 
-      // Update task list in editor (drag/edit/add/remove)
+      // Update task list in editor (auto-recalculates sequential times & total planned duration)
       updateLocalTasks: async (newTasks, title) => {
         const { currentPlan } = get();
         if (!currentPlan) return;
 
+        // Auto-recalculate sequential time slots for all tasks
+        const sequencedTasks = recalculateTaskTimeSlots(newTasks, currentPlan.sessionStartedAt);
+        const totalAllocatedMinutes = sequencedTasks.reduce((acc, t) => acc + (Number(t.duration) || 0), 0);
+
         const updatedPlan = {
           ...currentPlan,
+          totalHours: Number((totalAllocatedMinutes / 60).toFixed(1)),
+          durationSecondsPlanned: totalAllocatedMinutes * 60,
           plan: {
             ...currentPlan.plan,
             title: title !== undefined ? title : currentPlan.plan.title,
-            tasks: newTasks,
+            tasks: sequencedTasks,
           },
         };
 
         set({ currentPlan: updatedPlan });
 
-        // If saved on backend, sync tasks
+        // If saved on backend, sync tasks and duration
         if (currentPlan._id) {
           try {
-            await dailyPlanService.updateTasks(currentPlan._id, newTasks, title);
+            await dailyPlanService.updateTasks(currentPlan._id, sequencedTasks, title);
           } catch (err) {
             console.error('Sync tasks error:', err);
           }

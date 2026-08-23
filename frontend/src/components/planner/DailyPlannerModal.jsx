@@ -780,7 +780,7 @@ export const DailyPlannerModal = () => {
 
               {/* Title & Timing Info */}
               <div className="p-4 rounded-xl bg-white/5 border border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div>
+                <div className="flex-1">
                   <input
                     type="text"
                     value={currentPlan.plan.title}
@@ -788,7 +788,7 @@ export const DailyPlannerModal = () => {
                     className="text-base font-extrabold bg-transparent text-white border-b border-white/20 focus:border-neon-green outline-none w-full"
                   />
                   <p className="text-xs text-dark-300 mt-1">
-                    {totalHours} hrs • Mode: <span className="text-neon-green capitalize font-semibold">{mode}</span> • Sheet Monitoring active
+                    Mode: <span className="text-neon-green capitalize font-semibold">{mode}</span> • Sheet Monitoring active
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
@@ -802,6 +802,50 @@ export const DailyPlannerModal = () => {
                 </div>
               </div>
 
+              {/* Dynamic Surplus / Deficit Live Indicator Bar */}
+              {(() => {
+                const totalPlannedMins = Math.round((totalHours || 4) * 60);
+                const totalAllocatedMins = (currentPlan.plan.tasks || []).reduce(
+                  (sum, t) => sum + (Math.max(1, Number(t.duration)) || 0),
+                  0
+                );
+                const diffMins = totalAllocatedMins - totalPlannedMins;
+                const formatHM = (mins) => {
+                  const h = Math.floor(mins / 60);
+                  const m = mins % 60;
+                  if (h > 0 && m > 0) return `${h}h ${m}m`;
+                  if (h > 0) return `${h}h`;
+                  return `${m}m`;
+                };
+
+                return (
+                  <div className="p-3.5 rounded-xl bg-dark-950/80 border border-white/10 flex flex-wrap items-center justify-between gap-2 shadow-inner">
+                    <div className="flex items-center gap-2">
+                      <Clock className="w-4 h-4 text-neon-green" />
+                      <span className="text-xs text-dark-300">
+                        Planned: <strong className="text-white">{totalHours} hrs</strong> ({totalPlannedMins}m) • Allocated:{' '}
+                        <strong className="text-neon-green">{formatHM(totalAllocatedMins)}</strong> ({currentPlan.plan.tasks?.length || 0} tasks)
+                      </span>
+                    </div>
+                    <div>
+                      {diffMins > 0 ? (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-500/15 border border-amber-500/30 text-amber-400 text-xs font-bold font-mono">
+                          ⚡ Surplus: +{diffMins}m ({formatHM(totalAllocatedMins)} total)
+                        </span>
+                      ) : diffMins < 0 ? (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-cyan-500/15 border border-cyan-500/30 text-cyan-400 text-xs font-bold font-mono">
+                          ⏳ Deficit: -{Math.abs(diffMins)}m unallocated
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-xs font-bold font-mono">
+                          ✓ Balanced ({totalHours}h)
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })()}
+
               {/* Task Items Table (Editable & Reorderable) */}
               <div className="space-y-2">
                 <div className="flex justify-between items-center px-1">
@@ -809,7 +853,7 @@ export const DailyPlannerModal = () => {
                     Task Sequence & Allocations
                   </h4>
                   <span className="text-[11px] text-dark-400">
-                    Use arrows or inputs to customize time
+                    Moving or editing adjusts all sequential times automatically
                   </span>
                 </div>
 
