@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { Brain, Flame, Coffee, Zap, X, Clock, Play } from 'lucide-react';
+import { Brain, Flame, Coffee, Zap, X } from 'lucide-react';
 import useDailyPlanStore from '../../store/dailyPlanStore';
 
 export const DailyPlannerBubble = () => {
@@ -12,8 +12,8 @@ export const DailyPlannerBubble = () => {
     setBubbleVisible,
   } = useDailyPlanStore();
 
+  const containerRef = useRef(null);
   const [remainingTimeStr, setRemainingTimeStr] = useState('00:00:00');
-  const [progressPercent, setProgressPercent] = useState(0);
 
   const isActive = currentPlan?.status === 'active';
   const mode = currentPlan?.mode || 'grind';
@@ -47,10 +47,6 @@ export const DailyPlannerBubble = () => {
 
       const pad = (n) => String(n).padStart(2, '0');
       setRemainingTimeStr(`${pad(hours)}:${pad(minutes)}:${pad(seconds)}`);
-
-      const elapsedMs = totalPlannedMs - diffMs;
-      const pct = Math.min(100, Math.round((elapsedMs / totalPlannedMs) * 100));
-      setProgressPercent(pct);
     }, 1000);
 
     return () => clearInterval(interval);
@@ -60,77 +56,92 @@ export const DailyPlannerBubble = () => {
   if (isModalOpen || !isBubbleVisible) return null;
 
   return (
-    <motion.div
-      drag
-      dragMomentum={false}
-      dragConstraints={{
-        top: 60,
-        left: 20,
-        right: window.innerWidth ? window.innerWidth - 180 : 1000,
-        bottom: window.innerHeight ? window.innerHeight - 100 : 800,
-      }}
-      initial={{ opacity: 0, scale: 0.8, x: 20 }}
-      animate={{ opacity: 1, scale: 1, x: 0 }}
-      exit={{ opacity: 0, scale: 0.8 }}
-      whileHover={{ scale: 1.05 }}
-      whileTap={{ scale: 0.95 }}
-      onClick={() => openModal()}
-      className={`fixed bottom-24 right-4 z-40 cursor-grab active:cursor-grabbing select-none
-        transition-opacity duration-300 ${isActive ? 'opacity-90 hover:opacity-100' : 'opacity-40 hover:opacity-100'}`}
-      title={isActive ? `Active Plan Session (${remainingTimeStr} left) — Click to view` : 'Daily AI Planner — Click to open'}
-    >
-      <div className="relative group flex items-center gap-2 p-2 sm:px-3 sm:py-2 rounded-full bg-dark-900/90 border border-white/20 backdrop-blur-xl shadow-2xl shadow-neon-green/10">
-        {/* Glowing Pulsing Ring */}
-        {isActive ? (
-          <div className="absolute -inset-0.5 rounded-full bg-gradient-to-r from-neon-green/50 to-emerald-500/50 blur-sm animate-pulse opacity-75 group-hover:opacity-100" />
-        ) : (
-          <div className="absolute -inset-0.5 rounded-full bg-gradient-to-r from-white/10 to-neon-green/20 blur-sm opacity-50 group-hover:opacity-100" />
-        )}
-
-        <div className="relative z-10 flex items-center gap-2">
-          {/* Mode / Brain Icon Badge */}
-          <div
-            className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-gradient-to-br ${modeColor} flex items-center justify-center text-black font-bold shadow-md`}
-          >
-            {isActive ? <ModeIcon className="w-4 h-4 text-white drop-shadow" /> : <Brain className="w-4 h-4 text-black" />}
-          </div>
-
-          {/* Label / Countdown */}
-          <div className="flex flex-col pr-1">
+    <>
+      {/* Full-viewport boundary container so bubble NEVER goes outside visible screen */}
+      <div
+        ref={containerRef}
+        className="fixed inset-3 sm:inset-4 pointer-events-none z-40"
+      >
+        <motion.div
+          drag
+          dragMomentum={false}
+          dragConstraints={containerRef}
+          dragElastic={0}
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.8 }}
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={() => openModal()}
+          className={`absolute bottom-20 right-2 pointer-events-auto cursor-grab active:cursor-grabbing select-none
+            transition-opacity duration-300 ${
+              isActive ? 'opacity-90 hover:opacity-100' : 'opacity-30 hover:opacity-100'
+            }`}
+          title={
+            isActive
+              ? `Active Session (${remainingTimeStr} left) — Click to open`
+              : 'Daily AI Planner — Click to open'
+          }
+        >
+          <div className="relative group flex items-center justify-center">
+            {/* Glowing Pulsing Ring */}
             {isActive ? (
-              <>
-                <div className="flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-neon-green animate-ping" />
-                  <span className="text-[10px] uppercase font-bold tracking-wider text-neon-green">Lock In</span>
-                </div>
-                <span className="font-mono text-xs font-extrabold text-white tracking-wider">
-                  {remainingTimeStr}
-                </span>
-              </>
+              <div className="absolute -inset-1 rounded-full bg-gradient-to-r from-neon-green via-emerald-400 to-cyan-400 blur-sm animate-pulse opacity-80 group-hover:opacity-100" />
             ) : (
-              <div className="flex items-center gap-1">
-                <span className="text-xs font-bold text-white tracking-tight">AI Planner</span>
-                <span className="text-[10px] text-neon-green font-semibold">✨</span>
-              </div>
+              <div className="absolute -inset-1 rounded-full bg-gradient-to-r from-amber-500/40 to-neon-green/40 blur-sm opacity-40 group-hover:opacity-90" />
+            )}
+
+            {/* Circular Logo Icon Only (Small & Clean) */}
+            <div
+              className={`relative z-10 w-10 h-10 rounded-full bg-gradient-to-br ${modeColor} border border-white/20 shadow-xl flex items-center justify-center text-black font-bold`}
+            >
+              {isActive ? (
+                <ModeIcon className="w-5 h-5 text-white drop-shadow" />
+              ) : (
+                <Brain className="w-5 h-5 text-black" />
+              )}
+
+              {/* Active Session Ping Dot */}
+              {isActive && (
+                <span className="absolute -top-0.5 -right-0.5 w-3 h-3 rounded-full bg-neon-green border-2 border-dark-950 flex items-center justify-center">
+                  <span className="w-1.5 h-1.5 rounded-full bg-black animate-ping" />
+                </span>
+              )}
+            </div>
+
+            {/* Hover Tooltip / Mini Time Label */}
+            <div className="absolute right-12 top-1/2 -translate-y-1/2 px-2.5 py-1 rounded-lg bg-dark-900/95 border border-white/15 text-white text-[11px] font-mono font-bold whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none shadow-xl flex items-center gap-1.5">
+              {isActive ? (
+                <>
+                  <span className="w-1.5 h-1.5 rounded-full bg-neon-green" />
+                  <span>{remainingTimeStr}</span>
+                </>
+              ) : (
+                <>
+                  <span>AI Planner</span>
+                  <span className="text-neon-green">✨</span>
+                </>
+              )}
+            </div>
+
+            {/* Small Dismiss X on Hover when inactive */}
+            {!isActive && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setBubbleVisible(false);
+                }}
+                className="absolute -top-1 -right-1 opacity-0 group-hover:opacity-100 p-0.5 bg-dark-900/90 border border-white/20 text-dark-300 hover:text-white rounded-full transition-all shadow-md"
+                title="Hide bubble"
+              >
+                <X className="w-2.5 h-2.5" />
+              </button>
             )}
           </div>
-
-          {/* Dismiss small X on hover if not active */}
-          {!isActive && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setBubbleVisible(false);
-              }}
-              className="opacity-0 group-hover:opacity-100 p-0.5 hover:bg-white/20 text-dark-400 hover:text-white rounded-full transition-all"
-              title="Hide bubble (re-open anytime from Dashboard header)"
-            >
-              <X className="w-3 h-3" />
-            </button>
-          )}
-        </div>
+        </motion.div>
       </div>
-    </motion.div>
+    </>
   );
 };
 
