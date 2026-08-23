@@ -324,6 +324,43 @@ export const useDailyPlanStore = create(
         }
       },
 
+      // Repeat an existing plan from history or current session (Let's do this again)
+      repeatPlan: (planToRepeat) => {
+        if (!planToRepeat?.plan?.tasks) return;
+        const tasksWithNewTimes = recalculateTaskTimeSlots(planToRepeat.plan.tasks);
+        const totalAllocatedMinutes = tasksWithNewTimes.reduce(
+          (acc, t) => acc + (Math.max(1, Number(t.duration)) || 0),
+          0
+        );
+
+        set({
+          mode: planToRepeat.mode || 'grind',
+          totalHours: Number((totalAllocatedMinutes / 60).toFixed(1)) || planToRepeat.totalHours || 4,
+          subjects: planToRepeat.subjects || [],
+          meals: planToRepeat.meals !== undefined ? planToRepeat.meals : 1,
+          breaks: planToRepeat.breaks !== undefined ? planToRepeat.breaks : 2,
+          powerNap: planToRepeat.powerNap || false,
+          beverage: planToRepeat.beverage || 'chai',
+          currentPlan: {
+            mode: planToRepeat.mode || 'grind',
+            totalHours: Number((totalAllocatedMinutes / 60).toFixed(1)) || 4,
+            subjects: planToRepeat.subjects || [],
+            meals: planToRepeat.meals || 1,
+            breaks: planToRepeat.breaks || 2,
+            powerNap: planToRepeat.powerNap || false,
+            beverage: planToRepeat.beverage || 'chai',
+            plan: {
+              title: planToRepeat.plan.title || 'My Study Plan',
+              tasks: tasksWithNewTimes.map((t) => ({ ...t, completed: false, completedAt: null })),
+            },
+            status: 'draft',
+            durationSecondsPlanned: totalAllocatedMinutes * 60,
+          },
+          step: 'edit',
+        });
+        toast.success("🔁 Plan loaded! Let's do this again.");
+      },
+
       // Reset to create a new session
       createNewPlan: () => {
         set({

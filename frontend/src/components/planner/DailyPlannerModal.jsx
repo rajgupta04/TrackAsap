@@ -79,6 +79,7 @@ export const DailyPlannerModal = () => {
     fetchHistory,
     isLoadingHistory,
     createNewPlan,
+    repeatPlan,
   } = useDailyPlanStore();
 
   const { sheets, fetchSheets } = useSheetStore();
@@ -898,13 +899,31 @@ export const DailyPlannerModal = () => {
                             }}
                             className="text-xs font-semibold text-white bg-transparent border-b border-transparent hover:border-white/20 focus:border-neon-green outline-none w-full"
                           />
-                          <div className="flex items-center gap-2 mt-0.5">
+                          <div className="flex items-center gap-2 mt-1 flex-wrap">
                             <span className="text-[10px] text-dark-400 font-mono">{t.time}</span>
-                            {t.linkedSheetName && (
-                              <span className="text-[9px] px-1.5 py-0.2 rounded bg-cyan-500/20 text-cyan-300 font-medium">
-                                📊 {t.linkedSheetName}
-                              </span>
-                            )}
+                            {/* Sheet Linker Selector */}
+                            <div className="flex items-center gap-1">
+                              <span className="text-[9px] text-dark-400">Sheet:</span>
+                              <select
+                                value={t.linkedSheetId || ''}
+                                onChange={(e) => {
+                                  const selectedId = e.target.value;
+                                  const selectedSheet = sheets.find((s) => s._id === selectedId);
+                                  const updated = [...currentPlan.plan.tasks];
+                                  updated[idx].linkedSheetId = selectedId || undefined;
+                                  updated[idx].linkedSheetName = selectedSheet?.name || undefined;
+                                  updateLocalTasks(updated);
+                                }}
+                                className="text-[10px] font-semibold bg-dark-900/90 border border-white/15 rounded-md px-1.5 py-0.5 text-cyan-300 focus:border-cyan-400 focus:outline-none cursor-pointer max-w-[140px] truncate"
+                              >
+                                <option value="" className="text-dark-400">Auto (Platform Sync)</option>
+                                {sheets.map((s) => (
+                                  <option key={s._id} value={s._id} className="text-white bg-dark-900">
+                                    📊 {s.name}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -1216,18 +1235,25 @@ export const DailyPlannerModal = () => {
               )}
 
               {/* Action Buttons */}
-              <div className="flex gap-3 justify-center pt-2">
+              <div className="flex flex-wrap gap-3 justify-center pt-2">
+                <button
+                  type="button"
+                  onClick={() => repeatPlan(currentPlan)}
+                  className="px-6 py-3 rounded-xl bg-gradient-to-r from-neon-green via-emerald-400 to-cyan-400 text-black font-extrabold text-xs shadow-lg shadow-neon-green/20 hover:brightness-110 active:scale-95 transition-all flex items-center gap-1.5 cursor-pointer"
+                >
+                  <RotateCcw className="w-4 h-4" /> Let's do this again 🔁
+                </button>
                 <button
                   type="button"
                   onClick={createNewPlan}
-                  className="px-6 py-3 rounded-xl bg-neon-green text-black font-extrabold text-xs shadow-lg shadow-neon-green/20 hover:bg-neon-green/90 transition-all"
+                  className="px-5 py-3 rounded-xl bg-white/10 hover:bg-white/20 border border-white/15 text-white font-bold text-xs transition-all cursor-pointer"
                 >
-                  Start Another Plan ✨
+                  + New Plan ✨
                 </button>
                 <button
                   type="button"
                   onClick={closeModal}
-                  className="px-5 py-3 rounded-xl bg-white/10 hover:bg-white/20 border border-white/15 text-white font-bold text-xs transition-all"
+                  className="px-4 py-3 rounded-xl bg-transparent hover:bg-white/5 text-dark-300 hover:text-white text-xs transition-all cursor-pointer"
                 >
                   Back to Dashboard
                 </button>
@@ -1250,7 +1276,7 @@ export const DailyPlannerModal = () => {
                 </h3>
                 <button
                   onClick={() => setStep('greeting')}
-                  className="px-3 py-1 rounded-lg bg-neon-green text-black text-xs font-bold hover:bg-neon-green/90"
+                  className="px-3 py-1 rounded-lg bg-neon-green text-black text-xs font-bold hover:bg-neon-green/90 cursor-pointer"
                 >
                   + New Session
                 </button>
@@ -1269,7 +1295,7 @@ export const DailyPlannerModal = () => {
                   {history.map((h) => (
                     <div
                       key={h._id}
-                      className="p-4 rounded-xl bg-dark-800/80 border border-white/10 space-y-2"
+                      className="p-4 rounded-xl bg-dark-800/80 border border-white/10 space-y-2 hover:border-white/20 transition-all"
                     >
                       <div className="flex justify-between items-start">
                         <div>
@@ -1291,6 +1317,20 @@ export const DailyPlannerModal = () => {
                             </div>
                           </div>
                         )}
+                      </div>
+
+                      {/* Let's do this again button */}
+                      <div className="flex items-center justify-between pt-2.5 border-t border-white/10 mt-2">
+                        <span className="text-[10px] text-dark-400 font-mono">
+                          {h.plan?.tasks?.length || 0} tasks • {h.subjects?.map((s) => s.name).join(', ') || 'General DSA'}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => repeatPlan(h)}
+                          className="px-3.5 py-1.5 rounded-xl bg-neon-green text-black text-xs font-extrabold shadow-sm hover:brightness-110 transition-all flex items-center gap-1.5 active:scale-95 cursor-pointer"
+                        >
+                          <RotateCcw className="w-3.5 h-3.5" /> Let's do this again 🔁
+                        </button>
                       </div>
                     </div>
                   ))}

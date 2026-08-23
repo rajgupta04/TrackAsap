@@ -5,55 +5,56 @@ import SheetProblem from '../models/SheetProblem.model.js';
 import crypto from 'crypto';
 
 /**
+ * Robust Substring & Regex Matcher for User's Active Sheets and Topics
+ */
+function findMatchingSheetForText(sheets = [], text = '') {
+  if (!text || !Array.isArray(sheets) || sheets.length === 0) return null;
+  const clean = text.toLowerCase();
+
+  // Keyword extraction (words of length >= 3)
+  const keywords = clean.replace(/[^a-z0-9]/g, ' ').split(/\s+/).filter((w) => w.length >= 3);
+
+  // 1. Direct match on sheet name
+  for (const s of sheets) {
+    const sName = (s.name || '').toLowerCase();
+    for (const kw of keywords) {
+      if (sName.includes(kw) || kw.includes(sName)) {
+        return {
+          sheetId: s._id,
+          sheetName: s.name,
+        };
+      }
+    }
+  }
+
+  // 2. Match on topics within sheets
+  for (const s of sheets) {
+    if (Array.isArray(s.topics)) {
+      for (const t of s.topics) {
+        const tName = (t.name || '').toLowerCase();
+        for (const kw of keywords) {
+          if (tName.includes(kw) || kw.includes(tName)) {
+            return {
+              sheetId: s._id,
+              sheetName: s.name,
+              topicName: t.name,
+            };
+          }
+        }
+      }
+    }
+  }
+
+  return null;
+}
+
+/**
  * Fuzzy match subject name with user's available sheets and topics
  */
 async function matchSubjectToSheets(userId, subjectName) {
   try {
     const sheets = await Sheet.find({ user: userId, isActive: true }).select('name category topics _id');
-    const cleanSub = subjectName.toLowerCase().replace(/[^a-z0-9]/g, ' ').trim();
-    const keywords = cleanSub.split(/\s+/).filter(Boolean);
-
-    let bestSheet = null;
-    let bestTopic = null;
-    let highestScore = 0;
-
-    for (const s of sheets) {
-      const sName = s.name.toLowerCase();
-      let score = 0;
-
-      for (const kw of keywords) {
-        if (kw.length < 2) continue;
-        if (sName.includes(kw)) score += 3;
-      }
-
-      // Check topics
-      if (Array.isArray(s.topics)) {
-        for (const t of s.topics) {
-          const tName = (t.name || '').toLowerCase();
-          for (const kw of keywords) {
-            if (kw.length < 2) continue;
-            if (tName.includes(kw)) {
-              score += 2;
-              if (!bestTopic) bestTopic = t.name;
-            }
-          }
-        }
-      }
-
-      if (score > highestScore) {
-        highestScore = score;
-        bestSheet = s;
-      }
-    }
-
-    if (bestSheet && highestScore >= 2) {
-      return {
-        sheetId: bestSheet._id,
-        sheetName: bestSheet.name,
-        topicName: bestTopic || null,
-      };
-    }
-    return null;
+    return findMatchingSheetForText(sheets, subjectName);
   } catch (err) {
     console.warn('Sheet matching error:', err.message);
     return null;
@@ -63,7 +64,7 @@ async function matchSubjectToSheets(userId, subjectName) {
 /**
  * Fallback heuristic plan generator if Gemini API key is missing or network fails
  */
-function generateHeuristicPlanOptions(inputs, matchedSheets) {
+function generateHeuristicPlanOptions(inputs, matchedSheets, userSheets = []) {
   const { mode = 'grind', totalHours = 4, subjects = [], meals = 1, breaks = 2, powerNap = false, beverage = 'chai' } = inputs;
   const beverageBreaksCount = Math.max(1, Math.ceil(totalHours / 6));
 
@@ -71,14 +72,11 @@ function generateHeuristicPlanOptions(inputs, matchedSheets) {
   const beverageTitle = beverage === 'coffee' ? 'Coffee Break' : beverage === 'chai' ? 'Chai & Refreshment' : 'Hydration Break';
 
   const modePrefix = mode === 'chill' ? 'Chill Pace' : mode === 'allin' ? 'All-In Deep Work' : 'Grind Session';
-  const studyBlockMinutes = mode === 'chill' ? 45 : mode === 'allin' ? 90 : 60;
-  const breakMinutes = mode === 'chill' ? 15 : mode === 'allin' ? 5 : 10;
 
   const createPlan = (variant) => {
     const tasks = [];
     let currentOffsetMinutes = 0;
     const startTime = new Date();
-    // Round start time to next 15 min mark
     const mins = startTime.getMinutes();
     const roundedMins = Math.ceil(mins / 15) * 15;
     startTime.setMinutes(roundedMins, 0, 0);
@@ -105,11 +103,11 @@ function generateHeuristicPlanOptions(inputs, matchedSheets) {
 
     // Subjects allocation
     const userSubs = subjects.length > 0 ? subjects : [{ name: 'DSA & Core Topics', type: 'revision' }];
-    const targetStudyTimeTotal = totalHours * 60 - (meals * 35 + breaks * breakMinutes + (powerNap ? 25 : 0) + beverageBreaksCount * 15 + 20);
+    const targetStudyTimeTotal = totalHours * 60 - (meals * 35 + breaks * 10 + (powerNap ? 25 : 0) + beverageBreaksCount * 15 + 20);
     const subDuration = Math.max(30, Math.floor(targetStudyTimeTotal / userSubs.length));
 
     userSubs.forEach((sub, idx) => {
-      const match = matchedSheets[idx] || null;
+      const match = matchedSheets[idx] || findMatchingSheetForText(userSheets, sub.name);
       tasks.push({
         id: crypto.randomUUID(),
         time: formatSlot(currentOffsetMinutes, subDuration),
@@ -139,14 +137,14 @@ function generateHeuristicPlanOptions(inputs, matchedSheets) {
       } else if (idx < userSubs.length - 1) {
         tasks.push({
           id: crypto.randomUUID(),
-          time: formatSlot(currentOffsetMinutes, breakMinutes),
-          duration: breakMinutes,
+          time: formatSlot(currentOffsetMinutes, 10),
+          duration: 10,
           title: variant === 1 ? 'Quick Stretch & Water' : 'Eye Rest & Walk',
           category: 'break',
           icon: '🧘',
           completed: false,
         });
-        currentOffsetMinutes += breakMinutes;
+        currentOffsetMinutes += 10;
       }
     });
 
@@ -214,10 +212,10 @@ export const generateDailyPlan = async (req, res) => {
       beverage = 'chai',
     } = req.body;
 
+    const userSheets = await Sheet.find({ user: req.user._id, isActive: true }).select('name category topics _id');
+
     // 1. Resolve sheet matches for each subject in parallel
-    const matchedSheets = await Promise.all(
-      subjects.map((sub) => matchSubjectToSheets(req.user._id, sub.name))
-    );
+    const matchedSheets = subjects.map((sub) => findMatchingSheetForText(userSheets, sub.name));
 
     const beverageBreaksCount = Math.max(1, Math.ceil(totalHours / 6));
 
@@ -296,10 +294,11 @@ Return ONLY valid JSON matching this schema:
 
           const attachSheetsToTasks = (tasks = []) =>
             tasks.map((t, idx) => {
+              // Match by subjectIndex or by keyword search in task title
               const matched =
                 typeof t.subjectIndex === 'number' && matchedSheets[t.subjectIndex]
                   ? matchedSheets[t.subjectIndex]
-                  : null;
+                  : findMatchingSheetForText(userSheets, t.title);
 
               return {
                 id: t.id || `task-${idx + 1}-${Date.now()}`,
@@ -340,7 +339,8 @@ Return ONLY valid JSON matching this schema:
     // 3. Fallback Heuristic Generator
     const heuristic = generateHeuristicPlanOptions(
       { mode, totalHours, subjects, meals, breaks, powerNap, beverage },
-      matchedSheets
+      matchedSheets,
+      userSheets
     );
 
     res.json({
@@ -397,20 +397,41 @@ export const startPlanSession = async (req, res) => {
       return res.status(404).json({ message: 'Plan not found' });
     }
 
-    // Collect all unique linked sheet IDs in this plan
+    const userSheets = await Sheet.find({ user: req.user._id, isActive: true });
+
+    // Collect all linked sheet IDs or auto-match from tasks
     const linkedSheetIds = new Set();
     (plan.plan?.tasks || []).forEach((t) => {
-      if (t.linkedSheetId) linkedSheetIds.add(t.linkedSheetId.toString());
+      if (t.linkedSheetId) {
+        linkedSheetIds.add(t.linkedSheetId.toString());
+      } else {
+        const match = findMatchingSheetForText(userSheets, t.title);
+        if (match) {
+          t.linkedSheetId = match.sheetId;
+          t.linkedSheetName = match.sheetName;
+          linkedSheetIds.add(match.sheetId.toString());
+        }
+      }
     });
+
     (plan.subjects || []).forEach((s) => {
-      if (s.linkedSheetId) linkedSheetIds.add(s.linkedSheetId.toString());
+      if (s.linkedSheetId) {
+        linkedSheetIds.add(s.linkedSheetId.toString());
+      } else {
+        const match = findMatchingSheetForText(userSheets, s.name);
+        if (match) {
+          s.linkedSheetId = match.sheetId;
+          s.linkedSheetName = match.sheetName;
+          linkedSheetIds.add(match.sheetId.toString());
+        }
+      }
     });
 
     // Take snapshot of each sheet's current solved & revision count
     const snapshots = [];
-    for (const sheetIdStr of linkedSheetIds) {
-      const sheet = await Sheet.findById(sheetIdStr);
-      if (sheet) {
+    for (const sheet of userSheets) {
+      // Snapshot any explicitly linked sheet OR any sheet matching user subjects
+      if (linkedSheetIds.has(sheet._id.toString()) || linkedSheetIds.size === 0) {
         const solvedCount = await SheetProblem.countDocuments({
           sheet: sheet._id,
           status: 'solved',
@@ -494,7 +515,7 @@ export const updatePlanTasks = async (req, res) => {
   }
 };
 
-// @desc    End session, compute sheet delta & generate session report with motivational quote
+// @desc    End session, capture full platform activity delta & generate AI motivational report
 // @route   PATCH /api/daily-plan/:id/end-session
 // @access  Private
 export const endPlanSession = async (req, res) => {
@@ -508,76 +529,122 @@ export const endPlanSession = async (req, res) => {
     plan.status = 'completed';
     plan.sessionEndedAt = now;
 
-    const actualSeconds = plan.sessionStartedAt
-      ? Math.round((now.getTime() - new Date(plan.sessionStartedAt).getTime()) / 1000)
-      : plan.durationSecondsPlanned;
+    const sessionStart = plan.sessionStartedAt ? new Date(plan.sessionStartedAt) : new Date(Date.now() - 3600000);
+    const actualSeconds = Math.round((now.getTime() - sessionStart.getTime()) / 1000);
     plan.durationSecondsActual = actualSeconds;
 
-    // Collect end snapshots of linked sheets
-    const endSnapshots = [];
+    // 1. Query ALL SheetProblems updated / solved / revised by user during this session window
+    const activeSheetProblems = await SheetProblem.find({
+      user: req.user._id,
+      $or: [
+        { updatedAt: { $gte: sessionStart, $lte: now } },
+        { lastAttemptedAt: { $gte: sessionStart, $lte: now } },
+        { solvedAt: { $gte: sessionStart, $lte: now } },
+      ],
+    }).populate('sheet', 'name color category');
+
+    // 2. Track activity by Sheet
+    const sheetActivityMap = new Map();
+    activeSheetProblems.forEach((p) => {
+      const sheetName = p.sheet?.name || 'General Sheet';
+      const sheetId = p.sheet?._id || p.sheet;
+      if (!sheetActivityMap.has(sheetName)) {
+        sheetActivityMap.set(sheetName, {
+          sheetId,
+          sheetName,
+          solvedDelta: 0,
+          revisionDelta: 0,
+          problemTitles: [],
+        });
+      }
+      const entry = sheetActivityMap.get(sheetName);
+      if (p.status === 'solved' || p.status === 'Solved') {
+        entry.solvedDelta += 1;
+      } else if (p.status === 'revision' || p.status === 'Revision') {
+        entry.revisionDelta += 1;
+      }
+      entry.problemTitles.push(`${p.title} (${p.difficulty || 'medium'})`);
+    });
+
+    // Also check snapshots delta as fallback
     const monitoredReport = [];
     let totalSolvedDelta = 0;
     let totalRevisionDelta = 0;
 
-    for (const startSnap of plan.sheetSnapshotsStart || []) {
-      const sheet = await Sheet.findById(startSnap.sheetId);
-      if (sheet) {
-        const endSolved = await SheetProblem.countDocuments({
-          sheet: sheet._id,
-          status: 'solved',
-        });
-        const endRevision = await SheetProblem.countDocuments({
-          sheet: sheet._id,
-          status: { $in: ['revision', 'Revision'] },
-        });
-        const totalCount = await SheetProblem.countDocuments({ sheet: sheet._id });
+    for (const [_, act] of sheetActivityMap.entries()) {
+      totalSolvedDelta += act.solvedDelta;
+      totalRevisionDelta += act.revisionDelta;
+      monitoredReport.push({
+        sheetId: act.sheetId,
+        sheetName: act.sheetName,
+        solvedDelta: act.solvedDelta,
+        revisionDelta: act.revisionDelta,
+        problemTitles: act.problemTitles,
+      });
+    }
 
-        endSnapshots.push({
-          sheetId: sheet._id,
-          sheetName: sheet.name,
-          totalProblems: totalCount,
-          solvedProblems: endSolved,
-          revisionCount: endRevision,
-          updatedAt: now,
-        });
-
-        const solvedDelta = Math.max(0, endSolved - (startSnap.solvedProblems || 0));
-        const revisionDelta = Math.max(0, endRevision - (startSnap.revisionCount || 0));
-
-        totalSolvedDelta += solvedDelta;
-        totalRevisionDelta += revisionDelta;
-
-        monitoredReport.push({
-          sheetId: sheet._id,
-          sheetName: sheet.name,
-          startSolved: startSnap.solvedProblems || 0,
-          endSolved,
-          solvedDelta,
-          startRevision: startSnap.revisionCount || 0,
-          endRevision,
-          revisionDelta,
-        });
+    // Also check any existing snapshots if no activity query matches
+    if (monitoredReport.length === 0 && plan.sheetSnapshotsStart?.length > 0) {
+      for (const startSnap of plan.sheetSnapshotsStart) {
+        const sheet = await Sheet.findById(startSnap.sheetId);
+        if (sheet) {
+          const endSolved = await SheetProblem.countDocuments({ sheet: sheet._id, status: 'solved' });
+          const endRev = await SheetProblem.countDocuments({ sheet: sheet._id, status: { $in: ['revision', 'Revision'] } });
+          const sDelta = Math.max(0, endSolved - (startSnap.solvedProblems || 0));
+          const rDelta = Math.max(0, endRev - (startSnap.revisionCount || 0));
+          totalSolvedDelta += sDelta;
+          totalRevisionDelta += rDelta;
+          if (sDelta > 0 || rDelta > 0) {
+            monitoredReport.push({
+              sheetId: sheet._id,
+              sheetName: sheet.name,
+              solvedDelta: sDelta,
+              revisionDelta: rDelta,
+              problemTitles: [],
+            });
+          }
+        }
       }
     }
 
-    plan.sheetSnapshotsEnd = endSnapshots;
-
-    // Calculate task completion stats
+    // Calculate task completion rate
     const totalTasks = plan.plan?.tasks?.length || 0;
     const completedTasks = (plan.plan?.tasks || []).filter((t) => t.completed).length;
     const completionRate = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 100;
 
-    // Focus Score: 70% task completion + 30% sheet activity bonus
     const activityBonus = Math.min(30, (totalSolvedDelta + totalRevisionDelta) * 10);
     const focusScore = Math.min(100, Math.round(completionRate * 0.7 + activityBonus));
 
-    const quotes = [
-      'Give yourself a pat on your back! Not everyone clears the first step of planning things out.',
-      'Vision is not clear until you write it down and execute. Outstanding effort!',
-      'Consistency compounds like high interest. Another power session locked in.',
-      'You just moved miles ahead of where you were yesterday. Keep that fire burning!',
-    ];
-    const motivationalQuote = quotes[Math.floor(Math.random() * quotes.length)];
+    // 3. Generate Anonymized AI Motivational Commentary via Gemini
+    let aiCommentary = 'Give yourself a pat on your back! Not everyone clears the first step of planning things out. Vision is not clear until you write it down and execute.';
+    const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
+
+    if (apiKey) {
+      try {
+        const ai = new GoogleGenAI({ apiKey });
+        const activitySummary = monitoredReport.map((m) => `${m.sheetName}: +${m.solvedDelta} solved, +${m.revisionDelta} revised`).join(', ') || 'Consistent revision work';
+        const tasksSummary = `${completedTasks} of ${totalTasks} tasks completed in ${plan.mode} mode (${Math.round(actualSeconds / 60)} minutes)`;
+
+        const prompt = `You are an elite, inspiring study mentor for TrackAsap.
+A student just completed a study session with the following objective metrics:
+- Mode: ${plan.mode}
+- Tasks Done: ${tasksSummary}
+- Problems/Revisions Tackled on Platform: ${activitySummary}
+- Focus Score: ${focusScore}%
+
+Write an energetic, highly motivating 2-sentence personal debrief for this student celebrating their specific accomplishments. Keep it punchy, authentic, and inspiring. DO NOT use generic filler.`;
+
+        const response = await ai.models.generateContent({
+          model: 'gemini-1.5-flash',
+          contents: prompt,
+        });
+        if (response.text?.trim()) {
+          aiCommentary = response.text.trim();
+        }
+      } catch (aiErr) {
+        console.warn('AI Commentary generation failed:', aiErr.message);
+      }
+    }
 
     plan.report = {
       totalTasksCompleted: completedTasks,
@@ -587,7 +654,7 @@ export const endPlanSession = async (req, res) => {
       revisionsDelta: totalRevisionDelta,
       totalActivityCount: totalSolvedDelta + totalRevisionDelta,
       focusScore,
-      motivationalQuote,
+      motivationalQuote: aiCommentary,
       sheetsMonitored: monitoredReport,
     };
 
