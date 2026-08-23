@@ -78,7 +78,7 @@ export const useDailyPlanStore = create(
       history: [],
       isLoadingHistory: false,
 
-      // Modal Triggers
+      // Modal Triggers: Resumes exactly where the user left off
       openModal: (targetStep) => {
         const state = get();
         if (targetStep) {
@@ -87,8 +87,12 @@ export const useDailyPlanStore = create(
           set({ isModalOpen: true, step: 'session' });
         } else if (state.currentPlan?.status === 'completed' && state.currentPlan?.report) {
           set({ isModalOpen: true, step: 'report' });
+        } else if (state.currentPlan?.plan?.tasks?.length > 0) {
+          set({ isModalOpen: true, step: state.step || 'edit' });
+        } else if (state.generatedOptions) {
+          set({ isModalOpen: true, step: state.step || 'compare' });
         } else {
-          set({ isModalOpen: true });
+          set({ isModalOpen: true, step: state.step || 'greeting' });
         }
       },
 
@@ -298,11 +302,10 @@ export const useDailyPlanStore = create(
       fetchActiveSession: async () => {
         try {
           const active = await dailyPlanService.getActive();
-          if (active) {
+          if (active && active.status === 'active') {
+            set({ currentPlan: active, step: 'session' });
+          } else if (active && !get().currentPlan?._id && !get().generatedOptions) {
             set({ currentPlan: active });
-            if (active.status === 'active') {
-              set({ step: 'session' });
-            }
           }
         } catch (err) {
           console.warn('Fetch active plan error:', err);
@@ -331,9 +334,10 @@ export const useDailyPlanStore = create(
       },
     }),
     {
-      name: 'trackasap-daily-plan-storage-v2',
+      name: 'trackasap-daily-plan-storage-v3',
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({
+        step: state.step,
         mode: state.mode,
         totalHours: state.totalHours,
         subjects: state.subjects,
@@ -341,6 +345,9 @@ export const useDailyPlanStore = create(
         breaks: state.breaks,
         powerNap: state.powerNap,
         beverage: state.beverage,
+        generatedOptions: state.generatedOptions,
+        selectedPlanChoice: state.selectedPlanChoice,
+        currentPlan: state.currentPlan,
         isBubbleVisible: state.isBubbleVisible,
       }),
     }
