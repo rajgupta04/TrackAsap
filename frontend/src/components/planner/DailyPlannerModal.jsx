@@ -1238,19 +1238,27 @@ export const DailyPlannerModal = () => {
 
                   {/* Monitored Sheets Bar */}
                   {currentPlan.sheetSnapshotsStart?.length > 0 && (
-                    <div className="p-3.5 rounded-2xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-between gap-3 text-xs">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <BarChart3 className="w-4 h-4 text-cyan-400 shrink-0" />
-                        <div className="min-w-0">
-                          <span className="font-bold text-white">Monitoring: </span>
-                          <span className="text-cyan-300 font-medium truncate">
-                            {currentPlan.sheetSnapshotsStart.map((s) => s.sheetName).join(', ')}
-                          </span>
+                    <div className="p-3.5 rounded-2xl bg-cyan-500/10 border border-cyan-500/20 space-y-2 text-xs overflow-hidden">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-1.5 text-cyan-400 font-bold text-[11px]">
+                          <BarChart3 className="w-3.5 h-3.5 shrink-0" />
+                          <span>Live Sheet Monitoring</span>
                         </div>
+                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-200 font-mono font-bold shrink-0 border border-cyan-400/30">
+                          Syncing
+                        </span>
                       </div>
-                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-200 font-mono font-bold shrink-0 border border-cyan-400/30">
-                        Syncing
-                      </span>
+                      <div className="flex flex-wrap gap-1.5">
+                        {currentPlan.sheetSnapshotsStart.map((s, sIdx) => (
+                          <span
+                            key={s.sheetId || sIdx}
+                            className="text-[10px] px-2.5 py-0.5 rounded-md bg-dark-950/80 border border-cyan-500/30 text-cyan-300 font-medium truncate max-w-[200px] inline-block"
+                            title={s.sheetName}
+                          >
+                            📊 {s.sheetName}
+                          </span>
+                        ))}
+                      </div>
                     </div>
                   )}
 
@@ -1338,7 +1346,10 @@ export const DailyPlannerModal = () => {
                         {/* Badges & Duration */}
                         <div className="flex items-center gap-2 shrink-0 ml-2">
                           {t.category === 'study' && t.linkedSheetName && (
-                            <span className="text-[10px] px-2 py-0.5 rounded-md bg-cyan-500/15 border border-cyan-500/30 text-cyan-300 font-medium">
+                            <span
+                              className="text-[10px] px-2 py-0.5 rounded-md bg-cyan-500/15 border border-cyan-500/30 text-cyan-300 font-medium max-w-[120px] sm:max-w-[150px] truncate block"
+                              title={t.linkedSheetName}
+                            >
                               📊 {t.linkedSheetName}
                             </span>
                           )}
