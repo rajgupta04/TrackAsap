@@ -31,6 +31,16 @@ The Ultimate Developer Command Center & Interview Prep Platform. Featuring exten
 - **Visual Progress** - See completion percentage per topic
 - **Link Problems to Sheets** - Organize problems by sheet/topic
 
+### 🧠 AI Daily Study Planner & Focus Engine (NEW! ⚡)
+- **Multi-Mode Focus AI** - Personalized study session plans tailored to your energy level (**☕ Chill Mode**, **🔥 Grind Mode**, **⚡ All-In Mode**).
+- **Dual AI Plan Comparison** - Compare two distinct algorithmic schedule blueprints (Balanced Deep-Work Blocks vs. Agile Pomodoro Spreads) with direct task customization.
+- **Dynamic Cascading Timeline** - Automatically cascades task intervals sequentially and provides a real-time **Surplus / Deficit Balance Meter**.
+- **Live Sheet Monitoring** - Auto-matches study tasks to your active DSA/CP problem sheets, captures pre-session snapshots, and logs solved/revision deltas in real-time.
+- **Non-Stop Session Engine & Live Alignment** - Timer re-aligns to the exact second of launch so time spent reviewing or editing your plan is never lost.
+- **Matrix Glitch Reality Check** - Playful Easter egg preventing accidental premature task check-offs if insufficient study time has elapsed.
+- **Motivational Session Reports** - Generates dynamic focus scores, progress breakdowns, and personalized congratulatory feedback.
+- **macOS Window Interface** - Responsive 2-column widescreen layout with native controls: Minimize (🟡), Fullscreen toggle with dual-window restore icon (🟢), and draggable Quick-Launch bubble.
+
 ### 🗺️ Interactive Gamified DSA Roadmap (NEW!)
 - **11 Thematic Kingdoms** - Arrays, Two Pointers, Sliding Window, Stacks, Binary Search, Linked Lists, Trees, Heaps, Graphs, DP, and Advanced Citadel.
 - **Dynamic Mode Selector** - Toggle instantly between **Blind 75**, **Rabbit 150**, and **Running Rabbit 175** question counts.
