@@ -453,10 +453,32 @@ export const startPlanSession = async (req, res) => {
       }
     }
 
+    const sessionStart = new Date();
     plan.status = 'active';
-    plan.sessionStartedAt = new Date();
+    plan.sessionStartedAt = sessionStart;
     plan.sheetSnapshotsStart = snapshots;
-    plan.durationSecondsPlanned = (plan.totalHours || 4) * 3600;
+
+    // Re-sequence all task time intervals from the exact second the session launches
+    if (Array.isArray(plan.plan?.tasks) && plan.plan.tasks.length > 0) {
+      let currentOffsetMin = 0;
+      plan.plan.tasks = plan.plan.tasks.map((t) => {
+        const dur = Math.max(1, Number(t.duration) || 30);
+        const s = new Date(sessionStart.getTime() + currentOffsetMin * 60000);
+        const e = new Date(sessionStart.getTime() + (currentOffsetMin + dur) * 60000);
+        const fmt = (d) =>
+          d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+        currentOffsetMin += dur;
+        const taskObj = t.toObject ? t.toObject() : t;
+        return {
+          ...taskObj,
+          duration: dur,
+          time: `${fmt(s)} - ${fmt(e)}`,
+        };
+      });
+      plan.durationSecondsPlanned = currentOffsetMin * 60;
+    } else {
+      plan.durationSecondsPlanned = (plan.totalHours || 4) * 3600;
+    }
 
     await plan.save();
     res.json(plan);
