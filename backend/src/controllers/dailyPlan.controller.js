@@ -402,14 +402,16 @@ export const startPlanSession = async (req, res) => {
     // Collect all linked sheet IDs or auto-match from tasks
     const linkedSheetIds = new Set();
     (plan.plan?.tasks || []).forEach((t) => {
-      if (t.linkedSheetId) {
-        linkedSheetIds.add(t.linkedSheetId.toString());
-      } else {
-        const match = findMatchingSheetForText(userSheets, t.title);
-        if (match) {
-          t.linkedSheetId = match.sheetId;
-          t.linkedSheetName = match.sheetName;
-          linkedSheetIds.add(match.sheetId.toString());
+      if (t.category === 'study') {
+        if (t.linkedSheetId) {
+          linkedSheetIds.add(t.linkedSheetId.toString());
+        } else {
+          const match = findMatchingSheetForText(userSheets, t.title);
+          if (match) {
+            t.linkedSheetId = match.sheetId;
+            t.linkedSheetName = match.sheetName;
+            linkedSheetIds.add(match.sheetId.toString());
+          }
         }
       }
     });
