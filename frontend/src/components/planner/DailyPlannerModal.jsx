@@ -227,14 +227,6 @@ export const DailyPlannerModal = () => {
         <div className="px-4 py-3 bg-dark-950 border-b border-white/10 flex items-center justify-between select-none">
           <div className="flex items-center gap-2">
             <div className="group/traffic flex items-center gap-1.5 mr-2">
-              {/* Red dot: Cross back to Home */}
-              <button
-                type="button"
-                onClick={() => setStep('greeting')}
-                className="w-3 h-3 rounded-full bg-[#FF5F57] hover:brightness-110 active:brightness-90 flex items-center justify-center transition-all cursor-pointer"
-              >
-                <X className="w-2 h-2 text-black/80 opacity-0 group-hover/traffic:opacity-100 stroke-[3] transition-opacity" />
-              </button>
               {/* Yellow dot: Minus means Minimize to floating bubble */}
               <button
                 type="button"
