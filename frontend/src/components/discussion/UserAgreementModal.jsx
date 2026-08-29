@@ -150,9 +150,11 @@ const UserAgreementModal = ({ isOpen, onAccept, onClose }) => {
               </div>
 
               {/* Checkbox Agreement */}
-              <label className="flex items-start gap-2.5 sm:gap-3 cursor-pointer group mb-4 sm:mb-5 select-none">
+              <label
+                onClick={() => setAgreed(!agreed)}
+                className="flex items-start gap-2.5 sm:gap-3 cursor-pointer group mb-4 sm:mb-5 select-none"
+              >
                 <div
-                  onClick={() => setAgreed(!agreed)}
                   className={`w-4 h-4 sm:w-5 sm:h-5 rounded-md border-2 flex items-center justify-center transition-all duration-200 shrink-0 mt-0.5 ${
                     agreed
                       ? 'bg-neon-green border-neon-green shadow-sm shadow-neon-green/30'
