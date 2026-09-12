@@ -4,6 +4,7 @@ import { useAuthStore } from './store/authStore';
 import { useThemeStore } from './store/themeStore';
 import { useFeatureStore } from './store/featureStore';
 import { initTelemetry, trackPageView } from './utils/telemetry';
+import { flushSpeechQueue } from './utils/speechUtils';
 import Layout from './components/layout/Layout';
 import Login from './pages/Login';
 import Register from './pages/Register';
@@ -102,6 +103,10 @@ function App() {
   useEffect(() => {
     if (location.pathname) {
       trackPageView(location.pathname);
+      // Guarantee any live speech synthesis immediately halts when navigating to any other page
+      if (!location.pathname.startsWith('/interview/room')) {
+        flushSpeechQueue();
+      }
     }
   }, [location.pathname]);
 

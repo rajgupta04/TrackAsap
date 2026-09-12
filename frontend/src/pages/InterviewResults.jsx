@@ -18,6 +18,7 @@ import {
   Layers,
 } from 'lucide-react';
 import { useInterviewStore } from '../store/interviewStore';
+import { flushSpeechQueue } from '../utils/speechUtils';
 import toast from 'react-hot-toast';
 
 const InterviewResults = () => {
@@ -25,6 +26,14 @@ const InterviewResults = () => {
   const navigate = useNavigate();
   const { currentSession, fetchSession, isLoading } = useInterviewStore();
   const [showFullTranscript, setShowFullTranscript] = useState(false);
+
+  // Unconditionally stop any in-flight interview audio on arrival
+  useEffect(() => {
+    flushSpeechQueue();
+    return () => {
+      flushSpeechQueue();
+    };
+  }, []);
 
   useEffect(() => {
     if (sessionId) {

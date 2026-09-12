@@ -24,6 +24,7 @@ import { useAuthStore } from '../store/authStore';
 import AudioWaveform from '../components/interview/AudioWaveform';
 import ConfirmModal from '../components/interview/ConfirmModal';
 import RabbitAvatar from '../components/interview/RabbitAvatar';
+import { flushSpeechQueue, stopAllSpeech } from '../utils/speechUtils';
 import toast from 'react-hot-toast';
 
 const InterviewRoom = () => {
@@ -64,6 +65,47 @@ const InterviewRoom = () => {
   const lastAITextRef = useRef('');
   const recentAIPromptsRef = useRef([]);
   const aiAudioBlockedUntilRef = useRef(0);
+  const isSessionActiveRef = useRef(true);
+  const initialTimeoutRef = useRef(null);
+  const followupTimeoutRef = useRef(null);
+
+  // Unconditional unmount, route exit, and page hide lifecycle listener
+  useEffect(() => {
+    isSessionActiveRef.current = true;
+
+    const handleExit = () => {
+      isSessionActiveRef.current = false;
+      flushSpeechQueue();
+    };
+
+    window.addEventListener('beforeunload', handleExit);
+    window.addEventListener('pagehide', handleExit);
+    window.addEventListener('popstate', handleExit);
+
+    return () => {
+      isSessionActiveRef.current = false;
+      window.removeEventListener('beforeunload', handleExit);
+      window.removeEventListener('pagehide', handleExit);
+      window.removeEventListener('popstate', handleExit);
+
+      if (initialTimeoutRef.current) clearTimeout(initialTimeoutRef.current);
+      if (followupTimeoutRef.current) clearTimeout(followupTimeoutRef.current);
+
+      if (speechRecognitionRef.current) {
+        try {
+          speechRecognitionRef.current.onend = null;
+          speechRecognitionRef.current.onerror = null;
+          speechRecognitionRef.current.onresult = null;
+          speechRecognitionRef.current.onstart = null;
+          speechRecognitionRef.current.stop();
+          speechRecognitionRef.current.abort();
+        } catch (e) {}
+        speechRecognitionRef.current = null;
+      }
+
+      flushSpeechQueue();
+    };
+  }, []);
 
   // Pre-load and cache browser voices
   useEffect(() => {
@@ -386,18 +428,29 @@ const InterviewRoom = () => {
     }
 
     // Dynamic Mode-Tailored AI Initial Greeting
-    const initialTimeout = setTimeout(async () => {
+    if (initialTimeoutRef.current) clearTimeout(initialTimeoutRef.current);
+    initialTimeoutRef.current = setTimeout(async () => {
+      if (!isSessionActiveRef.current) return;
       if (transcript.length === 0 && currentSession) {
         setIsAIThinking(true);
         let openingQuestion = '';
 
         try {
           const res = await getInitialQuestion(sessionId);
+          if (!isSessionActiveRef.current) {
+            setIsAIThinking(false);
+            return;
+          }
           if (res?.success && res.initialQuestion) {
             openingQuestion = res.initialQuestion;
           }
         } catch (e) {
           console.warn('Backend opening question failed, using local fallback:', e);
+        }
+
+        if (!isSessionActiveRef.current) {
+          setIsAIThinking(false);
+          return;
         }
 
         if (!openingQuestion) {
@@ -410,21 +463,23 @@ const InterviewRoom = () => {
     }, 800);
 
     return () => {
-      clearTimeout(initialTimeout);
+      if (initialTimeoutRef.current) clearTimeout(initialTimeoutRef.current);
       if (speechRecognitionRef.current) {
         try {
+          speechRecognitionRef.current.onend = null;
           speechRecognitionRef.current.abort();
         } catch (e) {}
       }
-      if (window.speechSynthesis) {
-        window.speechSynthesis.cancel();
-      }
+      flushSpeechQueue();
     };
   }, [currentSession]);
 
   // Voice Synthesis helper with barge-in support and acoustic echo guard
   const speakAIResponse = (text) => {
-    if (!text) return;
+    if (!text || !isSessionActiveRef.current) {
+      flushSpeechQueue();
+      return;
+    }
     lastAITextRef.current = text.toLowerCase();
     recentAIPromptsRef.current = [text, ...(recentAIPromptsRef.current || []).slice(0, 4)];
     appendTranscriptTurn('ai', text, activeSection);
@@ -443,7 +498,8 @@ const InterviewRoom = () => {
     }
 
     if (window.speechSynthesis) {
-      window.speechSynthesis.cancel();
+      stopAllSpeech();
+      if (!isSessionActiveRef.current) return;
 
       const utterance = new SpeechSynthesisUtterance(text);
 
@@ -471,6 +527,10 @@ const InterviewRoom = () => {
       utterance.rate = 1.02;
 
       utterance.onstart = () => {
+        if (!isSessionActiveRef.current) {
+          stopAllSpeech();
+          return;
+        }
         isAISpeakingRef.current = true;
         aiAudioBlockedUntilRef.current = Number.MAX_SAFE_INTEGER;
         setIsAISpeaking(true);
@@ -480,9 +540,14 @@ const InterviewRoom = () => {
 
       utterance.onend = () => {
         setIsAISpeaking(false);
+        if (!isSessionActiveRef.current) {
+          isAISpeakingRef.current = false;
+          return;
+        }
         // Generous acoustic silence buffer: 1400ms after audio finishes before microphone opens
         aiAudioBlockedUntilRef.current = Date.now() + 1400;
         setTimeout(() => {
+          if (!isSessionActiveRef.current) return;
           isAISpeakingRef.current = false;
           if (!isMutedRef.current && speechRecognitionRef.current) {
             try {
@@ -494,8 +559,13 @@ const InterviewRoom = () => {
 
       utterance.onerror = () => {
         setIsAISpeaking(false);
+        if (!isSessionActiveRef.current) {
+          isAISpeakingRef.current = false;
+          return;
+        }
         aiAudioBlockedUntilRef.current = Date.now() + 800;
         setTimeout(() => {
+          if (!isSessionActiveRef.current) return;
           isAISpeakingRef.current = false;
           if (!isMutedRef.current && speechRecognitionRef.current) {
             try {
@@ -505,21 +575,23 @@ const InterviewRoom = () => {
         }, 800);
       };
 
+      if (!isSessionActiveRef.current) {
+        stopAllSpeech();
+        return;
+      }
       window.speechSynthesis.speak(utterance);
     }
   };
 
   const handleBargeIn = () => {
-    if (window.speechSynthesis) {
-      window.speechSynthesis.cancel();
-    }
+    stopAllSpeech();
     setIsAISpeaking(false);
     isAISpeakingRef.current = false;
     aiAudioBlockedUntilRef.current = Date.now() + 300;
     setLiveCaption('');
 
     setTimeout(() => {
-      if (!isMutedRef.current && speechRecognitionRef.current) {
+      if (isSessionActiveRef.current && !isMutedRef.current && speechRecognitionRef.current) {
         try {
           speechRecognitionRef.current.start();
         } catch (e) {}
@@ -534,7 +606,7 @@ const InterviewRoom = () => {
   };
 
   const handleCandidateUtterance = async (text) => {
-    if (!text || isAISpeakingRef.current || Date.now() < aiAudioBlockedUntilRef.current) return;
+    if (!text || !isSessionActiveRef.current || isAISpeakingRef.current || Date.now() < aiAudioBlockedUntilRef.current) return;
 
     if (isEchoOfAI(text, recentAIPromptsRef.current)) {
       console.warn('Blocked acoustic echo utterance:', text);
@@ -546,17 +618,25 @@ const InterviewRoom = () => {
     setLiveCaption('');
 
     // Trigger dynamic conversational follow-up turn
-    setTimeout(() => {
-      generateAdaptiveFollowup(text);
+    if (followupTimeoutRef.current) clearTimeout(followupTimeoutRef.current);
+    followupTimeoutRef.current = setTimeout(() => {
+      if (isSessionActiveRef.current) {
+        generateAdaptiveFollowup(text);
+      }
     }, 400);
   };
 
   const generateAdaptiveFollowup = async (candidateAnswer) => {
+    if (!isSessionActiveRef.current) return;
     setIsAIThinking(true);
 
     try {
       // 1. Call dynamic backend conversational agent (Groq qwen3.8-27b / Gemini 3.6 Flash)
       const res = await getNextTurn(sessionId, candidateAnswer);
+      if (!isSessionActiveRef.current) {
+        setIsAIThinking(false);
+        return;
+      }
       if (res?.success && res.aiResponse) {
         if (res.section) setActiveSection(res.section);
         setIsAIThinking(false);
@@ -565,6 +645,11 @@ const InterviewRoom = () => {
       }
     } catch (err) {
       console.warn('Dynamic conversational agent call failed, using mode-specific fallback:', err);
+    }
+
+    if (!isSessionActiveRef.current) {
+      setIsAIThinking(false);
+      return;
     }
 
     setIsAIThinking(false);
@@ -607,13 +692,28 @@ const InterviewRoom = () => {
   };
 
   const executeEndInterview = async () => {
+    // 1. Instantly mark session as inactive so no background promise/timeout can trigger speech or recognition
+    isSessionActiveRef.current = false;
     setShowEarlyEndModal(false);
     setIsEnding(true);
-    if (window.speechSynthesis) window.speechSynthesis.cancel();
+
+    if (initialTimeoutRef.current) clearTimeout(initialTimeoutRef.current);
+    if (followupTimeoutRef.current) clearTimeout(followupTimeoutRef.current);
+
+    // 2. Thoroughly flush all audio and pending browser utterances
+    flushSpeechQueue();
+
+    // 3. Dismantle speech recognition engine
     if (speechRecognitionRef.current) {
       try {
+        speechRecognitionRef.current.onend = null;
+        speechRecognitionRef.current.onerror = null;
+        speechRecognitionRef.current.onresult = null;
+        speechRecognitionRef.current.onstart = null;
+        speechRecognitionRef.current.stop();
         speechRecognitionRef.current.abort();
       } catch (e) {}
+      speechRecognitionRef.current = null;
     }
 
     try {
@@ -626,14 +726,17 @@ const InterviewRoom = () => {
       } else {
         toast('Evaluation generated', { icon: '📊' });
       }
+      flushSpeechQueue();
       navigate(`/interview/results/${sessionId}`);
     } catch (err) {
       toast.dismiss('eval-loading');
       console.error('Failed to generate evaluation report:', err);
       toast.error('Could not complete evaluation analysis');
+      flushSpeechQueue();
       navigate(`/interview/results/${sessionId}`);
     } finally {
       setIsEnding(false);
+      flushSpeechQueue();
     }
   };
 
