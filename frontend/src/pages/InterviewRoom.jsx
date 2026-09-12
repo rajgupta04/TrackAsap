@@ -17,6 +17,7 @@ import {
   ChevronRight,
   ChevronLeft,
   BrainCircuit,
+  Shuffle,
 } from 'lucide-react';
 import { useInterviewStore } from '../store/interviewStore';
 import { useAuthStore } from '../store/authStore';
@@ -52,7 +53,9 @@ const InterviewRoom = () => {
   const [liveCaption, setLiveCaption] = useState('');
   const [isEnding, setIsEnding] = useState(false);
   const [showEarlyEndModal, setShowEarlyEndModal] = useState(false);
-  const [voiceGender, setVoiceGender] = useState('male'); // 'male' (Alex/Adam) | 'female' (Bella/Jenny)
+  // Voice selection: 'random' (sometime male, sometime female) | 'random_turn' | 'male' | 'female'
+  const [voiceMode, setVoiceMode] = useState('random');
+  const [activeVoiceGender, setActiveVoiceGender] = useState(() => (Math.random() < 0.5 ? 'male' : 'female'));
 
   const transcriptEndRef = useRef(null);
   const speechRecognitionRef = useRef(null);
@@ -78,6 +81,9 @@ const InterviewRoom = () => {
     const voices = window.speechSynthesis.getVoices();
     if (!voices || voices.length === 0) return null;
 
+    const enVoices = voices.filter((v) => v.lang.startsWith('en'));
+    const pool = enVoices.length > 0 ? enVoices : voices;
+
     if (gender === 'male') {
       const malePreferences = [
         'alex',
@@ -85,6 +91,7 @@ const InterviewRoom = () => {
         'guy online (natural)',
         'christopher online (natural)',
         'natural',
+        'google uk english male',
         'google us english',
         'daniel',
         'george',
@@ -93,33 +100,53 @@ const InterviewRoom = () => {
       ];
 
       for (const pref of malePreferences) {
-        const found = voices.find(
-          (v) => v.name.toLowerCase().includes(pref) && v.lang.startsWith('en')
-        );
+        const found = pool.find((v) => v.name.toLowerCase().includes(pref));
         if (found) return found;
       }
 
       // Any male English voice fallback
-      const anyMale = voices.find(
+      const anyMale = pool.find(
         (v) =>
-          v.lang.startsWith('en') &&
-          (v.name.toLowerCase().includes('male') ||
-            (!v.name.toLowerCase().includes('female') &&
-              !v.name.toLowerCase().includes('zira') &&
-              !v.name.toLowerCase().includes('susan')))
+          v.name.toLowerCase().includes('male') ||
+          (!v.name.toLowerCase().includes('female') &&
+            !v.name.toLowerCase().includes('zira') &&
+            !v.name.toLowerCase().includes('susan') &&
+            !v.name.toLowerCase().includes('jenny') &&
+            !v.name.toLowerCase().includes('aria') &&
+            !v.name.toLowerCase().includes('samantha'))
       );
       if (anyMale) return anyMale;
     } else {
-      const femalePreferences = ['jenny', 'aria', 'samantha', 'victoria', 'zira', 'female'];
+      const femalePreferences = [
+        'jenny online (natural)',
+        'aria online (natural)',
+        'samantha',
+        'victoria',
+        'google uk english female',
+        'zira',
+        'karen',
+        'susan',
+        'female',
+      ];
+
       for (const pref of femalePreferences) {
-        const found = voices.find(
-          (v) => v.name.toLowerCase().includes(pref) && v.lang.startsWith('en')
-        );
+        const found = pool.find((v) => v.name.toLowerCase().includes(pref));
         if (found) return found;
       }
+
+      const anyFemale = pool.find(
+        (v) =>
+          v.name.toLowerCase().includes('female') ||
+          v.name.toLowerCase().includes('zira') ||
+          v.name.toLowerCase().includes('susan') ||
+          v.name.toLowerCase().includes('jenny') ||
+          v.name.toLowerCase().includes('aria') ||
+          v.name.toLowerCase().includes('samantha')
+      );
+      if (anyFemale) return anyFemale;
     }
 
-    return voices.find((v) => v.lang.startsWith('en')) || voices[0];
+    return pool[0];
   };
 
   // Multi-layer Echo detection: exact substring + word-level token overlap against recent AI prompts
@@ -430,12 +457,28 @@ const InterviewRoom = () => {
       window.speechSynthesis.cancel();
 
       const utterance = new SpeechSynthesisUtterance(text);
-      const chosenVoice = getPreferredVoice(voiceGender);
+
+      // Determine voice gender based on voiceMode
+      let effectiveGender = activeVoiceGender;
+      if (voiceMode === 'male') {
+        effectiveGender = 'male';
+      } else if (voiceMode === 'female') {
+        effectiveGender = 'female';
+      } else if (voiceMode === 'random_turn') {
+        // Sometime male, sometime female turn-by-turn
+        effectiveGender = Math.random() < 0.5 ? 'male' : 'female';
+        setActiveVoiceGender(effectiveGender);
+      } else {
+        // 'random' mode: uses the randomly assigned persona for this session
+        effectiveGender = activeVoiceGender;
+      }
+
+      const chosenVoice = getPreferredVoice(effectiveGender);
       if (chosenVoice) {
         utterance.voice = chosenVoice;
       }
       // Calm, confident natural cadence:
-      utterance.pitch = voiceGender === 'male' ? 0.94 : 1.0;
+      utterance.pitch = effectiveGender === 'male' ? 0.94 : 1.02;
       utterance.rate = 1.02;
 
       utterance.onstart = () => {
@@ -634,24 +677,59 @@ const InterviewRoom = () => {
           <div className="flex items-center gap-1.5 bg-dark-950/80 border border-white/10 px-2.5 py-1.5 rounded-lg text-xs">
             <Volume2 className="w-3.5 h-3.5 text-neon-green shrink-0" />
             <select
-              value={voiceGender}
+              value={voiceMode}
               onChange={(e) => {
-                setVoiceGender(e.target.value);
-                toast.success(
-                  `Voice set to ${
-                    e.target.value === 'male' ? 'Alex / Adam (Natural Male)' : 'Bella / Jenny (Natural Female)'
-                  }`
-                );
+                const val = e.target.value;
+                setVoiceMode(val);
+                if (val === 'random') {
+                  const newGen = Math.random() < 0.5 ? 'male' : 'female';
+                  setActiveVoiceGender(newGen);
+                  toast.success(
+                    `Voice set to Random (assigned ${
+                      newGen === 'male' ? 'Alex · Male' : 'Bella · Female'
+                    })`
+                  );
+                } else if (val === 'random_turn') {
+                  toast.success('Voice set to Mixed Panel (alternates male & female turns)');
+                } else if (val === 'male') {
+                  setActiveVoiceGender('male');
+                  toast.success('Voice locked to Alex / Adam (Natural Male)');
+                } else if (val === 'female') {
+                  setActiveVoiceGender('female');
+                  toast.success('Voice locked to Bella / Jenny (Natural Female)');
+                }
               }}
               className="bg-transparent text-white text-xs font-semibold focus:outline-none cursor-pointer pr-1"
             >
+              <option value="random" className="bg-dark-900 text-white">
+                🎲 Random ({activeVoiceGender === 'male' ? 'Alex · Male' : 'Bella · Female'})
+              </option>
+              <option value="random_turn" className="bg-dark-900 text-white">
+                🔀 Mixed Panel (Male & Female)
+              </option>
               <option value="male" className="bg-dark-900 text-white">
-                Alex (Natural Male)
+                👨 Alex (Natural Male)
               </option>
               <option value="female" className="bg-dark-900 text-white">
-                Bella (Natural Female)
+                👩 Bella (Natural Female)
               </option>
             </select>
+            {voiceMode === 'random' && (
+              <button
+                type="button"
+                onClick={() => {
+                  const nextGen = activeVoiceGender === 'male' ? 'female' : 'male';
+                  setActiveVoiceGender(nextGen);
+                  toast.success(
+                    `Interviewer shuffled to ${nextGen === 'male' ? 'Alex (Male)' : 'Bella (Female)'}`
+                  );
+                }}
+                title="Shuffle Random Voice"
+                className="text-dark-400 hover:text-neon-green transition-colors p-0.5 ml-0.5"
+              >
+                <Shuffle className="w-3 h-3" />
+              </button>
+            )}
           </div>
 
           <div className="flex items-center gap-2 font-mono text-sm text-dark-300 bg-dark-950/80 px-3 py-1.5 rounded-lg border border-white/10">

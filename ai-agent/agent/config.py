@@ -22,8 +22,10 @@ class Config:
     # TrackAsap Backend
     TRACKASAP_API_URL = os.getenv("TRACKASAP_API_URL", "http://localhost:5000/api")
 
-    # Kokoro TTS (Natural Male Interviewer: am_adam / am_michael / am_onyx)
-    KOKORO_VOICE = os.getenv("KOKORO_VOICE", "am_adam")
+    # Kokoro TTS (Randomized Male / Female Interviewer)
+    KOKORO_VOICE = os.getenv("KOKORO_VOICE", "random")
+    KOKORO_MALE_VOICES = ["am_adam", "am_michael", "am_alex", "am_onyx"]
+    KOKORO_FEMALE_VOICES = ["af_bella", "af_sarah", "af_nicole", "af_sky"]
     KOKORO_SPEED = float(os.getenv("KOKORO_SPEED", "1.02"))
 
     @classmethod

@@ -1,5 +1,6 @@
 import io
 import logging
+import random
 import numpy as np
 from typing import Generator, Optional, Tuple
 from .config import Config
@@ -10,14 +11,26 @@ class TTSService:
     """
     Text-to-Speech service using Kokoro-82M on CPU via ONNX Runtime.
     Synthesizes natural, high-quality speech with low latency (~180ms TTFA).
+    Supports dynamic random voice selection (sometime male, sometime female).
     """
 
     def __init__(self, voice: Optional[str] = None, speed: Optional[float] = None):
-        self.voice = voice or Config.KOKORO_VOICE
+        selected_voice = voice or Config.KOKORO_VOICE
+        if selected_voice == "random":
+            all_voices = Config.KOKORO_MALE_VOICES + Config.KOKORO_FEMALE_VOICES
+            self.voice = random.choice(all_voices)
+        elif selected_voice == "male":
+            self.voice = random.choice(Config.KOKORO_MALE_VOICES)
+        elif selected_voice == "female":
+            self.voice = random.choice(Config.KOKORO_FEMALE_VOICES)
+        else:
+            self.voice = selected_voice
+
         self.speed = speed or Config.KOKORO_SPEED
         self.kokoro = None
         self.sample_rate = 24000
 
+        logger.info(f"Initialized TTSService with voice: {self.voice}")
         self._init_kokoro()
 
     def _init_kokoro(self):
