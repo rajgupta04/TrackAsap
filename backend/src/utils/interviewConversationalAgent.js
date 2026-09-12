@@ -265,7 +265,7 @@ const callGroqTurn = async (messages, systemPrompt) => {
         ...messages,
       ],
       temperature: 0.7,
-      max_tokens: 220,
+      max_tokens: 280,
     }),
   });
 
@@ -290,12 +290,12 @@ const callGeminiTurn = async (messages, systemPrompt) => {
   const model = process.env.GEMINI_LLM_MODEL || 'gemini-3.6-flash';
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
-  // Format history for Gemini
+  // Format history for Gemini with turn indices and speaker clarity
   const conversationSummary = messages
-    .map((m) => `${m.role === 'user' ? 'Candidate' : 'Interviewer'}: ${m.content}`)
-    .join('\n');
+    .map((m, idx) => `[Turn ${Math.floor(idx / 2) + 1}] ${m.role === 'user' ? 'Candidate' : 'Interviewer'}: ${m.content}`)
+    .join('\n\n');
 
-  const fullPrompt = `${systemPrompt}\n\nCONVERSATION TRANSCRIPT SO FAR:\n${conversationSummary}\n\nNow respond as the interviewer in 1-3 spoken sentences:`;
+  const fullPrompt = `${systemPrompt}\n\n=== FULL CONVERSATION TRANSCRIPT SO FAR (FROM TURN 1) ===\n${conversationSummary}\n\nNow respond as the interviewer in 1-3 spoken conversational sentences:`;
 
   const res = await fetch(url, {
     method: 'POST',
@@ -321,35 +321,39 @@ const callGeminiTurn = async (messages, systemPrompt) => {
 };
 
 /**
- * Generates the next dynamic interviewer turn
+ * Generates the next dynamic interviewer turn with persistent long-term memory
  */
 export const generateNextInterviewTurn = async (session, transcript = [], candidateAnswer = '') => {
   const modeKey = session?.mode || 'general_sde';
   const modeConfig = MODE_DEFINITIONS[modeKey] || MODE_DEFINITIONS.general_sde;
   const role = session?.targetRole || 'Software Development Engineer';
   const company = session?.targetCompany ? ` at ${session.targetCompany}` : '';
-  const resumeText = session?.resumeText ? `\n\nCANDIDATE RESUME SUMMARY:\n${session.resumeText.slice(0, 1500)}` : '';
-  const jdText = session?.jobDescription ? `\n\nTARGET JOB DESCRIPTION:\n${session.jobDescription.slice(0, 1500)}` : '';
+  const resumeText = session?.resumeText ? `\n\nCANDIDATE RESUME PROFILE:\n${session.resumeText.slice(0, 3500)}` : '';
+  const jdText = session?.jobDescription ? `\n\nTARGET JOB SPECIFICATION:\n${session.jobDescription.slice(0, 3500)}` : '';
 
-  const systemPrompt = `You are conducting a live, spoken voice mock interview for a ${role}${company} position.
+  // Extract the original opening question / topic from the first AI turn or session record
+  const openingTurn = transcript.find((t) => t.speaker === 'ai') || null;
+  const initialProblem = session?.initialQuestion || openingTurn?.text || 'Introductory technical problem assessment';
+
+  const systemPrompt = `You are a Principal Technical Interviewer conducting a live voice mock interview for a ${role}${company} position.
 Active Interview Mode: "${modeConfig.title}".
 ${modeConfig.persona}${resumeText}${jdText}
 
-STRICT VOICE CONVERSATION RULES:
-1. Speak concisely in 1 to 3 natural sentences maximum (this is spoken via text-to-speech).
-2. Directly acknowledge the candidate's previous response with constructive feedback or technical critique.
-3. Ask ONE crisp, high-impact follow-up question that drills deeper into their technical answer or presents a concrete edge case / trade-off.
-4. If in Verbal DSA mode, stay 100% on algorithmic intuition, data structures, and Big-O complexity.
-5. If in System Design mode, probe scale, bottlenecks, database sharding, caching, and single points of failure.
-6. If in Backend mode, probe runtime internals, database indexing, caching strategies, and security.
-7. If in Resume mode, challenge their actual project claims.
-8. Never repeat previous questions from the transcript. Do NOT give long lectures.`;
+ORIGINAL OPENING PROBLEM & TARGET TOPIC:
+"${initialProblem}"
 
-  // Build message history (last 8 turns for tight latency)
-  const recentTurns = transcript.slice(-8);
+PERSISTENT CONTEXT & UNBROKEN MEMORY DIRECTIVES:
+1. You have a COMPLETE, UNBROKEN MEMORY of this entire interview session from Turn 1 to now.
+2. NEVER forget what problem or architecture you originally started talking about. Every follow-up question must logically build upon what the candidate has explained so far.
+3. Track the candidate's journey across turns: acknowledge their latest explanation, note what they got right, point out any missed edge cases or trade-offs, and drill into the next layer (e.g. naive intuition -> optimal data structure -> edge cases -> scalability & failure modes -> Big-O time and space).
+4. Do NOT jump to an unrelated scenario or restart the interview unless the current problem has been fully solved and analyzed.
+5. CONVERSATIONAL VOICE FORMAT: Speak in 1 to 3 punchy, natural spoken sentences maximum (suitable for text-to-speech). Do not use bullet points or long monologues. Return ONLY spoken dialogue.`;
+
+  // Build full message history (up to 40 turns — full conversation window)
+  const conversationTurns = transcript.slice(-40);
   const messages = [];
 
-  for (const turn of recentTurns) {
+  for (const turn of conversationTurns) {
     messages.push({
       role: turn.speaker === 'ai' ? 'assistant' : 'user',
       content: turn.text || '',

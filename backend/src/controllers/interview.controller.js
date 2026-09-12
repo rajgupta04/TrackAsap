@@ -463,6 +463,9 @@ export const getInitialTurn = async (req, res) => {
 
     const question = await getInitialQuestion(session, req.user);
 
+    // Persist opening question permanently on session
+    session.initialQuestion = question;
+
     // If transcript is empty, register opening AI turn
     if (session.transcript.length === 0) {
       session.transcript.push({
@@ -473,8 +476,8 @@ export const getInitialTurn = async (req, res) => {
       });
       session.status = 'active';
       session.startedAt = new Date();
-      await session.save();
     }
+    await session.save();
 
     res.json({
       success: true,

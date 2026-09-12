@@ -68,6 +68,9 @@ const InterviewRoom = () => {
   const isSessionActiveRef = useRef(true);
   const initialTimeoutRef = useRef(null);
   const followupTimeoutRef = useRef(null);
+  const candidateAccumulatorRef = useRef('');
+  const silenceTimeoutRef = useRef(null);
+  const SILENCE_DEBOUNCE_MS = 2800; // 2.8s: allows candidate to speak multi-sentence answers and pause without interruption
 
   // Unconditional unmount, route exit, and page hide lifecycle listener
   useEffect(() => {
@@ -88,6 +91,8 @@ const InterviewRoom = () => {
       window.removeEventListener('pagehide', handleExit);
       window.removeEventListener('popstate', handleExit);
 
+      if (silenceTimeoutRef.current) clearTimeout(silenceTimeoutRef.current);
+      candidateAccumulatorRef.current = '';
       if (initialTimeoutRef.current) clearTimeout(initialTimeoutRef.current);
       if (followupTimeoutRef.current) clearTimeout(followupTimeoutRef.current);
 
@@ -381,26 +386,47 @@ const InterviewRoom = () => {
           return;
         }
 
-        const current = event.resultIndex;
-        const transcriptText = event.results[current][0].transcript;
-
-        // Check if interim words match recent AI prompts
-        if (isEchoOfAI(transcriptText, recentAIPromptsRef.current)) {
-          return;
+        // Candidate actively speaking: cancel silence timer immediately so they are never interrupted
+        if (silenceTimeoutRef.current) {
+          clearTimeout(silenceTimeoutRef.current);
+          silenceTimeoutRef.current = null;
         }
 
-        if (event.results[current].isFinal) {
-          setIsCandidateSpeaking(false);
-          setLiveCaption('');
-          const trimmed = transcriptText.trim();
-          
-          // Ensure it's not an echo of the AI's question
-          if (trimmed && !isEchoOfAI(trimmed, recentAIPromptsRef.current)) {
-            handleCandidateUtterance(trimmed);
+        let interimText = '';
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          const result = event.results[i];
+          const chunk = result[0]?.transcript || '';
+
+          // Drop interim chunks that match recent AI prompts
+          if (isEchoOfAI(chunk, recentAIPromptsRef.current)) {
+            continue;
           }
-        } else {
+
+          if (result.isFinal) {
+            const trimmed = chunk.trim();
+            if (trimmed) {
+              candidateAccumulatorRef.current = candidateAccumulatorRef.current
+                ? `${candidateAccumulatorRef.current} ${trimmed}`
+                : trimmed;
+            }
+          } else {
+            interimText += chunk;
+          }
+        }
+
+        const currentCombined = [candidateAccumulatorRef.current, interimText]
+          .filter(Boolean)
+          .join(' ')
+          .trim();
+
+        if (currentCombined) {
           setIsCandidateSpeaking(true);
-          setLiveCaption(transcriptText);
+          setLiveCaption(currentCombined);
+
+          // Reset silence debounce timer: only auto-submit after 2.8s of silence
+          silenceTimeoutRef.current = setTimeout(() => {
+            commitCandidateAnswer();
+          }, SILENCE_DEBOUNCE_MS);
         }
       };
 
@@ -585,6 +611,11 @@ const InterviewRoom = () => {
 
   const handleBargeIn = () => {
     stopAllSpeech();
+    if (silenceTimeoutRef.current) {
+      clearTimeout(silenceTimeoutRef.current);
+      silenceTimeoutRef.current = null;
+    }
+    candidateAccumulatorRef.current = '';
     setIsAISpeaking(false);
     isAISpeakingRef.current = false;
     aiAudioBlockedUntilRef.current = Date.now() + 300;
@@ -604,6 +635,45 @@ const InterviewRoom = () => {
       duration: 1500,
     });
   };
+
+  // Finalizes the candidate's turn and sends the full multi-sentence explanation to AI
+  const commitCandidateAnswer = () => {
+    if (silenceTimeoutRef.current) {
+      clearTimeout(silenceTimeoutRef.current);
+      silenceTimeoutRef.current = null;
+    }
+
+    const fullAnswer = candidateAccumulatorRef.current.trim();
+    candidateAccumulatorRef.current = '';
+    setIsCandidateSpeaking(false);
+    setLiveCaption('');
+
+    if (!fullAnswer || fullAnswer.length < 2) return;
+
+    // Filter out acoustic echo on very short utterances (long answers are never pure echoes)
+    if (fullAnswer.split(/\s+/).length < 8 && isEchoOfAI(fullAnswer, recentAIPromptsRef.current)) {
+      console.warn('Blocked acoustic echo candidate turn:', fullAnswer);
+      return;
+    }
+
+    handleCandidateUtterance(fullAnswer);
+  };
+
+  const handleDoneSpeakingEarly = () => {
+    commitCandidateAnswer();
+  };
+
+  // Allow pressing Enter key to quickly submit spoken answer without waiting for silence timer
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Enter' && isCandidateSpeaking && !['INPUT', 'TEXTAREA'].includes(e.target?.tagName)) {
+        e.preventDefault();
+        handleDoneSpeakingEarly();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isCandidateSpeaking]);
 
   const handleCandidateUtterance = async (text) => {
     if (!text || !isSessionActiveRef.current || isAISpeakingRef.current || Date.now() < aiAudioBlockedUntilRef.current) return;
@@ -696,6 +766,12 @@ const InterviewRoom = () => {
     isSessionActiveRef.current = false;
     setShowEarlyEndModal(false);
     setIsEnding(true);
+
+    if (silenceTimeoutRef.current) {
+      clearTimeout(silenceTimeoutRef.current);
+      silenceTimeoutRef.current = null;
+    }
+    candidateAccumulatorRef.current = '';
 
     if (initialTimeoutRef.current) clearTimeout(initialTimeoutRef.current);
     if (followupTimeoutRef.current) clearTimeout(followupTimeoutRef.current);
@@ -877,7 +953,8 @@ const InterviewRoom = () => {
               ) : isCandidateSpeaking ? (
                 <>
                   <span className="w-2 h-2 rounded-full bg-blue-400 animate-ping" />
-                  <span className="text-blue-400 font-semibold">Listening to you...</span>
+                  <span className="text-blue-400 font-semibold">Listening to your explanation...</span>
+                  <span className="text-dark-400 text-[11px] hidden sm:inline">(Speak freely — pause when done or click "Done Speaking")</span>
                 </>
               ) : (
                 <>
@@ -888,9 +965,25 @@ const InterviewRoom = () => {
             </div>
 
             {liveCaption && (
-              <p className="text-xs text-dark-300 italic max-w-md mx-auto line-clamp-2 px-4">
-                "{liveCaption}..."
-              </p>
+              <div className="max-w-lg mx-auto px-4 py-3 bg-dark-900/90 border border-blue-500/30 rounded-2xl backdrop-blur-md shadow-lg transition-all animate-fade-in text-left">
+                <div className="flex items-center justify-between gap-2 mb-1.5 border-b border-white/5 pb-1">
+                  <span className="text-[10px] font-bold text-blue-400 uppercase tracking-wider flex items-center gap-1.5">
+                    <Mic className="w-3.5 h-3.5 text-blue-400 animate-pulse" />
+                    Transcribing your answer
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleDoneSpeakingEarly}
+                    className="text-[11px] font-bold text-neon-green hover:text-neon-green/80 flex items-center gap-1 cursor-pointer bg-neon-green/10 hover:bg-neon-green/20 border border-neon-green/30 px-2.5 py-0.5 rounded-lg transition-all"
+                  >
+                    <CheckCircle2 className="w-3.5 h-3.5 text-neon-green" />
+                    Done Speaking ↵
+                  </button>
+                </div>
+                <p className="text-xs text-blue-100 leading-relaxed max-h-24 overflow-y-auto pr-1 scrollbar-thin">
+                  "{liveCaption}"
+                </p>
+              </div>
             )}
           </div>
         </div>
@@ -963,6 +1056,19 @@ const InterviewRoom = () => {
           <HandMetal className="w-4 h-4 text-neon-green" />
           Interrupt (Barge-in)
         </button>
+
+        {/* Done Speaking / Submit Answer Button */}
+        {isCandidateSpeaking && (
+          <button
+            type="button"
+            onClick={handleDoneSpeakingEarly}
+            className="flex items-center gap-2 bg-neon-green/20 hover:bg-neon-green/30 border border-neon-green/60 text-neon-green px-5 py-3 rounded-2xl text-xs font-bold transition-all transform active:scale-95 animate-pulse shadow-[0_0_20px_rgba(57,255,20,0.25)]"
+            title="Press Enter or click to submit your answer immediately without waiting for silence timer"
+          >
+            <CheckCircle2 className="w-4 h-4 text-neon-green" />
+            Done Speaking ↵
+          </button>
+        )}
 
         {/* Toggle Transcript View on Mobile */}
         <button

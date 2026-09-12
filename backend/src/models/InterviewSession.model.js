@@ -65,6 +65,10 @@ const InterviewSessionSchema = new mongoose.Schema(
       type: String,
       default: '',
     },
+    initialQuestion: {
+      type: String,
+      default: '',
+    },
     jobDescription: {
       type: String,
       default: '',
