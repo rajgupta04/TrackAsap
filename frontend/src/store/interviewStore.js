@@ -153,6 +153,31 @@ export const useInterviewStore = create((set, get) => ({
     }
   },
 
+  getInitialQuestion: async (sessionId) => {
+    try {
+      const data = await interviewService.getInitialQuestion(sessionId);
+      if (data.success && data.initialQuestion) {
+        return { success: true, initialQuestion: data.initialQuestion, section: data.section };
+      }
+    } catch (err) {
+      console.warn('Failed to fetch dynamic initial question from backend:', err);
+    }
+    return { success: false };
+  },
+
+  getNextTurn: async (sessionId, candidateAnswer) => {
+    const { transcript } = get();
+    try {
+      const data = await interviewService.getNextTurn(sessionId, candidateAnswer, transcript);
+      if (data.success && data.aiResponse) {
+        return { success: true, aiResponse: data.aiResponse, section: data.section };
+      }
+    } catch (err) {
+      console.warn('Failed to fetch dynamic follow-up from backend:', err);
+    }
+    return { success: false };
+  },
+
   toggleMute: () => set((state) => ({ isMuted: !state.isMuted })),
   setAISpeaking: (isAISpeaking) => set({ isAISpeaking }),
   setCandidateSpeaking: (isCandidateSpeaking) => set({ isCandidateSpeaking }),

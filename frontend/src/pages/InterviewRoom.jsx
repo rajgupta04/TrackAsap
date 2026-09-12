@@ -38,11 +38,14 @@ const InterviewRoom = () => {
     appendTranscriptTurn,
     submitEvaluation,
     evaluateSession,
+    getInitialQuestion,
+    getNextTurn,
   } = useInterviewStore();
 
   const [isMuted, setIsMuted] = useState(false);
   const [isAISpeaking, setIsAISpeaking] = useState(false);
   const [isCandidateSpeaking, setIsCandidateSpeaking] = useState(false);
+  const [isAIThinking, setIsAIThinking] = useState(false);
   const [showTranscript, setShowTranscript] = useState(true);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [activeSection, setActiveSection] = useState('intro');
@@ -153,6 +156,129 @@ const InterviewRoom = () => {
     return false;
   };
 
+  // Mode-tailored opening question helper (used as instant fallback if backend call times out)
+  const getClientOpeningQuestion = (session, currentUser) => {
+    const mode = session?.mode || 'general_sde';
+    const name = currentUser?.name?.split(' ')?.[0] || 'there';
+    const role = session?.targetRole || 'Software Development Engineer';
+    const company = session?.targetCompany ? ` at ${session.targetCompany}` : '';
+
+    switch (mode) {
+      case 'dsa_interview':
+        return `Hello ${name}! Welcome to your Verbal DSA and Problem Solving round for ${role}${company}. Today we will explore algorithmic intuition, data structure selection, and Big-O complexity out loud without writing code. Let's dive right into your first problem: suppose you are given an integer array and need to find the contiguous subarray with the largest sum in linear time. What algorithmic approach comes to mind first, and how would you explain your intuition?`;
+      case 'system_design':
+        return `Hello ${name}! Welcome to your System Design and Scalability round for ${role}${company}. Today we will architect a high-scale distributed system from scratch. Imagine you are tasked with designing a real-time Notification Service or a distributed Rate Limiter that must support 100,000 requests per second with high availability. How would you begin by defining the functional and non-functional requirements?`;
+      case 'backend_interview':
+        return `Hello ${name}! Welcome to the Backend Engineering technical round for ${role}${company}. We'll focus on server runtimes, database indexing, caching layers, and API resilience. To kick off: when architecting a high-throughput backend API in Node.js or Go, how do you manage asynchronous I/O and prevent database connection exhaustion under burst traffic?`;
+      case 'resume_interview':
+        return `Hello ${name}! Welcome to your Resume and Project Deep-Dive for ${role}${company}. Let's jump straight into your flagship engineering project: walk me through the high-level architecture, your individual contribution, and the most complex technical hurdle you had to solve.`;
+      case 'jd_interview':
+        return `Hello ${name}! Welcome to your technical round for ${role}${company} calibrated to the job description. To start off, could you highlight how your hands-on production experience directly aligns with the core technical requirements of this role?`;
+      default:
+        return `Hello ${name}! Welcome to your General SDE mock interview for ${role}${company}. We will cover computer science core concepts, algorithmic problem solving, and engineering trade-offs. To get started, could you give a brief 60-second introduction of your technical background and your favorite engineering challenge to date?`;
+    }
+  };
+
+  // Mode-specific fallback matrix for resilient follow-up questioning
+  const getModeSpecificFallback = (mode, candidateAnswer = '', turnCount = 0) => {
+    const lower = candidateAnswer.toLowerCase();
+
+    if (mode === 'dsa_interview') {
+      if (lower.includes('kadane') || lower.includes('array') || lower.includes('subarray')) {
+        return {
+          aiResponse:
+            "That makes sense with Kadane's algorithm. How does your logic handle an array where every single element is negative, and what is your exact Big-O time and space complexity?",
+          section: 'problem_solving',
+        };
+      }
+      if (lower.includes('negative') || lower.includes('hash') || lower.includes('map') || lower.includes('index')) {
+        return {
+          aiResponse:
+            'Good catch on handling negative elements. Now, if we need to return the starting and ending indices of the maximum subarray rather than just the sum, how would you adjust your pointer tracking?',
+          section: 'complexity_analysis',
+        };
+      }
+      if (turnCount > 4) {
+        return {
+          aiResponse:
+            'Excellent analysis. What would be the worst-case space complexity if you were asked to solve this recursively using divide and conquer instead of iteratively?',
+          section: 'complexity_analysis',
+        };
+      }
+      return {
+        aiResponse:
+          'Understood. Could you walk me through an edge case with duplicate elements or an empty input array, and confirm your Big-O time complexity?',
+        section: 'problem_solving',
+      };
+    }
+
+    if (mode === 'system_design') {
+      if (lower.includes('database') || lower.includes('sql') || lower.includes('nosql')) {
+        return {
+          aiResponse:
+            'That architectural choice makes sense for standard traffic. How would you partition or shard the data across database nodes when daily writes exceed 100 million records?',
+          section: 'system_design',
+        };
+      }
+      if (lower.includes('cache') || lower.includes('redis')) {
+        return {
+          aiResponse:
+            'Using a distributed cache is vital here. What eviction strategy would you configure, and how would you prevent cache stampede when popular keys expire simultaneously?',
+          section: 'scaling_and_bottlenecks',
+        };
+      }
+      return {
+        aiResponse:
+          'Good high-level breakdown. If this service suffered a sudden regional datacenter outage, how would your architecture guarantee high availability without risking data inconsistency?',
+        section: 'system_design',
+      };
+    }
+
+    if (mode === 'backend_interview') {
+      if (lower.includes('mongo') || lower.includes('postgres') || lower.includes('index')) {
+        return {
+          aiResponse:
+            'Indexes are crucial there. How do B-tree indexes behave differently under heavy writes compared to LSM trees, and how do you monitor slow query execution plans in production?',
+          section: 'databases_and_caching',
+        };
+      }
+      if (lower.includes('async') || lower.includes('event') || lower.includes('thread') || lower.includes('loop')) {
+        return {
+          aiResponse:
+            'Right on the event loop mechanics. When CPU-intensive tasks block the main thread, how do you offload that work to worker threads or background workers to keep the API responsive?',
+          section: 'technical',
+        };
+      }
+      return {
+        aiResponse:
+          'Solid points. How do you implement rate limiting and idempotency on financial or state-mutating endpoints to prevent duplicate operations during network retries?',
+        section: 'technical',
+      };
+    }
+
+    if (mode === 'resume_interview') {
+      return {
+        aiResponse:
+          'In that project, what was the biggest technical trade-off you made between development velocity and long-term architectural maintainability?',
+        section: 'project_deepdive',
+      };
+    }
+
+    if (mode === 'jd_interview') {
+      return {
+        aiResponse:
+          'That experience is directly relevant to this job description. If you encountered a critical production outage in that subsystem during your first week, what would be your step-by-step diagnostic process?',
+        section: 'technical',
+      };
+    }
+
+    return {
+      aiResponse:
+        'Good explanation. If you were building this from scratch today with 10x scale, what architectural component would you design differently?',
+      section: 'technical',
+    };
+  };
+
   // 1. Fetch Session on mount
   useEffect(() => {
     if (sessionId) {
@@ -243,16 +369,29 @@ const InterviewRoom = () => {
       speechRecognitionRef.current = recognition;
     }
 
-    // AI Initial greeting if empty transcript
-    const initialTimeout = setTimeout(() => {
-      if (transcript.length === 0) {
-        speakAIResponse(
-          `Hello ${user?.name || 'there'}! Welcome to your ${
-            currentSession?.targetRole || 'Software Engineering'
-          } mock interview. Let's get started. Could you briefly introduce yourself and tell me about a recent project you built?`
-        );
+    // Dynamic Mode-Tailored AI Initial Greeting
+    const initialTimeout = setTimeout(async () => {
+      if (transcript.length === 0 && currentSession) {
+        setIsAIThinking(true);
+        let openingQuestion = '';
+
+        try {
+          const res = await getInitialQuestion(sessionId);
+          if (res?.success && res.initialQuestion) {
+            openingQuestion = res.initialQuestion;
+          }
+        } catch (e) {
+          console.warn('Backend opening question failed, using local fallback:', e);
+        }
+
+        if (!openingQuestion) {
+          openingQuestion = getClientOpeningQuestion(currentSession, user);
+        }
+
+        setIsAIThinking(false);
+        speakAIResponse(openingQuestion);
       }
-    }, 1000);
+    }, 800);
 
     return () => {
       clearTimeout(initialTimeout);
@@ -371,39 +510,38 @@ const InterviewRoom = () => {
     }
 
     appendTranscriptTurn('user', text, activeSection);
+    setIsCandidateSpeaking(false);
+    setLiveCaption('');
 
-    // Give candidate a moment before AI prepares response
+    // Trigger dynamic conversational follow-up turn
     setTimeout(() => {
       generateAdaptiveFollowup(text);
-    }, 600);
+    }, 400);
   };
 
-  const generateAdaptiveFollowup = (candidateAnswer) => {
-    const lower = candidateAnswer.toLowerCase();
-    let followUp = '';
+  const generateAdaptiveFollowup = async (candidateAnswer) => {
+    setIsAIThinking(true);
 
-    if (lower.includes('mongodb') || lower.includes('database')) {
-      followUp =
-        "Interesting choice with MongoDB. How did you structure your indexes to avoid collection scans on frequent queries, and why didn't you choose a relational database like PostgreSQL?";
-      setActiveSection('technical');
-    } else if (lower.includes('redis') || lower.includes('cache')) {
-      followUp =
-        'You mentioned Redis. What cache eviction policy did you configure, and how did you handle cache stampede or invalidation when records update?';
-      setActiveSection('system_design');
-    } else if (lower.includes('jwt') || lower.includes('auth')) {
-      followUp =
-        'Good. When implementing JWT authentication, where do you store the tokens on the client to protect against XSS and CSRF attacks?';
-      setActiveSection('technical');
-    } else if (candidateAnswer.split(' ').length < 15) {
-      followUp =
-        'Could you elaborate on that a bit more? Specifically, what were the major engineering trade-offs you considered?';
-    } else {
-      followUp =
-        'Got it. If traffic scaled by 50x tomorrow, what would be the first point of failure in this architecture, and how would you mitigate it?';
-      setActiveSection('system_design');
+    try {
+      // 1. Call dynamic backend conversational agent (Groq qwen3.8-27b / Gemini 3.6 Flash)
+      const res = await getNextTurn(sessionId, candidateAnswer);
+      if (res?.success && res.aiResponse) {
+        if (res.section) setActiveSection(res.section);
+        setIsAIThinking(false);
+        speakAIResponse(res.aiResponse);
+        return;
+      }
+    } catch (err) {
+      console.warn('Dynamic conversational agent call failed, using mode-specific fallback:', err);
     }
 
-    speakAIResponse(followUp);
+    setIsAIThinking(false);
+
+    // 2. Intelligent mode-specific fallback matrix
+    const mode = currentSession?.mode || 'general_sde';
+    const fallback = getModeSpecificFallback(mode, candidateAnswer, transcript.length);
+    if (fallback.section) setActiveSection(fallback.section);
+    speakAIResponse(fallback.aiResponse);
   };
 
   const toggleMuteMic = () => {
@@ -555,7 +693,12 @@ const InterviewRoom = () => {
           {/* Status Indicator */}
           <div className="text-center space-y-1.5">
             <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-dark-900 border border-white/10 text-xs font-medium">
-              {isAISpeaking ? (
+              {isAIThinking ? (
+                <>
+                  <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
+                  <span className="text-amber-400 font-semibold">AI is analyzing & formulating question...</span>
+                </>
+              ) : isAISpeaking ? (
                 <>
                   <span className="w-2 h-2 rounded-full bg-neon-green animate-ping" />
                   <span className="text-neon-green font-semibold">AI is speaking...</span>

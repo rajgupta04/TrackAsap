@@ -493,7 +493,7 @@ const Interview = () => {
                         <input
                           ref={fileInputRef}
                           type="file"
-                          accept=".pdf,.docx,.txt,.md"
+                          accept=".pdf,.docx,.doc,.txt,.md,image/*"
                           className="hidden"
                           onChange={(e) => {
                             if (e.target.files && e.target.files[0]) {
@@ -521,7 +521,7 @@ const Interview = () => {
                               <span className="text-neon-green underline">Browse</span>
                             </div>
                             <p className="text-[11px] text-dark-400">
-                              Supports PDF, DOCX, TXT, MD (Max 5MB)
+                              Supports PDF, DOCX, DOC, TXT, MD, Images (Max 5MB)
                             </p>
                           </div>
                         )}

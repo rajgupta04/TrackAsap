@@ -3,6 +3,7 @@ import InterviewSession from '../models/InterviewSession.model.js';
 import Problem from '../models/Problem.model.js';
 import { generateInterviewEvaluation } from '../utils/interviewEvaluator.js';
 import { extractResumeText } from '../utils/resumeParser.js';
+import { getInitialQuestion, generateNextInterviewTurn } from '../utils/interviewConversationalAgent.js';
 
 // Helper to generate LiveKit token with fallback for local/mock development
 const generateLiveKitToken = async (roomName, user, metadata = {}) => {
@@ -443,4 +444,115 @@ export const uploadResume = async (req, res) => {
     res.status(500).json({ message: error.message || 'Failed to process resume file' });
   }
 };
+
+/**
+ * @route   GET /api/interview/session/:id/initial-question
+ * @desc    Get dynamic opening question calibrated to session mode, role, and context
+ * @access  Private
+ */
+export const getInitialTurn = async (req, res) => {
+  try {
+    const session = await InterviewSession.findById(req.params.id);
+    if (!session) {
+      return res.status(404).json({ message: 'Interview session not found' });
+    }
+
+    if (session.user.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Not authorized' });
+    }
+
+    const question = getInitialQuestion(session, req.user);
+
+    // If transcript is empty, register opening AI turn
+    if (session.transcript.length === 0) {
+      session.transcript.push({
+        speaker: 'ai',
+        text: question,
+        timestamp: Date.now(),
+        section: 'intro',
+      });
+      session.status = 'active';
+      session.startedAt = new Date();
+      await session.save();
+    }
+
+    res.json({
+      success: true,
+      initialQuestion: question,
+      section: 'intro',
+    });
+  } catch (error) {
+    console.error('Get initial question error:', error);
+    res.status(500).json({ message: 'Failed to generate opening question', error: error.message });
+  }
+};
+
+/**
+ * @route   POST /api/interview/session/:id/next-turn
+ * @desc    Generate real-time dynamic LLM response calibrated to candidate answer & mode
+ * @access  Private
+ */
+export const getNextTurn = async (req, res) => {
+  try {
+    const { candidateAnswer, clientTranscript } = req.body;
+
+    if (!candidateAnswer) {
+      return res.status(400).json({ message: 'candidateAnswer is required' });
+    }
+
+    const session = await InterviewSession.findById(req.params.id);
+    if (!session) {
+      return res.status(404).json({ message: 'Interview session not found' });
+    }
+
+    if (session.user.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Not authorized' });
+    }
+
+    // Sync client transcript if provided
+    if (Array.isArray(clientTranscript) && clientTranscript.length > session.transcript.length) {
+      session.transcript = clientTranscript;
+    }
+
+    // Record candidate answer in session transcript if not recorded yet
+    const lastTurn = session.transcript[session.transcript.length - 1];
+    if (!lastTurn || lastTurn.speaker !== 'user' || lastTurn.text !== candidateAnswer) {
+      session.transcript.push({
+        speaker: 'user',
+        text: candidateAnswer,
+        timestamp: Date.now(),
+        section: 'discussion',
+      });
+    }
+
+    // Generate dynamic turn via Groq / Gemini
+    const { aiResponse, section } = await generateNextInterviewTurn(
+      session,
+      session.transcript,
+      candidateAnswer
+    );
+
+    // Record AI turn
+    session.transcript.push({
+      speaker: 'ai',
+      text: aiResponse,
+      timestamp: Date.now(),
+      section,
+    });
+
+    session.status = 'active';
+    await session.save();
+
+    res.json({
+      success: true,
+      aiResponse,
+      section,
+      transcriptCount: session.transcript.length,
+    });
+  } catch (error) {
+    console.error('Get next turn error:', error);
+    res.status(500).json({ message: 'Failed to generate dynamic follow-up', error: error.message });
+  }
+};
+
 

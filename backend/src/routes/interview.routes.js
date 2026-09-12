@@ -11,6 +11,8 @@ import {
   deleteSession,
   getUserContext,
   uploadResume,
+  getInitialTurn,
+  getNextTurn,
 } from '../controllers/interview.controller.js';
 import multer from 'multer';
 
@@ -28,6 +30,8 @@ router.post('/session', createSession);
 router.get('/sessions', listSessions);
 router.get('/user-context', getUserContext);
 router.get('/session/:id', getSession);
+router.get('/session/:id/initial-question', getInitialTurn);
+router.post('/session/:id/next-turn', getNextTurn);
 router.post('/session/:id/token', getSessionToken);
 router.post('/session/:id/transcript', addTranscriptTurn);
 router.post('/session/:id/evaluation', submitEvaluation);

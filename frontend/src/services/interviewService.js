@@ -56,4 +56,17 @@ export const interviewService = {
     });
     return response.data;
   },
+
+  getInitialQuestion: async (sessionId) => {
+    const response = await api.get(`/interview/session/${sessionId}/initial-question`);
+    return response.data;
+  },
+
+  getNextTurn: async (sessionId, candidateAnswer, clientTranscript = null) => {
+    const response = await api.post(`/interview/session/${sessionId}/next-turn`, {
+      candidateAnswer,
+      clientTranscript,
+    });
+    return response.data;
+  },
 };
