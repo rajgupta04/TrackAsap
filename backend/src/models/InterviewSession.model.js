@@ -18,6 +18,18 @@ const TranscriptMessageSchema = new mongoose.Schema({
     type: String,
     default: 'general',
   },
+  speakerName: {
+    type: String,
+    default: '',
+  },
+  speakerRole: {
+    type: String,
+    default: '',
+  },
+  panelistColor: {
+    type: String,
+    default: '',
+  },
 });
 
 const InterviewSessionSchema = new mongoose.Schema(

@@ -95,13 +95,16 @@ export const useInterviewStore = create((set, get) => ({
     }
   },
 
-  appendTranscriptTurn: async (speaker, text, section = 'general') => {
+  appendTranscriptTurn: async (speaker, text, section = 'general', speakerName = null, speakerRole = null, panelistColor = null) => {
     const { currentSession, transcript } = get();
     const newTurn = {
       speaker,
       text,
       timestamp: Date.now(),
       section,
+      speakerName,
+      speakerRole,
+      panelistColor,
     };
 
     set({ transcript: [...transcript, newTurn] });

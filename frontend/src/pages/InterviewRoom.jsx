@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -18,12 +18,14 @@ import {
   ChevronLeft,
   BrainCircuit,
   Shuffle,
+  Users,
 } from 'lucide-react';
 import { useInterviewStore } from '../store/interviewStore';
 import { useAuthStore } from '../store/authStore';
 import AudioWaveform from '../components/interview/AudioWaveform';
 import ConfirmModal from '../components/interview/ConfirmModal';
 import RabbitAvatar from '../components/interview/RabbitAvatar';
+import { INTERVIEW_PANELISTS, getPanelistById } from '../utils/interviewPanelists';
 import { flushSpeechQueue, stopAllSpeech } from '../utils/speechUtils';
 import toast from 'react-hot-toast';
 
@@ -54,9 +56,17 @@ const InterviewRoom = () => {
   const [liveCaption, setLiveCaption] = useState('');
   const [isEnding, setIsEnding] = useState(false);
   const [showEarlyEndModal, setShowEarlyEndModal] = useState(false);
-  // Voice selection: 'random' (sometime male, sometime female) | 'random_turn' | 'male' | 'female'
-  const [voiceMode, setVoiceMode] = useState('random');
-  const [activeVoiceGender, setActiveVoiceGender] = useState(() => (Math.random() < 0.5 ? 'male' : 'female'));
+
+  // Multi-Panel Interview mode: 'multi_panel' (default, rotates Alex, Bella, Marcus & Sophia) | 'alex' | 'bella' | 'marcus' | 'sophia' | 'random'
+  const [voiceMode, setVoiceMode] = useState('multi_panel');
+  const [currentPanelistIndex, setCurrentPanelistIndex] = useState(0);
+
+  const activePanelist = useMemo(() => {
+    if (voiceMode === 'multi_panel' || voiceMode === 'random') {
+      return INTERVIEW_PANELISTS[currentPanelistIndex % INTERVIEW_PANELISTS.length];
+    }
+    return getPanelistById(voiceMode);
+  }, [voiceMode, currentPanelistIndex]);
 
   const transcriptEndRef = useRef(null);
   const speechRecognitionRef = useRef(null);
@@ -71,6 +81,12 @@ const InterviewRoom = () => {
   const candidateAccumulatorRef = useRef('');
   const silenceTimeoutRef = useRef(null);
   const SILENCE_DEBOUNCE_MS = 2800; // 2.8s: allows candidate to speak multi-sentence answers and pause without interruption
+
+  // Speech synthesis audio reliability refs (solves Chrome audio dropping & garbage collection bug)
+  const activeUtteranceRef = useRef(null);
+  const speechHeartbeatRef = useRef(null);
+  const speechDispatchTimeoutRef = useRef(null);
+  const hasSpeechRetriedRef = useRef(false);
 
   // Unconditional unmount, route exit, and page hide lifecycle listener
   useEffect(() => {
@@ -95,6 +111,11 @@ const InterviewRoom = () => {
       candidateAccumulatorRef.current = '';
       if (initialTimeoutRef.current) clearTimeout(initialTimeoutRef.current);
       if (followupTimeoutRef.current) clearTimeout(followupTimeoutRef.current);
+
+      if (speechHeartbeatRef.current) clearInterval(speechHeartbeatRef.current);
+      if (speechDispatchTimeoutRef.current) clearTimeout(speechDispatchTimeoutRef.current);
+      activeUtteranceRef.current = null;
+      window._activeInterviewUtterance = null;
 
       if (speechRecognitionRef.current) {
         try {
@@ -122,8 +143,8 @@ const InterviewRoom = () => {
     }
   }, []);
 
-  // Natural voice matching algorithm
-  const getPreferredVoice = (gender = 'male') => {
+  // Natural voice matching algorithm calibrated per panelist
+  const getPreferredVoiceForPanelist = (panelist) => {
     if (!window.speechSynthesis) return null;
     const voices = window.speechSynthesis.getVoices();
     if (!voices || voices.length === 0) return null;
@@ -131,27 +152,27 @@ const InterviewRoom = () => {
     const enVoices = voices.filter((v) => v.lang.startsWith('en'));
     const pool = enVoices.length > 0 ? enVoices : voices;
 
-    if (gender === 'male') {
-      const malePreferences = [
-        'alex',
-        'ryan online (natural)',
-        'guy online (natural)',
-        'christopher online (natural)',
-        'natural',
-        'google uk english male',
-        'google us english',
-        'daniel',
-        'george',
-        'mark',
-        'david',
-      ];
-
-      for (const pref of malePreferences) {
+    // Check specific preferences for this panelist
+    if (panelist?.voicePreferences) {
+      for (const pref of panelist.voicePreferences) {
         const found = pool.find((v) => v.name.toLowerCase().includes(pref));
         if (found) return found;
       }
+    }
 
-      // Any male English voice fallback
+    const isFemale = panelist?.gender === 'female';
+    if (isFemale) {
+      const anyFemale = pool.find(
+        (v) =>
+          v.name.toLowerCase().includes('female') ||
+          v.name.toLowerCase().includes('zira') ||
+          v.name.toLowerCase().includes('susan') ||
+          v.name.toLowerCase().includes('jenny') ||
+          v.name.toLowerCase().includes('aria') ||
+          v.name.toLowerCase().includes('samantha')
+      );
+      if (anyFemale) return anyFemale;
+    } else {
       const anyMale = pool.find(
         (v) =>
           v.name.toLowerCase().includes('male') ||
@@ -163,34 +184,6 @@ const InterviewRoom = () => {
             !v.name.toLowerCase().includes('samantha'))
       );
       if (anyMale) return anyMale;
-    } else {
-      const femalePreferences = [
-        'jenny online (natural)',
-        'aria online (natural)',
-        'samantha',
-        'victoria',
-        'google uk english female',
-        'zira',
-        'karen',
-        'susan',
-        'female',
-      ];
-
-      for (const pref of femalePreferences) {
-        const found = pool.find((v) => v.name.toLowerCase().includes(pref));
-        if (found) return found;
-      }
-
-      const anyFemale = pool.find(
-        (v) =>
-          v.name.toLowerCase().includes('female') ||
-          v.name.toLowerCase().includes('zira') ||
-          v.name.toLowerCase().includes('susan') ||
-          v.name.toLowerCase().includes('jenny') ||
-          v.name.toLowerCase().includes('aria') ||
-          v.name.toLowerCase().includes('samantha')
-      );
-      if (anyFemale) return anyFemale;
     }
 
     return pool[0];
@@ -500,7 +493,7 @@ const InterviewRoom = () => {
     };
   }, [currentSession]);
 
-  // Voice Synthesis helper with barge-in support and acoustic echo guard
+  // Voice Synthesis helper with multi-panel interviewer support and Chrome audio deadlock protection
   const speakAIResponse = (text) => {
     if (!text || !isSessionActiveRef.current) {
       flushSpeechQueue();
@@ -508,7 +501,22 @@ const InterviewRoom = () => {
     }
     lastAITextRef.current = text.toLowerCase();
     recentAIPromptsRef.current = [text, ...(recentAIPromptsRef.current || []).slice(0, 4)];
-    appendTranscriptTurn('ai', text, activeSection);
+
+    // Resolve active panelist for this turn (rotates across board members in multi-panel mode)
+    let turnPanelist = activePanelist;
+    if (voiceMode === 'multi_panel') {
+      turnPanelist = INTERVIEW_PANELISTS[currentPanelistIndex % INTERVIEW_PANELISTS.length];
+      setCurrentPanelistIndex((prev) => prev + 1);
+    }
+
+    appendTranscriptTurn(
+      'ai',
+      text,
+      activeSection,
+      turnPanelist.name,
+      turnPanelist.badge,
+      turnPanelist.color
+    );
 
     // Mute mic & clear captions immediately before any sound comes out of speakers
     isAISpeakingRef.current = true;
@@ -524,33 +532,33 @@ const InterviewRoom = () => {
     }
 
     if (window.speechSynthesis) {
-      stopAllSpeech();
-      if (!isSessionActiveRef.current) return;
-
-      const utterance = new SpeechSynthesisUtterance(text);
-
-      // Determine voice gender based on voiceMode
-      let effectiveGender = activeVoiceGender;
-      if (voiceMode === 'male') {
-        effectiveGender = 'male';
-      } else if (voiceMode === 'female') {
-        effectiveGender = 'female';
-      } else if (voiceMode === 'random_turn') {
-        // Sometime male, sometime female turn-by-turn
-        effectiveGender = Math.random() < 0.5 ? 'male' : 'female';
-        setActiveVoiceGender(effectiveGender);
-      } else {
-        // 'random' mode: uses the randomly assigned persona for this session
-        effectiveGender = activeVoiceGender;
+      // 1. Cancel previous speech and ensure engine is unpaused
+      window.speechSynthesis.cancel();
+      if (window.speechSynthesis.paused) {
+        window.speechSynthesis.resume();
       }
 
-      const chosenVoice = getPreferredVoice(effectiveGender);
+      // 2. Clear any pending speech timeouts or heartbeats
+      if (speechDispatchTimeoutRef.current) {
+        clearTimeout(speechDispatchTimeoutRef.current);
+        speechDispatchTimeoutRef.current = null;
+      }
+      if (speechHeartbeatRef.current) {
+        clearInterval(speechHeartbeatRef.current);
+        speechHeartbeatRef.current = null;
+      }
+
+      // 3. Create utterance and attach globally to prevent Chromium V8 Garbage Collection bug
+      const utterance = new SpeechSynthesisUtterance(text);
+      activeUtteranceRef.current = utterance;
+      window._activeInterviewUtterance = utterance;
+
+      const chosenVoice = getPreferredVoiceForPanelist(turnPanelist);
       if (chosenVoice) {
         utterance.voice = chosenVoice;
       }
-      // Calm, confident natural cadence:
-      utterance.pitch = effectiveGender === 'male' ? 0.94 : 1.02;
-      utterance.rate = 1.02;
+      utterance.pitch = turnPanelist.pitch || 1.0;
+      utterance.rate = turnPanelist.rate || 1.02;
 
       utterance.onstart = () => {
         if (!isSessionActiveRef.current) {
@@ -565,11 +573,19 @@ const InterviewRoom = () => {
       };
 
       utterance.onend = () => {
+        if (speechHeartbeatRef.current) {
+          clearInterval(speechHeartbeatRef.current);
+          speechHeartbeatRef.current = null;
+        }
+        activeUtteranceRef.current = null;
+        window._activeInterviewUtterance = null;
         setIsAISpeaking(false);
+
         if (!isSessionActiveRef.current) {
           isAISpeakingRef.current = false;
           return;
         }
+
         // Generous acoustic silence buffer: 1400ms after audio finishes before microphone opens
         aiAudioBlockedUntilRef.current = Date.now() + 1400;
         setTimeout(() => {
@@ -583,12 +599,43 @@ const InterviewRoom = () => {
         }, 1400);
       };
 
-      utterance.onerror = () => {
+      utterance.onerror = (event) => {
+        console.warn('Speech synthesis event:', event.error);
+        if (speechHeartbeatRef.current) {
+          clearInterval(speechHeartbeatRef.current);
+          speechHeartbeatRef.current = null;
+        }
+        activeUtteranceRef.current = null;
+        window._activeInterviewUtterance = null;
         setIsAISpeaking(false);
+
+        // If audio failed unexpectedly (network or voice busy), retry once with default system voice
+        if (
+          !hasSpeechRetriedRef.current &&
+          isSessionActiveRef.current &&
+          event.error !== 'canceled' &&
+          event.error !== 'interrupted'
+        ) {
+          hasSpeechRetriedRef.current = true;
+          const fallbackUtterance = new SpeechSynthesisUtterance(text);
+          fallbackUtterance.rate = 1.0;
+          activeUtteranceRef.current = fallbackUtterance;
+          window._activeInterviewUtterance = fallbackUtterance;
+          fallbackUtterance.onend = () => {
+            activeUtteranceRef.current = null;
+            window._activeInterviewUtterance = null;
+            setIsAISpeaking(false);
+            isAISpeakingRef.current = false;
+          };
+          window.speechSynthesis.speak(fallbackUtterance);
+          return;
+        }
+
         if (!isSessionActiveRef.current) {
           isAISpeakingRef.current = false;
           return;
         }
+
         aiAudioBlockedUntilRef.current = Date.now() + 800;
         setTimeout(() => {
           if (!isSessionActiveRef.current) return;
@@ -601,11 +648,22 @@ const InterviewRoom = () => {
         }, 800);
       };
 
-      if (!isSessionActiveRef.current) {
-        stopAllSpeech();
-        return;
-      }
-      window.speechSynthesis.speak(utterance);
+      // 4. Stagger by 60ms to let Chromium OS audio thread cleanly process cancel() before queueing new speech
+      speechDispatchTimeoutRef.current = setTimeout(() => {
+        if (!isSessionActiveRef.current) return;
+        if (window.speechSynthesis.paused) {
+          window.speechSynthesis.resume();
+        }
+
+        // Heartbeat to prevent Chrome 15s freeze
+        speechHeartbeatRef.current = setInterval(() => {
+          if (window.speechSynthesis.speaking && window.speechSynthesis.paused) {
+            window.speechSynthesis.resume();
+          }
+        }, 2000);
+
+        window.speechSynthesis.speak(utterance);
+      }, 60);
     }
   };
 
@@ -839,60 +897,58 @@ const InterviewRoom = () => {
           </span>
         </div>
 
-        {/* Controls: Voice Persona, Timer & Finish Button */}
+        {/* Controls: Multi-Panel Technical Board, Timer & Finish Button */}
         <div className="flex items-center gap-3 sm:gap-4">
-          {/* Natural Voice Selector */}
+          {/* Multi-Panel Technical Board & Voice Selector */}
           <div className="flex items-center gap-1.5 bg-dark-950/80 border border-white/10 px-2.5 py-1.5 rounded-lg text-xs">
-            <Volume2 className="w-3.5 h-3.5 text-neon-green shrink-0" />
+            <Users className="w-3.5 h-3.5 text-neon-green shrink-0" />
             <select
               value={voiceMode}
               onChange={(e) => {
                 const val = e.target.value;
                 setVoiceMode(val);
-                if (val === 'random') {
-                  const newGen = Math.random() < 0.5 ? 'male' : 'female';
-                  setActiveVoiceGender(newGen);
-                  toast.success(
-                    `Voice set to Random (assigned ${
-                      newGen === 'male' ? 'Alex · Male' : 'Bella · Female'
-                    })`
-                  );
-                } else if (val === 'random_turn') {
-                  toast.success('Voice set to Mixed Panel (alternates male & female turns)');
-                } else if (val === 'male') {
-                  setActiveVoiceGender('male');
-                  toast.success('Voice locked to Alex / Adam (Natural Male)');
-                } else if (val === 'female') {
-                  setActiveVoiceGender('female');
-                  toast.success('Voice locked to Bella / Jenny (Natural Female)');
+                if (val === 'multi_panel') {
+                  toast.success('🤼 Multi-Panel Board active! Interviewers rotate dynamically across turns.');
+                } else if (val === 'random') {
+                  const nextIdx = Math.floor(Math.random() * INTERVIEW_PANELISTS.length);
+                  setCurrentPanelistIndex(nextIdx);
+                  const p = INTERVIEW_PANELISTS[nextIdx];
+                  toast.success(`🎲 Assigned to ${p.name} (${p.shortName})`);
+                } else {
+                  const p = getPanelistById(val);
+                  toast.success(`Interviewer locked to ${p.name} (${p.badge})`);
                 }
               }}
               className="bg-transparent text-white text-xs font-semibold focus:outline-none cursor-pointer pr-1"
             >
+              <option value="multi_panel" className="bg-dark-900 text-white">
+                🤼 Multi-Panel Board (Alex, Dr. Bella & Team)
+              </option>
+              <option value="alex" className="bg-dark-900 text-white">
+                ⚡ Alex Rivera · Lead Systems Architect (Male)
+              </option>
+              <option value="bella" className="bg-dark-900 text-white">
+                🧠 Dr. Bella Chen · Algorithms Lead (Female)
+              </option>
+              <option value="marcus" className="bg-dark-900 text-white">
+                💼 Marcus Vance · Director of Eng (Male)
+              </option>
+              <option value="sophia" className="bg-dark-900 text-white">
+                🛡️ Sophia Sterling · Infrastructure Lead (Female)
+              </option>
               <option value="random" className="bg-dark-900 text-white">
-                🎲 Random ({activeVoiceGender === 'male' ? 'Alex · Male' : 'Bella · Female'})
-              </option>
-              <option value="random_turn" className="bg-dark-900 text-white">
-                🔀 Mixed Panel (Male & Female)
-              </option>
-              <option value="male" className="bg-dark-900 text-white">
-                👨 Alex (Natural Male)
-              </option>
-              <option value="female" className="bg-dark-900 text-white">
-                👩 Bella (Natural Female)
+                🎲 Random ({activePanelist?.shortName})
               </option>
             </select>
-            {voiceMode === 'random' && (
+            {(voiceMode === 'random' || voiceMode === 'multi_panel') && (
               <button
                 type="button"
                 onClick={() => {
-                  const nextGen = activeVoiceGender === 'male' ? 'female' : 'male';
-                  setActiveVoiceGender(nextGen);
-                  toast.success(
-                    `Interviewer shuffled to ${nextGen === 'male' ? 'Alex (Male)' : 'Bella (Female)'}`
-                  );
+                  setCurrentPanelistIndex((prev) => (prev + 1) % INTERVIEW_PANELISTS.length);
+                  const next = INTERVIEW_PANELISTS[(currentPanelistIndex + 1) % INTERVIEW_PANELISTS.length];
+                  toast.success(`Switched active panelist to ${next.name} (${next.badge})`);
                 }}
-                title="Shuffle Random Voice"
+                title="Shuffle / Next Panelist"
                 className="text-dark-400 hover:text-neon-green transition-colors p-0.5 ml-0.5"
               >
                 <Shuffle className="w-3 h-3" />
@@ -921,10 +977,11 @@ const InterviewRoom = () => {
       <div className="flex-1 flex flex-col md:flex-row items-center justify-center p-4 sm:p-8 gap-8 max-w-7xl mx-auto w-full relative z-10">
         {/* Center: Stage Visualizer & Voice Orb */}
         <div className="flex-1 flex flex-col items-center justify-center space-y-8 w-full max-w-xl">
-          {/* TrackAsap Rabbit AI Avatar (Three.js 3D WebGL with interactive 2.5D Mascot fallback) */}
+          {/* TrackAsap Rabbit AI Avatar (Dynamic Multi-Panel Interviewer Persona) */}
           <RabbitAvatar
             isAISpeaking={isAISpeaking}
             isCandidateSpeaking={isCandidateSpeaking}
+            panelist={activePanelist}
           />
 
           {/* Dynamic Waveform Visualizer */}
@@ -1010,15 +1067,42 @@ const InterviewRoom = () => {
                   key={i}
                   className={`flex flex-col ${isAI ? 'items-start' : 'items-end'} space-y-1`}
                 >
-                  <span className="text-[10px] font-semibold uppercase tracking-wider text-dark-400 px-1">
-                    {isAI ? 'AI Interviewer' : 'You'}
+                  <span className="text-[10px] font-semibold uppercase tracking-wider text-dark-400 px-1 flex items-center gap-1.5">
+                    {isAI ? (
+                      <>
+                        <span
+                          className="w-1.5 h-1.5 rounded-full"
+                          style={{ backgroundColor: turn.panelistColor || '#39ff14' }}
+                        />
+                        <span style={{ color: turn.panelistColor || '#39ff14' }} className="font-bold">
+                          {turn.speakerName || 'AI Interviewer'}
+                        </span>
+                        {turn.speakerRole && (
+                          <span className="text-[9px] px-1.5 py-0.5 rounded bg-white/5 border border-white/10 text-dark-300 font-mono font-medium">
+                            {turn.speakerRole}
+                          </span>
+                        )}
+                      </>
+                    ) : (
+                      'You'
+                    )}
                   </span>
                   <div
                     className={`max-w-[85%] rounded-2xl p-3 text-xs leading-relaxed ${
                       isAI
-                        ? 'bg-dark-950 border border-neon-green/20 text-dark-100 rounded-tl-sm'
+                        ? 'bg-dark-950 text-dark-100 rounded-tl-sm'
                         : 'bg-neon-green/10 border border-neon-green/30 text-white rounded-tr-sm'
                     }`}
+                    style={
+                      isAI
+                        ? {
+                            borderColor: turn.panelistColor
+                              ? `${turn.panelistColor}40`
+                              : 'rgba(57, 255, 20, 0.2)',
+                            borderWidth: 1,
+                          }
+                        : undefined
+                    }
                   >
                     {turn.text}
                   </div>

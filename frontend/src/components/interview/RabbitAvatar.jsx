@@ -6,22 +6,33 @@ import { Sparkles, Mic, Volume2 } from 'lucide-react';
  * RabbitAvatar
  *
  * Clean, high-performance avatar card rendering the official TrackAsap Mascot Rabbit (/assets/avatar/rabbit.png)
- * with audio-reactive ambient glow rings, breathing floats, and state badges.
+ * with dynamic multi-panel interviewer themes (Alex, Dr. Bella, Marcus, Sophia) and audio-reactive animations.
  */
-export default function RabbitAvatar({ isAISpeaking = false, isCandidateSpeaking = false }) {
+export default function RabbitAvatar({
+  isAISpeaking = false,
+  isCandidateSpeaking = false,
+  panelist = null,
+}) {
+  const activeColor = panelist?.color || '#39ff14';
+  const glowColor = panelist?.glowColor || 'rgba(57, 255, 20, 0.45)';
+  const activeName = panelist?.name || 'TrackAsap AI';
+  const activeBadge = panelist?.badge || 'INTERVIEWER';
+  const activeEmoji = panelist?.avatarEmoji || '🐰';
+
   return (
     <div className="relative flex flex-col items-center justify-center w-full max-w-sm mx-auto select-none">
       {/* Background Cyberpunk Ambient Glow Rings */}
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-        {/* Speaking Neon-Green Aura */}
+        {/* Speaking Panelist Glow Aura */}
         <motion.div
-          className="absolute w-80 h-80 rounded-full bg-neon-green/25 blur-3xl pointer-events-none"
+          className="absolute w-80 h-80 rounded-full blur-3xl pointer-events-none transition-colors duration-500"
+          style={{ backgroundColor: activeColor }}
           animate={
             isAISpeaking
-              ? { scale: [1, 1.45, 1], opacity: [0.4, 0.85, 0.4] }
+              ? { scale: [1, 1.45, 1], opacity: [0.35, 0.8, 0.35] }
               : isCandidateSpeaking
               ? { scale: 0.9, opacity: 0.08 }
-              : { scale: 1, opacity: 0.18 }
+              : { scale: 1, opacity: 0.16 }
           }
           transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}
         />
@@ -44,7 +55,8 @@ export default function RabbitAvatar({ isAISpeaking = false, isCandidateSpeaking
               {[0, 1, 2].map((ring) => (
                 <motion.div
                   key={`speak-ring-${ring}`}
-                  className="absolute rounded-full border border-neon-green/50 pointer-events-none"
+                  className="absolute rounded-full pointer-events-none"
+                  style={{ borderColor: activeColor, borderWidth: 1 }}
                   initial={{ width: 160, height: 160, opacity: 0.9 }}
                   animate={{
                     width: [160, 300 + ring * 45],
@@ -89,32 +101,42 @@ export default function RabbitAvatar({ isAISpeaking = false, isCandidateSpeaking
 
       {/* Main Avatar Stage Card */}
       <div
-        className={`relative z-10 w-64 h-72 sm:w-72 sm:h-80 rounded-3xl p-3 flex flex-col items-center justify-center transition-all duration-300 backdrop-blur-2xl border ${
-          isAISpeaking
-            ? 'border-neon-green/80 bg-dark-900/85 shadow-[0_0_50px_rgba(57,255,20,0.3)] scale-[1.02]'
+        className="relative z-10 w-64 h-72 sm:w-72 sm:h-80 rounded-3xl p-3 flex flex-col items-center justify-center transition-all duration-300 backdrop-blur-2xl border"
+        style={{
+          borderColor: isAISpeaking
+            ? activeColor
             : isCandidateSpeaking
-            ? 'border-blue-400/80 bg-dark-900/85 shadow-[0_0_50px_rgba(96,165,250,0.3)]'
-            : 'border-white/10 bg-dark-900/60 shadow-2xl'
-        }`}
+            ? '#60a5fa'
+            : 'rgba(255, 255, 255, 0.1)',
+          backgroundColor: isAISpeaking || isCandidateSpeaking ? 'rgba(24, 24, 27, 0.9)' : 'rgba(24, 24, 27, 0.6)',
+          boxShadow: isAISpeaking
+            ? `0 0 50px ${glowColor}`
+            : isCandidateSpeaking
+            ? '0 0 50px rgba(96, 165, 250, 0.3)'
+            : '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
+          transform: isAISpeaking ? 'scale(1.02)' : 'scale(1)',
+        }}
       >
         {/* Top Header Badge */}
         <div className="absolute top-3 left-3 right-3 flex items-center justify-between pointer-events-auto z-20">
           <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-dark-950/85 border border-white/10 text-xs text-dark-200 font-medium backdrop-blur-md">
-            <span className="text-sm">🐰</span>
-            <span className="font-semibold text-white">TrackAsap AI</span>
+            <span className="text-sm">{activeEmoji}</span>
+            <span className="font-semibold text-white tracking-tight">{activeName}</span>
             <span
-              className={`w-1.5 h-1.5 rounded-full ${
-                isAISpeaking
-                  ? 'bg-neon-green animate-pulse'
-                  : isCandidateSpeaking
-                  ? 'bg-blue-400 animate-pulse'
-                  : 'bg-dark-500'
-              }`}
+              className="w-1.5 h-1.5 rounded-full animate-pulse"
+              style={{ backgroundColor: isAISpeaking ? activeColor : isCandidateSpeaking ? '#60a5fa' : '#71717a' }}
             />
           </div>
 
-          <span className="text-[10px] uppercase font-mono px-2 py-0.5 rounded-full bg-dark-950/70 border border-white/10 text-dark-400">
-            Interviewer
+          <span
+            className="text-[10px] uppercase font-mono px-2 py-0.5 rounded-full border transition-colors duration-300"
+            style={{
+              color: activeColor,
+              borderColor: `${activeColor}40`,
+              backgroundColor: `${activeColor}15`,
+            }}
+          >
+            {activeBadge}
           </span>
         </div>
 
@@ -144,13 +166,14 @@ export default function RabbitAvatar({ isAISpeaking = false, isCandidateSpeaking
           <img
             src="/assets/avatar/rabbit.png"
             alt="TrackAsap Mascot Rabbit"
-            className={`w-full h-full object-contain transition-all duration-300 select-none ${
-              isAISpeaking
-                ? 'drop-shadow-[0_0_30px_rgba(57,255,20,0.6)]'
+            className="w-full h-full object-contain transition-all duration-300 select-none"
+            style={{
+              filter: isAISpeaking
+                ? `drop-shadow(0 0 30px ${glowColor})`
                 : isCandidateSpeaking
-                ? 'drop-shadow-[0_0_25px_rgba(96,165,250,0.5)]'
-                : 'drop-shadow-[0_0_20px_rgba(0,0,0,0.7)]'
-            }`}
+                ? 'drop-shadow(0 0 25px rgba(96, 165, 250, 0.5))'
+                : 'drop-shadow(0 0 20px rgba(0, 0, 0, 0.7))',
+            }}
           />
         </motion.div>
 
@@ -158,8 +181,10 @@ export default function RabbitAvatar({ isAISpeaking = false, isCandidateSpeaking
         <div className="absolute bottom-3 flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-dark-950/90 border border-white/10 text-xs backdrop-blur-md shadow-lg z-20">
           {isAISpeaking ? (
             <>
-              <Volume2 className="w-3.5 h-3.5 text-neon-green animate-pulse" />
-              <span className="text-neon-green font-semibold tracking-wide">Speaking...</span>
+              <Volume2 className="w-3.5 h-3.5 animate-pulse" style={{ color: activeColor }} />
+              <span className="font-semibold tracking-wide" style={{ color: activeColor }}>
+                {panelist?.shortName || 'AI'} is speaking...
+              </span>
             </>
           ) : isCandidateSpeaking ? (
             <>

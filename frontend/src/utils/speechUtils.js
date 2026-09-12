@@ -7,16 +7,12 @@ export const stopAllSpeech = () => {
   if (typeof window === 'undefined' || !window.speechSynthesis) return;
 
   try {
-    // 1. Pause immediately to halt active speaker output
-    window.speechSynthesis.pause();
-
-    // 2. Clear queued utterances
+    // 1. Cancel active and pending utterances
     window.speechSynthesis.cancel();
 
-    // 3. In Chromium engines, if speech was paused, a resume-cancel flush clears any hung audio thread
-    if (window.speechSynthesis.speaking || window.speechSynthesis.pending) {
+    // 2. In Chromium engines, ensure paused state is never left frozen
+    if (window.speechSynthesis.paused) {
       window.speechSynthesis.resume();
-      window.speechSynthesis.cancel();
     }
   } catch (e) {
     console.warn('Speech cancellation error:', e);
