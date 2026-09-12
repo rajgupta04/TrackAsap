@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -18,9 +18,15 @@ import {
   CheckCircle2,
   Trash2,
   Play,
+  UploadCloud,
+  X,
+  FileCheck,
+  Eye,
+  Loader2,
 } from 'lucide-react';
 import { useInterviewStore } from '../store/interviewStore';
 import { useAuthStore } from '../store/authStore';
+import { interviewService } from '../services/interviewService';
 import ConfirmModal from '../components/interview/ConfirmModal';
 import toast from 'react-hot-toast';
 
@@ -96,6 +102,12 @@ const Interview = () => {
   const [durationMinutes, setDurationMinutes] = useState(20);
   const [resumeText, setResumeText] = useState('');
   const [jobDescription, setJobDescription] = useState('');
+  const [resumeTab, setResumeTab] = useState('upload'); // 'upload' | 'paste'
+  const [resumeFile, setResumeFile] = useState(null);
+  const [isUploadingResume, setIsUploadingResume] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const [showExtractedPreview, setShowExtractedPreview] = useState(false);
+  const fileInputRef = useRef(null);
   const [isStarting, setIsStarting] = useState(false);
   const [sessionToDelete, setSessionToDelete] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -104,6 +116,40 @@ const Interview = () => {
     fetchSessions(1, 6);
     fetchUserContext();
   }, [fetchSessions, fetchUserContext]);
+
+  const handleResumeUpload = async (file) => {
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Resume file size must be less than 5MB');
+      return;
+    }
+
+    setIsUploadingResume(true);
+    const toastId = toast.loading(`Parsing ${file.name}...`, { id: 'resume-upload' });
+
+    try {
+      const data = await interviewService.uploadResume(file);
+      toast.dismiss('resume-upload');
+
+      if (data.success && data.text) {
+        setResumeText(data.text);
+        setResumeFile({
+          name: data.fileName || file.name,
+          size: data.fileSize || file.size,
+        });
+        toast.success('Resume parsed successfully! Projects & skills extracted.');
+      } else {
+        toast.error('Could not extract text from this resume');
+      }
+    } catch (err) {
+      toast.dismiss('resume-upload');
+      console.error('Resume upload error:', err);
+      toast.error(err.response?.data?.message || 'Failed to parse resume document');
+    } finally {
+      setIsUploadingResume(false);
+    }
+  };
 
   const handleStartInterview = async () => {
     setIsStarting(true);
@@ -324,19 +370,186 @@ const Interview = () => {
               </div>
             </div>
 
-            {/* Optional Resume / JD Accordion */}
+            {/* Resume Upload & Project Claims Section */}
             <div className="pt-2 space-y-3">
-              <div>
-                <label className="block text-xs font-semibold text-dark-300 uppercase tracking-wider mb-1.5">
-                  Resume Highlights or Project Claims (Optional)
-                </label>
-                <textarea
-                  rows={3}
-                  value={resumeText}
-                  onChange={(e) => setResumeText(e.target.value)}
-                  placeholder="Paste your top projects, tech stack claims, or key resume bullet points here..."
-                  className="w-full bg-dark-950/80 border border-white/10 rounded-xl p-3 text-xs text-white placeholder-dark-500 focus:outline-none focus:border-neon-green transition-colors resize-none"
-                />
+              <div
+                className={`p-4 rounded-2xl border transition-all ${
+                  selectedMode === 'resume_interview'
+                    ? 'bg-blue-500/5 border-blue-500/40 shadow-lg shadow-blue-500/5'
+                    : 'bg-dark-950/60 border-white/10'
+                }`}
+              >
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
+                  <div className="flex items-center gap-2">
+                    <FileText
+                      className={`w-4 h-4 ${
+                        selectedMode === 'resume_interview' ? 'text-blue-400' : 'text-neon-green'
+                      }`}
+                    />
+                    <div>
+                      <span className="text-xs font-bold text-white uppercase tracking-wider block">
+                        Candidate Resume / Projects
+                      </span>
+                      <span className="text-[11px] text-dark-400">
+                        {selectedMode === 'resume_interview'
+                          ? 'Required for Deep Dive: AI questions your real projects & architectures'
+                          : 'Optional: Tailors interview questions to your background'}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Mode Switcher Tabs */}
+                  <div className="flex items-center self-start sm:self-auto bg-dark-900 border border-white/10 rounded-xl p-1 text-[11px]">
+                    <button
+                      type="button"
+                      onClick={() => setResumeTab('upload')}
+                      className={`px-3 py-1 rounded-lg transition-all font-medium ${
+                        resumeTab === 'upload'
+                          ? 'bg-neon-green text-dark-950 font-bold shadow-sm'
+                          : 'text-dark-400 hover:text-white'
+                      }`}
+                    >
+                      Upload File
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setResumeTab('paste')}
+                      className={`px-3 py-1 rounded-lg transition-all font-medium ${
+                        resumeTab === 'paste'
+                          ? 'bg-neon-green text-dark-950 font-bold shadow-sm'
+                          : 'text-dark-400 hover:text-white'
+                      }`}
+                    >
+                      Paste Text
+                    </button>
+                  </div>
+                </div>
+
+                {resumeTab === 'upload' ? (
+                  <div className="space-y-3">
+                    {resumeFile ? (
+                      <div className="bg-dark-900/90 border border-emerald-500/30 rounded-xl p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 shrink-0">
+                            <FileCheck className="w-5 h-5" />
+                          </div>
+                          <div className="min-w-0">
+                            <div className="text-xs font-bold text-white truncate max-w-xs">
+                              {resumeFile.name}
+                            </div>
+                            <div className="text-[10px] text-dark-400 flex items-center gap-2 mt-0.5">
+                              <span>{(resumeFile.size / 1024).toFixed(1)} KB</span>
+                              <span className="text-emerald-400 font-semibold flex items-center gap-1">
+                                <CheckCircle2 className="w-3 h-3" /> Extracted & Ready for AI
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 self-end sm:self-auto">
+                          <button
+                            type="button"
+                            onClick={() => setShowExtractedPreview(!showExtractedPreview)}
+                            className="px-2.5 py-1.5 rounded-lg bg-dark-950 hover:bg-dark-800 border border-white/10 text-xs text-dark-300 hover:text-white transition-all flex items-center gap-1.5"
+                          >
+                            <Eye className="w-3.5 h-3.5 text-neon-green" />
+                            {showExtractedPreview ? 'Hide Details' : 'View Extracted Details'}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setResumeFile(null);
+                              setResumeText('');
+                              setShowExtractedPreview(false);
+                            }}
+                            className="p-1.5 rounded-lg bg-dark-950 hover:bg-red-500/20 border border-white/10 text-dark-400 hover:text-rose-400 transition-all"
+                            title="Remove Resume"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div
+                        onDragOver={(e) => {
+                          e.preventDefault();
+                          setIsDragging(true);
+                        }}
+                        onDragLeave={() => setIsDragging(false)}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          setIsDragging(false);
+                          if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+                            handleResumeUpload(e.dataTransfer.files[0]);
+                          }
+                        }}
+                        onClick={() => fileInputRef.current?.click()}
+                        className={`border-2 border-dashed rounded-xl p-6 text-center transition-all cursor-pointer ${
+                          isDragging
+                            ? 'border-neon-green bg-neon-green/10'
+                            : 'border-white/15 bg-dark-900/40 hover:border-white/30 hover:bg-dark-900/70'
+                        }`}
+                      >
+                        <input
+                          ref={fileInputRef}
+                          type="file"
+                          accept=".pdf,.docx,.txt,.md"
+                          className="hidden"
+                          onChange={(e) => {
+                            if (e.target.files && e.target.files[0]) {
+                              handleResumeUpload(e.target.files[0]);
+                            }
+                          }}
+                        />
+                        {isUploadingResume ? (
+                          <div className="flex flex-col items-center gap-2 py-2">
+                            <Loader2 className="w-7 h-7 text-neon-green animate-spin" />
+                            <div className="text-xs font-semibold text-white">
+                              Analyzing & Extracting Resume Profile...
+                            </div>
+                            <div className="text-[11px] text-dark-400">
+                              AI is extracting your technical projects, stack, and metrics
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex flex-col items-center gap-2">
+                            <div className="w-10 h-10 rounded-xl bg-neon-green/10 border border-neon-green/20 flex items-center justify-center text-neon-green mb-1">
+                              <UploadCloud className="w-5 h-5" />
+                            </div>
+                            <div className="text-xs font-bold text-white">
+                              Drop your resume file here or{' '}
+                              <span className="text-neon-green underline">Browse</span>
+                            </div>
+                            <p className="text-[11px] text-dark-400">
+                              Supports PDF, DOCX, TXT, MD (Max 5MB)
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Extracted preview accordion */}
+                    {showExtractedPreview && resumeText && (
+                      <div className="p-3.5 bg-dark-950 border border-white/10 rounded-xl text-xs text-dark-200 font-mono whitespace-pre-wrap max-h-52 overflow-y-auto scrollbar-thin">
+                        <div className="text-[10px] uppercase font-bold text-neon-green mb-2 flex items-center gap-1.5">
+                          <CheckCircle2 className="w-3.5 h-3.5" />
+                          Parsed Profile That AI Will Reference:
+                        </div>
+                        {resumeText}
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div>
+                    <textarea
+                      rows={4}
+                      value={resumeText}
+                      onChange={(e) => setResumeText(e.target.value)}
+                      placeholder="Paste your top projects, technical architecture claims, and key achievements here..."
+                      className="w-full bg-dark-900/80 border border-white/10 rounded-xl p-3 text-xs text-white placeholder-dark-500 focus:outline-none focus:border-neon-green transition-colors resize-none"
+                    />
+                  </div>
+                )}
               </div>
 
               {selectedMode === 'jd_interview' && (

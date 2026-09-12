@@ -2,6 +2,7 @@ import { AccessToken } from 'livekit-server-sdk';
 import InterviewSession from '../models/InterviewSession.model.js';
 import Problem from '../models/Problem.model.js';
 import { generateInterviewEvaluation } from '../utils/interviewEvaluator.js';
+import { extractResumeText } from '../utils/resumeParser.js';
 
 // Helper to generate LiveKit token with fallback for local/mock development
 const generateLiveKitToken = async (roomName, user, metadata = {}) => {
@@ -416,3 +417,30 @@ export const getUserContext = async (req, res) => {
     res.status(500).json({ message: 'Failed to fetch user context', error: error.message });
   }
 };
+
+/**
+ * @route   POST /api/interview/upload-resume
+ * @desc    Upload and parse candidate resume (PDF, DOCX, TXT, MD)
+ * @access  Private
+ */
+export const uploadResume = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: 'No resume file uploaded' });
+    }
+
+    const text = await extractResumeText(req.file);
+
+    res.json({
+      success: true,
+      message: 'Resume parsed successfully',
+      text,
+      fileName: req.file.originalname,
+      fileSize: req.file.size,
+    });
+  } catch (error) {
+    console.error('Resume upload error:', error);
+    res.status(500).json({ message: error.message || 'Failed to process resume file' });
+  }
+};
+

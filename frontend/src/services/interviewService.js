@@ -45,4 +45,15 @@ export const interviewService = {
     const response = await api.get('/interview/user-context');
     return response.data;
   },
+
+  uploadResume: async (file) => {
+    const formData = new FormData();
+    formData.append('resume', file);
+    const response = await api.post('/interview/upload-resume', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data;
+  },
 };
