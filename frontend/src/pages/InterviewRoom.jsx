@@ -56,6 +56,8 @@ const InterviewRoom = () => {
   const isAISpeakingRef = useRef(false);
   const isMutedRef = useRef(false);
   const lastAITextRef = useRef('');
+  const recentAIPromptsRef = useRef([]);
+  const aiAudioBlockedUntilRef = useRef(0);
 
   // Pre-load and cache browser voices
   useEffect(() => {
@@ -117,13 +119,36 @@ const InterviewRoom = () => {
     return voices.find((v) => v.lang.startsWith('en')) || voices[0];
   };
 
-  // Echo detection helper
-  const isEchoOfAI = (userText, aiText) => {
-    if (!aiText || !userText) return false;
+  // Multi-layer Echo detection: exact substring + word-level token overlap against recent AI prompts
+  const isEchoOfAI = (userText, aiUtterances = []) => {
+    if (!userText || !aiUtterances || aiUtterances.length === 0) return false;
     const cleanUser = userText.toLowerCase().replace(/[^a-z0-9 ]/g, '').trim();
-    const cleanAI = aiText.toLowerCase().replace(/[^a-z0-9 ]/g, '').trim();
-    if (cleanUser.length >= 8 && cleanAI.includes(cleanUser)) {
-      return true;
+    if (!cleanUser) return false;
+
+    const userWords = cleanUser.split(/\s+/).filter((w) => w.length > 1);
+    if (userWords.length === 0) return false;
+
+    for (const aiText of aiUtterances) {
+      if (!aiText) continue;
+      const cleanAI = aiText.toLowerCase().replace(/[^a-z0-9 ]/g, '').trim();
+      if (!cleanAI) continue;
+
+      // Substring check: if userText is in AI prompt (e.g. "could you elaborate on that")
+      if (cleanUser.length >= 6 && cleanAI.includes(cleanUser)) {
+        return true;
+      }
+
+      // Token overlap match: handles repeated words ("could you could you elaborate")
+      const aiWords = new Set(cleanAI.split(/\s+/).filter((w) => w.length > 1));
+      let matchCount = 0;
+      for (const w of userWords) {
+        if (aiWords.has(w)) matchCount++;
+      }
+
+      // If 50% or more of candidate's captured words are words directly from the AI's question
+      if (userWords.length >= 2 && matchCount / userWords.length >= 0.5) {
+        return true;
+      }
     }
     return false;
   };
@@ -164,21 +189,29 @@ const InterviewRoom = () => {
       };
 
       recognition.onresult = (event) => {
-        // CRITICAL: Drop any microphone audio picked up while AI is outputting sound (Acoustic Echo Guard)
-        if (isAISpeakingRef.current) {
+        // Drop any microphone audio if AI is speaking or acoustic silence buffer is active
+        if (
+          isAISpeakingRef.current ||
+          Date.now() < aiAudioBlockedUntilRef.current
+        ) {
           return;
         }
 
         const current = event.resultIndex;
         const transcriptText = event.results[current][0].transcript;
 
+        // Check if interim words match recent AI prompts
+        if (isEchoOfAI(transcriptText, recentAIPromptsRef.current)) {
+          return;
+        }
+
         if (event.results[current].isFinal) {
           setIsCandidateSpeaking(false);
           setLiveCaption('');
           const trimmed = transcriptText.trim();
           
-          // Ensure it's not a residual echo of the AI's question
-          if (trimmed && !isEchoOfAI(trimmed, lastAITextRef.current)) {
+          // Ensure it's not an echo of the AI's question
+          if (trimmed && !isEchoOfAI(trimmed, recentAIPromptsRef.current)) {
             handleCandidateUtterance(trimmed);
           }
         } else {
@@ -188,8 +221,12 @@ const InterviewRoom = () => {
       };
 
       recognition.onend = () => {
-        // Automatically restart speech recognition when listening to candidate
-        if (!isAISpeakingRef.current && !isMutedRef.current) {
+        // Automatically restart speech recognition only when AI is definitely not speaking and not in acoustic silence window
+        if (
+          !isAISpeakingRef.current &&
+          Date.now() >= aiAudioBlockedUntilRef.current &&
+          !isMutedRef.current
+        ) {
           try {
             recognition.start();
           } catch (e) {}
@@ -234,19 +271,24 @@ const InterviewRoom = () => {
   const speakAIResponse = (text) => {
     if (!text) return;
     lastAITextRef.current = text.toLowerCase();
+    recentAIPromptsRef.current = [text, ...(recentAIPromptsRef.current || []).slice(0, 4)];
     appendTranscriptTurn('ai', text, activeSection);
+
+    // Mute mic & clear captions immediately before any sound comes out of speakers
+    isAISpeakingRef.current = true;
+    aiAudioBlockedUntilRef.current = Number.MAX_SAFE_INTEGER;
+    setIsAISpeaking(true);
+    setIsCandidateSpeaking(false);
+    setLiveCaption('');
+
+    if (speechRecognitionRef.current) {
+      try {
+        speechRecognitionRef.current.abort();
+      } catch (e) {}
+    }
 
     if (window.speechSynthesis) {
       window.speechSynthesis.cancel();
-
-      // Immediately flag AI as speaking and abort microphone input
-      isAISpeakingRef.current = true;
-      setIsAISpeaking(true);
-      if (speechRecognitionRef.current) {
-        try {
-          speechRecognitionRef.current.abort();
-        } catch (e) {}
-      }
 
       const utterance = new SpeechSynthesisUtterance(text);
       const chosenVoice = getPreferredVoice(voiceGender);
@@ -259,12 +301,16 @@ const InterviewRoom = () => {
 
       utterance.onstart = () => {
         isAISpeakingRef.current = true;
+        aiAudioBlockedUntilRef.current = Number.MAX_SAFE_INTEGER;
         setIsAISpeaking(true);
+        setIsCandidateSpeaking(false);
+        setLiveCaption('');
       };
 
       utterance.onend = () => {
         setIsAISpeaking(false);
-        // Safety buffer: wait 500ms after audio finishes before opening microphone to eliminate speaker echo
+        // Generous acoustic silence buffer: 1400ms after audio finishes before microphone opens
+        aiAudioBlockedUntilRef.current = Date.now() + 1400;
         setTimeout(() => {
           isAISpeakingRef.current = false;
           if (!isMutedRef.current && speechRecognitionRef.current) {
@@ -272,17 +318,20 @@ const InterviewRoom = () => {
               speechRecognitionRef.current.start();
             } catch (e) {}
           }
-        }, 500);
+        }, 1400);
       };
 
       utterance.onerror = () => {
         setIsAISpeaking(false);
-        isAISpeakingRef.current = false;
-        if (!isMutedRef.current && speechRecognitionRef.current) {
-          try {
-            speechRecognitionRef.current.start();
-          } catch (e) {}
-        }
+        aiAudioBlockedUntilRef.current = Date.now() + 800;
+        setTimeout(() => {
+          isAISpeakingRef.current = false;
+          if (!isMutedRef.current && speechRecognitionRef.current) {
+            try {
+              speechRecognitionRef.current.start();
+            } catch (e) {}
+          }
+        }, 800);
       };
 
       window.speechSynthesis.speak(utterance);
@@ -295,12 +344,16 @@ const InterviewRoom = () => {
     }
     setIsAISpeaking(false);
     isAISpeakingRef.current = false;
+    aiAudioBlockedUntilRef.current = Date.now() + 300;
+    setLiveCaption('');
 
-    if (!isMutedRef.current && speechRecognitionRef.current) {
-      try {
-        speechRecognitionRef.current.start();
-      } catch (e) {}
-    }
+    setTimeout(() => {
+      if (!isMutedRef.current && speechRecognitionRef.current) {
+        try {
+          speechRecognitionRef.current.start();
+        } catch (e) {}
+      }
+    }, 300);
 
     toast('Interrupted AI — listening to you now!', {
       icon: '⚡',
@@ -310,7 +363,12 @@ const InterviewRoom = () => {
   };
 
   const handleCandidateUtterance = async (text) => {
-    if (!text || isAISpeakingRef.current) return;
+    if (!text || isAISpeakingRef.current || Date.now() < aiAudioBlockedUntilRef.current) return;
+
+    if (isEchoOfAI(text, recentAIPromptsRef.current)) {
+      console.warn('Blocked acoustic echo utterance:', text);
+      return;
+    }
 
     appendTranscriptTurn('user', text, activeSection);
 
