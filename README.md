@@ -41,6 +41,23 @@ The Ultimate Developer Command Center & Interview Prep Platform. Featuring exten
 - **Motivational Session Reports** - Generates dynamic focus scores, progress breakdowns, and personalized congratulatory feedback.
 - **macOS Window Interface** - Responsive 2-column widescreen layout with native controls: Minimize (🟡), Fullscreen toggle with dual-window restore icon (🟢), and draggable Quick-Launch bubble.
 
+### 🎙️ TrackAsap AI Live Mock Interviewer & Mascot Avatar (NEW! 🐰)
+- **Authentic TrackAsap Mascot Avatar (`rabbit.png`)** — Replaced heavy 3D CAD/Three.js rendering with a clean, ultra-responsive 2D mascot avatar featuring real-time visual reactive feedback:
+  - 🗣️ **Active Speaking Aura**: Dynamic pulsating neon-green audio shockwaves and glowing outer rim when the AI interviewer is speaking.
+  - 🎧 **Live Listening Breathing**: Gentle cyan-blue breathing luminescence and status badge while actively capturing candidate responses.
+  - ⚡ **Thinking State**: Radiant amber spinning radar ring when the conversational engine synthesizes contextual follow-up questions.
+  - 🚀 **Silky 60 FPS Performance**: Zero WebGL rendering overhead, GPU battery drain, or canvas crashes; operates with zero lag across desktop and mobile.
+- **Intelligent Acoustic Echo Cancellation** — Employs a 1400ms acoustic silence delay after AI speech ends plus a token-level overlap filter (`isEchoOfAI`) to prevent browser speech recognition from picking up the AI's own voice through speakers.
+- **6 Mode-Calibrated Technical Interview Personas**:
+  - **Verbal DSA & Algorithmic Intuition**: Out-loud algorithmic problem solving without code, focusing on data structure trade-offs, two-pointer/sliding window patterns, and Big-O edge cases.
+  - **System Design & Distributed Architecture**: Scalability, database sharding, latency bottlenecks, caching invalidation, and failover design.
+  - **Backend Engineering**: Concurrency, ACID transactions, connection pools, and microservices architecture.
+  - **Resume Deep-Dive**: In-depth probing of candidate's actual projects, architectural claims, and scale metrics parsed directly from their uploaded resume.
+  - **Target Job Description Alignment**: Tailored questions aligned with the candidate's target job role and company tech stack.
+  - **General SDE Round**: Comprehensive software engineering interview spanning CS fundamentals, problem solving, and design trade-offs.
+- **5-Tier Fault-Tolerant Resume Parsing Pipeline** — Multi-tier extraction pipeline extracting structured candidate profiles (role, skills, projects, metrics) from PDF, Word (`.docx`, `.doc`, `.rtf`), Markdown/Text (`.md`, `.txt`), and image scans (`.png`, `.jpg`, `.jpeg`, `.webp`) using Gemini 3.6 Flash Multi-Modal Vision OCR.
+- **Authentic Post-Interview Evaluation & Rubric** — Post-interview scoring based on actual transcript turns (Technical Knowledge, System Design, Communication, Problem Solving, Confidence) alongside objective speech delivery signals (WPM pace, speaking duration, filler word counts) and premature session detection.
+
 ### 🗺️ Interactive Gamified DSA Roadmap (NEW!)
 - **11 Thematic Kingdoms** - Arrays, Two Pointers, Sliding Window, Stacks, Binary Search, Linked Lists, Trees, Heaps, Graphs, DP, and Advanced Citadel.
 - **Dynamic Mode Selector** - Toggle instantly between **Blind 75**, **Rabbit 150**, and **Running Rabbit 175** question counts.
@@ -97,7 +114,8 @@ TrackAsap/
 │   │   │   ├── physique.controller.js # Weight tracking
 │   │   │   ├── analytics.controller.js # Dashboard data
 │   │   │   ├── problem.controller.js  # Problem tracking (NEW)
-│   │   │   └── sheet.controller.js    # Sheets/Roadmaps (NEW)
+│   │   │   ├── sheet.controller.js    # Sheets/Roadmaps (NEW)
+│   │   │   └── interview.controller.js # AI Mock Interviewer & turn generation (NEW 🐰)
 │   │   ├── middleware/
 │   │   │   ├── auth.middleware.js    # JWT verification
 │   │   │   ├── error.middleware.js   # Error handling
@@ -107,21 +125,30 @@ TrackAsap/
 │   │   │   ├── DailyLog.model.js     # Daily log schema
 │   │   │   ├── PhysiqueLog.model.js  # Weight log schema
 │   │   │   ├── Problem.model.js      # Problem schema (NEW)
-│   │   │   └── Sheet.model.js        # Sheet/Roadmap schema (NEW)
+│   │   │   ├── Sheet.model.js        # Sheet/Roadmap schema (NEW)
+│   │   │   └── InterviewSession.model.js # Interview transcripts & evaluation (NEW 🐰)
 │   │   ├── routes/
 │   │   │   ├── auth.routes.js
 │   │   │   ├── dailyLog.routes.js
 │   │   │   ├── physique.routes.js
 │   │   │   ├── analytics.routes.js
 │   │   │   ├── problem.routes.js     # (NEW)
-│   │   │   └── sheet.routes.js       # (NEW)
+│   │   │   ├── sheet.routes.js       # (NEW)
+│   │   │   └── interview.routes.js   # Interview & resume upload routes (NEW 🐰)
+│   │   ├── utils/
+│   │   │   ├── resumeParser.js       # 5-Tier multi-modal resume parsing pipeline
+│   │   │   ├── interviewConversationalAgent.js # Real-time mode-tailored question generator
+│   │   │   └── interviewEvaluator.js # Post-interview LLM rubric evaluation
 │   │   └── server.js                 # Express app entry
 │   ├── .env.example
 │   └── package.json
 │
 ├── frontend/
 │   ├── public/
-│   │   └── favicon.svg
+│   │   ├── favicon.svg
+│   │   └── assets/
+│   │       └── avatar/
+│   │           └── rabbit.png        # Official TrackAsap mascot avatar image (🐰)
 │   ├── src/
 │   │   ├── components/
 │   │   │   ├── layout/
@@ -136,6 +163,10 @@ TrackAsap/
 │   │   │   │   ├── NumberInput.jsx
 │   │   │   │   ├── Select.jsx
 │   │   │   │   └── LoadingSpinner.jsx
+│   │   │   ├── interview/            # AI Interviewer components (NEW 🐰)
+│   │   │   │   ├── RabbitAvatar.jsx  # Reactive TrackAsap Mascot Avatar (Speaking/Listening)
+│   │   │   │   ├── AudioWaveform.jsx # Real-time dynamic voice activity visualizer
+│   │   │   │   └── ConfirmModal.jsx  # Confirmation dialogs
 │   │   │   ├── roadmap/              # Gamified Roadmap components (NEW)
 │   │   │   │   ├── WorldMap.jsx
 │   │   │   │   ├── WorldModal.jsx
@@ -156,14 +187,18 @@ TrackAsap/
 │   │   │   ├── Profile.jsx
 │   │   │   ├── Sheets.jsx            # Sheets/Roadmaps page (NEW)
 │   │   │   ├── Problems.jsx          # Problems list page (NEW)
-│   │   │   └── Roadmap.jsx           # Gamified DSA Roadmap Page (NEW)
+│   │   │   ├── Roadmap.jsx           # Gamified DSA Roadmap Page (NEW)
+│   │   │   ├── Interview.jsx         # AI Interview Lobby & Resume Upload (NEW 🐰)
+│   │   │   ├── InterviewRoom.jsx     # Live WebRTC Interview Room with Rabbit Avatar (NEW 🐰)
+│   │   │   └── InterviewResults.jsx  # Post-interview evaluation scorecard & metrics (NEW 🐰)
 │   │   ├── services/
 │   │   │   ├── authService.js
 │   │   │   ├── dailyLogService.js
 │   │   │   ├── physiqueService.js
 │   │   │   ├── analyticsService.js
 │   │   │   ├── problemService.js     # (NEW)
-│   │   │   └── sheetService.js       # (NEW)
+│   │   │   ├── sheetService.js       # (NEW)
+│   │   │   └── interviewService.js   # Interview session & resume API (NEW 🐰)
 │   │   ├── store/
 │   │   │   ├── authStore.js          # Zustand auth state
 │   │   │   ├── dailyLogStore.js      # Daily logs state
@@ -171,7 +206,8 @@ TrackAsap/
 │   │   │   ├── physiqueStore.js      # Weight tracking
 │   │   │   ├── problemStore.js       # Problems state (NEW)
 │   │   │   ├── sheetStore.js         # Sheets state (NEW)
-│   │   │   └── roadmapStore.js       # Roadmap state & audio progress (NEW)
+│   │   │   ├── roadmapStore.js       # Roadmap state & audio progress (NEW)
+│   │   │   └── interviewStore.js     # AI Interview session & audio state (NEW 🐰)
 │   │   ├── App.jsx
 │   │   ├── main.jsx
 │   │   └── index.css                 # Tailwind + custom styles
@@ -346,6 +382,20 @@ Visit `http://localhost:3000` to use the application.
 | DELETE | `/api/sheets/:id` | Delete sheet |
 | POST | `/api/sheets/:id/topics` | Add topic to sheet |
 | PUT | `/api/sheets/:id/topics/:topicName` | Update topic progress |
+
+### AI Mock Interview (NEW! 🐰)
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/interview/session` | Create new interview session (mode, role, company, difficulty) |
+| GET | `/api/interview/sessions` | List candidate interview history (paginated) |
+| GET | `/api/interview/session/:id` | Get interview session details & transcript |
+| GET | `/api/interview/session/:id/initial-question` | Generate mode-tailored dynamic opening question |
+| POST | `/api/interview/session/:id/next-turn` | Conversational follow-up turn via Groq/Gemini LLM agent |
+| POST | `/api/interview/upload-resume` | 5-Tier multi-modal resume & image OCR parsing |
+| POST | `/api/interview/session/:id/token` | Mint LiveKit WebRTC access token |
+| POST | `/api/interview/session/:id/transcript` | Record candidate / AI speech turn |
+| POST | `/api/interview/session/:id/evaluate` | Generate comprehensive LLM evaluation rubric scorecard |
+| DELETE | `/api/interview/session/:id` | Delete interview session record |
 
 ## 🔥 Streak Calculation Logic (Multiplier Reward)
 
