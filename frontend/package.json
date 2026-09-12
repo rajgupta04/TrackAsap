@@ -46,6 +46,7 @@
     "rehype-katex": "^7.0.1",
     "remark-gfm": "^4.0.1",
     "remark-math": "^6.0.0",
+    "three": "^0.186.0",
     "zustand": "^4.4.7"
   },
   "devDependencies": {

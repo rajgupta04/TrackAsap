@@ -22,6 +22,7 @@ import { useInterviewStore } from '../store/interviewStore';
 import { useAuthStore } from '../store/authStore';
 import AudioWaveform from '../components/interview/AudioWaveform';
 import ConfirmModal from '../components/interview/ConfirmModal';
+import RabbitAvatar from '../components/interview/RabbitAvatar';
 import toast from 'react-hot-toast';
 
 const InterviewRoom = () => {
@@ -478,41 +479,11 @@ const InterviewRoom = () => {
       <div className="flex-1 flex flex-col md:flex-row items-center justify-center p-4 sm:p-8 gap-8 max-w-7xl mx-auto w-full relative z-10">
         {/* Center: Stage Visualizer & Voice Orb */}
         <div className="flex-1 flex flex-col items-center justify-center space-y-8 w-full max-w-xl">
-          {/* Glowing AI Voice Avatar */}
-          <div className="relative flex items-center justify-center">
-            <motion.div
-              className="absolute w-56 h-56 rounded-full bg-neon-green/15 blur-2xl pointer-events-none"
-              animate={
-                isAISpeaking
-                  ? { scale: [1, 1.3, 1], opacity: [0.3, 0.7, 0.3] }
-                  : { scale: 1, opacity: 0.15 }
-              }
-              transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
-            />
-
-            <div
-              className={`w-36 h-36 sm:w-44 sm:h-44 rounded-full flex flex-col items-center justify-center border-2 transition-all shadow-2xl relative z-10 ${
-                isAISpeaking
-                  ? 'border-neon-green bg-dark-900 shadow-neon-green/30 scale-105'
-                  : isCandidateSpeaking
-                  ? 'border-blue-400 bg-dark-900 shadow-blue-500/20'
-                  : 'border-white/20 bg-dark-900/80'
-              }`}
-            >
-              <Sparkles
-                className={`w-10 h-10 mb-2 transition-colors ${
-                  isAISpeaking
-                    ? 'text-neon-green animate-pulse'
-                    : isCandidateSpeaking
-                    ? 'text-blue-400 animate-bounce'
-                    : 'text-dark-400'
-                }`}
-              />
-              <span className="text-xs font-bold tracking-wider uppercase text-dark-300">
-                AI Interviewer
-              </span>
-            </div>
-          </div>
+          {/* TrackAsap Rabbit AI Avatar (Three.js 3D WebGL with interactive 2.5D Mascot fallback) */}
+          <RabbitAvatar
+            isAISpeaking={isAISpeaking}
+            isCandidateSpeaking={isCandidateSpeaking}
+          />
 
           {/* Dynamic Waveform Visualizer */}
           <div className="w-full max-w-md bg-dark-900/50 border border-white/10 rounded-2xl p-3 backdrop-blur-sm">
