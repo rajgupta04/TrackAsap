@@ -15,9 +15,9 @@ class Config:
     GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 
     # LLM Settings
-    GROQ_LLM_MODEL = os.getenv("GROQ_LLM_MODEL", "llama-3.3-70b-versatile")
-    GROQ_STT_MODEL = os.getenv("GROQ_STT_MODEL", "whisper-large-v3")
-    GEMINI_LLM_MODEL = os.getenv("GEMINI_LLM_MODEL", "gemini-2.0-flash")
+    GROQ_LLM_MODEL = os.getenv("GROQ_LLM_MODEL", "qwen/qwen3.8-27b")
+    GROQ_STT_MODEL = os.getenv("GROQ_STT_MODEL", "whisper-large-v3-turbo")
+    GEMINI_LLM_MODEL = os.getenv("GEMINI_LLM_MODEL", "gemini-3.6-flash")
 
     # TrackAsap Backend
     TRACKASAP_API_URL = os.getenv("TRACKASAP_API_URL", "http://localhost:5000/api")
