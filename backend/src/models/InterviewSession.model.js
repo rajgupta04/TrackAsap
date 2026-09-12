@@ -86,6 +86,8 @@ const InterviewSessionSchema = new mongoose.Schema(
     transcript: [TranscriptMessageSchema],
     evaluation: {
       overallScore: { type: Number, default: 0 },
+      incomplete: { type: Boolean, default: false },
+      reason: { type: String, default: '' },
       categories: {
         technicalKnowledge: { type: Number, default: 0 },
         problemSolving: { type: Number, default: 0 },

@@ -31,6 +31,11 @@ export const interviewService = {
     return response.data;
   },
 
+  evaluateSession: async (sessionId, transcript = null) => {
+    const response = await api.post(`/interview/session/${sessionId}/evaluate`, { transcript });
+    return response.data;
+  },
+
   deleteSession: async (sessionId) => {
     const response = await api.delete(`/interview/session/${sessionId}`);
     return response.data;

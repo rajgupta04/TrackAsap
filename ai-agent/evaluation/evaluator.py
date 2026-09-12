@@ -45,6 +45,8 @@ class EvaluationEngine:
 
         return {
             "totalSpeakingTimeSec": round(total_speaking_time_est_sec, 1),
+            "totalWords": total_word_count,
+            "userTurns": user_turns,
             "wpm": round(wpm, 1),
             "pauseCount": max(0, user_turns - 1),
             "fillerWordCount": filler_count,
@@ -62,6 +64,34 @@ class EvaluationEngine:
         Generates structured JSON scoring report based on the candidate's actual answers.
         """
         metrics = self.compute_voice_metrics(transcript)
+
+        # Premature / Aborted Session Guard
+        if metrics["userTurns"] < 2 or metrics["totalWords"] < 20:
+            return {
+                "overallScore": 0,
+                "incomplete": True,
+                "reason": "Session ended prematurely before technical questioning began.",
+                "categories": {
+                    "technicalKnowledge": 0,
+                    "problemSolving": 0,
+                    "communication": 0,
+                    "projectDepth": 0,
+                    "systemDesign": 0,
+                    "confidence": 0,
+                },
+                "strengths": ["Microphone and audio connection were initialized successfully."],
+                "weaknesses": ["Session concluded before technical or architectural discussion could take place."],
+                "incorrectAnswers": [],
+                "areasToRevise": [
+                    "Complete a full 15-20 minute mock interview session answering role-specific questions to receive detailed competency scoring and feedback."
+                ],
+                "recommendedNextInterview": mode or "general_sde",
+                "detailedFeedback": (
+                    "This interview session was concluded prematurely after only an initial greeting or audio test. "
+                    "Because no technical responses were provided by the candidate, competencies could not be evaluated."
+                ),
+                "voiceMetrics": metrics,
+            }
 
         # Build transcript representation
         lines = []

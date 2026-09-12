@@ -1,6 +1,7 @@
 import { AccessToken } from 'livekit-server-sdk';
 import InterviewSession from '../models/InterviewSession.model.js';
 import Problem from '../models/Problem.model.js';
+import { generateInterviewEvaluation } from '../utils/interviewEvaluator.js';
 
 // Helper to generate LiveKit token with fallback for local/mock development
 const generateLiveKitToken = async (roomName, user, metadata = {}) => {
@@ -268,6 +269,50 @@ export const submitEvaluation = async (req, res) => {
   } catch (error) {
     console.error('Submit evaluation error:', error);
     res.status(500).json({ message: 'Failed to submit evaluation', error: error.message });
+  }
+};
+
+/**
+ * @route   POST /api/interview/session/:id/evaluate
+ * @desc    Generate authentic AI evaluation from interview transcript
+ * @access  Private
+ */
+export const evaluateSession = async (req, res) => {
+  try {
+    const session = await InterviewSession.findById(req.params.id);
+
+    if (!session) {
+      return res.status(404).json({ message: 'Interview session not found' });
+    }
+
+    if (session.user.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Not authorized' });
+    }
+
+    const clientTranscript = req.body.transcript;
+
+    // If client provided any latest turns that haven't been persisted yet, update transcript
+    if (Array.isArray(clientTranscript) && clientTranscript.length > session.transcript.length) {
+      session.transcript = clientTranscript;
+    }
+
+    const evaluation = await generateInterviewEvaluation(session, clientTranscript);
+
+    session.evaluation = evaluation;
+    session.status = 'completed';
+    session.endedAt = new Date();
+
+    await session.save();
+
+    res.json({
+      success: true,
+      message: 'Interview evaluated successfully',
+      evaluation,
+      session,
+    });
+  } catch (error) {
+    console.error('Evaluate interview session error:', error);
+    res.status(500).json({ message: 'Failed to evaluate interview session', error: error.message });
   }
 };
 

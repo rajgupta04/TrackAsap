@@ -13,8 +13,8 @@ class LLMRouter:
     """
 
     def __init__(self, groq_api_key: Optional[str] = None, gemini_api_key: Optional[str] = None):
-        self.groq_api_key = groq_api_key or Config.GROQ_API_KEY
-        self.gemini_api_key = gemini_api_key or Config.GEMINI_API_KEY
+        self.groq_api_key = groq_api_key if groq_api_key is not None else Config.GROQ_API_KEY
+        self.gemini_api_key = gemini_api_key if gemini_api_key is not None else Config.GEMINI_API_KEY
         
         self.groq_client = None
         self.gemini_model = None

@@ -7,6 +7,7 @@ import {
   getSessionToken,
   addTranscriptTurn,
   submitEvaluation,
+  evaluateSession,
   deleteSession,
   getUserContext,
 } from '../controllers/interview.controller.js';
@@ -23,6 +24,7 @@ router.get('/session/:id', getSession);
 router.post('/session/:id/token', getSessionToken);
 router.post('/session/:id/transcript', addTranscriptTurn);
 router.post('/session/:id/evaluation', submitEvaluation);
+router.post('/session/:id/evaluate', evaluateSession);
 router.delete('/session/:id', deleteSession);
 
 export default router;

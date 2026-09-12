@@ -128,6 +128,20 @@ export const useInterviewStore = create((set, get) => ({
     }
   },
 
+  evaluateSession: async (sessionId, transcript = null) => {
+    try {
+      const data = await interviewService.evaluateSession(sessionId, transcript);
+      if (data.success) {
+        set({ currentSession: data.session });
+        return { success: true, session: data.session, evaluation: data.evaluation };
+      }
+      throw new Error(data.message || 'Evaluation generation failed');
+    } catch (err) {
+      console.error('Failed to evaluate session:', err);
+      return { success: false, error: err.response?.data?.message || err.message };
+    }
+  },
+
   deleteSession: async (sessionId) => {
     try {
       await interviewService.deleteSession(sessionId);

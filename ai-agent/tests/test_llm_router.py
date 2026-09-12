@@ -4,7 +4,7 @@ from agent.llm_router import LLMRouter
 
 def test_llm_router_mock_stream():
     async def _run():
-        router = LLMRouter()
+        router = LLMRouter(groq_api_key="", gemini_api_key="")
         assert router.active_provider == "mock"
 
         messages = [{"role": "user", "content": "Hello!"}]
@@ -22,7 +22,7 @@ def test_llm_router_mock_stream():
 
 def test_llm_router_mock_complete_json():
     async def _run():
-        router = LLMRouter()
+        router = LLMRouter(groq_api_key="", gemini_api_key="")
         prompt = "Evaluate candidate"
         system_prompt = "Return valid JSON"
 

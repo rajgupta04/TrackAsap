@@ -16,6 +16,7 @@ import {
   HandMetal,
   ChevronRight,
   ChevronLeft,
+  BrainCircuit,
 } from 'lucide-react';
 import { useInterviewStore } from '../store/interviewStore';
 import { useAuthStore } from '../store/authStore';
@@ -35,6 +36,7 @@ const InterviewRoom = () => {
     fetchSession,
     appendTranscriptTurn,
     submitEvaluation,
+    evaluateSession,
   } = useInterviewStore();
 
   const [isMuted, setIsMuted] = useState(false);
@@ -386,50 +388,20 @@ const InterviewRoom = () => {
     }
 
     try {
-      // Calculate realistic scores based on turns
-      const userTurns = transcript.filter((t) => t.speaker === 'user');
-      const scoreBase = userTurns.length >= 4 ? 7.8 : 6.8;
+      toast.loading('AI is auditing transcript & generating evaluation report...', { id: 'eval-loading' });
+      const res = await evaluateSession(sessionId, transcript);
+      toast.dismiss('eval-loading');
 
-      const evaluation = {
-        overallScore: scoreBase,
-        categories: {
-          technicalKnowledge: Math.min(9.0, scoreBase + 0.3),
-          problemSolving: scoreBase,
-          communication: scoreBase + 0.4,
-          projectDepth: scoreBase + 0.2,
-          systemDesign: Math.max(5.5, scoreBase - 0.5),
-          confidence: scoreBase + 0.1,
-        },
-        strengths: [
-          'Communicated engineering decisions with clear structured explanations.',
-          'Understood architectural rationale behind tooling choices.',
-        ],
-        weaknesses: [
-          'Could quantify scale and bottlenecks with concrete QPS and latency numbers.',
-          'Explore edge cases before finalizing technical approaches.',
-        ],
-        incorrectAnswers: [],
-        areasToRevise: [
-          'Database indexing strategies and B-Tree mechanics',
-          'Distributed cache invalidation patterns',
-        ],
-        recommendedNextInterview: 'system_design',
-        detailedFeedback:
-          'Great interview session! The candidate demonstrated genuine familiarity with full-stack concepts, state management, and real-time architectures.',
-        voiceMetrics: {
-          totalSpeakingTimeSec: Math.round(elapsedSeconds * 0.45),
-          wpm: 135,
-          pauseCount: Math.max(1, userTurns.length),
-          fillerWordCount: 4,
-          interruptionsCount: 1,
-        },
-      };
-
-      await submitEvaluation(sessionId, evaluation);
-      toast.success('Interview completed! Generating report...');
+      if (res && res.success) {
+        toast.success('Interview evaluation complete!');
+      } else {
+        toast('Evaluation generated', { icon: '📊' });
+      }
       navigate(`/interview/results/${sessionId}`);
     } catch (err) {
-      toast.error('Failed to save evaluation report');
+      toast.dismiss('eval-loading');
+      console.error('Failed to generate evaluation report:', err);
+      toast.error('Could not complete evaluation analysis');
       navigate(`/interview/results/${sessionId}`);
     } finally {
       setIsEnding(false);
@@ -659,6 +631,22 @@ const InterviewRoom = () => {
           <MessageSquare className="w-5 h-5 text-dark-300" />
         </button>
       </div>
+
+      {/* Loading Overlay during AI evaluation */}
+      {isEnding && (
+        <div className="fixed inset-0 z-50 bg-dark-950/90 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center animate-fade-in">
+          <div className="relative mb-6">
+            <div className="w-16 h-16 border-4 border-neon-green/30 border-t-neon-green rounded-full animate-spin" />
+            <BrainCircuit className="w-7 h-7 text-neon-green absolute inset-0 m-auto animate-pulse" />
+          </div>
+          <h3 className="text-xl font-extrabold text-white mb-2 tracking-tight">
+            AI Bar Raiser Evaluating Interview
+          </h3>
+          <p className="text-xs sm:text-sm text-dark-300 max-w-md leading-relaxed">
+            Auditing interview transcript, analyzing engineering depth, and computing objective speech delivery metrics...
+          </p>
+        </div>
+      )}
 
       {/* Custom Confirmation Modal for Ending Early */}
       <ConfirmModal
