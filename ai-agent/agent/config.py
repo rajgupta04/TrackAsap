@@ -22,9 +22,9 @@ class Config:
     # TrackAsap Backend
     TRACKASAP_API_URL = os.getenv("TRACKASAP_API_URL", "http://localhost:5000/api")
 
-    # Kokoro TTS
-    KOKORO_VOICE = os.getenv("KOKORO_VOICE", "af_bella")
-    KOKORO_SPEED = float(os.getenv("KOKORO_SPEED", "1.05"))
+    # Kokoro TTS (Natural Male Interviewer: am_adam / am_michael / am_onyx)
+    KOKORO_VOICE = os.getenv("KOKORO_VOICE", "am_adam")
+    KOKORO_SPEED = float(os.getenv("KOKORO_SPEED", "1.02"))
 
     @classmethod
     def is_configured(cls) -> bool:

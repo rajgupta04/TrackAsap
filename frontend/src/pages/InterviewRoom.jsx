@@ -46,12 +46,73 @@ const InterviewRoom = () => {
   const [liveCaption, setLiveCaption] = useState('');
   const [isEnding, setIsEnding] = useState(false);
   const [showEarlyEndModal, setShowEarlyEndModal] = useState(false);
+  const [voiceGender, setVoiceGender] = useState('male'); // 'male' (Alex/Adam) | 'female' (Bella/Jenny)
 
   const transcriptEndRef = useRef(null);
   const speechRecognitionRef = useRef(null);
   const isAISpeakingRef = useRef(false);
   const isMutedRef = useRef(false);
   const lastAITextRef = useRef('');
+
+  // Pre-load and cache browser voices
+  useEffect(() => {
+    if (window.speechSynthesis) {
+      window.speechSynthesis.getVoices();
+      window.speechSynthesis.onvoiceschanged = () => {
+        window.speechSynthesis.getVoices();
+      };
+    }
+  }, []);
+
+  // Natural voice matching algorithm
+  const getPreferredVoice = (gender = 'male') => {
+    if (!window.speechSynthesis) return null;
+    const voices = window.speechSynthesis.getVoices();
+    if (!voices || voices.length === 0) return null;
+
+    if (gender === 'male') {
+      const malePreferences = [
+        'alex',
+        'ryan online (natural)',
+        'guy online (natural)',
+        'christopher online (natural)',
+        'natural',
+        'google us english',
+        'daniel',
+        'george',
+        'mark',
+        'david',
+      ];
+
+      for (const pref of malePreferences) {
+        const found = voices.find(
+          (v) => v.name.toLowerCase().includes(pref) && v.lang.startsWith('en')
+        );
+        if (found) return found;
+      }
+
+      // Any male English voice fallback
+      const anyMale = voices.find(
+        (v) =>
+          v.lang.startsWith('en') &&
+          (v.name.toLowerCase().includes('male') ||
+            (!v.name.toLowerCase().includes('female') &&
+              !v.name.toLowerCase().includes('zira') &&
+              !v.name.toLowerCase().includes('susan')))
+      );
+      if (anyMale) return anyMale;
+    } else {
+      const femalePreferences = ['jenny', 'aria', 'samantha', 'victoria', 'zira', 'female'];
+      for (const pref of femalePreferences) {
+        const found = voices.find(
+          (v) => v.name.toLowerCase().includes(pref) && v.lang.startsWith('en')
+        );
+        if (found) return found;
+      }
+    }
+
+    return voices.find((v) => v.lang.startsWith('en')) || voices[0];
+  };
 
   // Echo detection helper
   const isEchoOfAI = (userText, aiText) => {
@@ -185,8 +246,13 @@ const InterviewRoom = () => {
       }
 
       const utterance = new SpeechSynthesisUtterance(text);
-      utterance.rate = 1.05;
-      utterance.pitch = 1.0;
+      const chosenVoice = getPreferredVoice(voiceGender);
+      if (chosenVoice) {
+        utterance.voice = chosenVoice;
+      }
+      // Calm, confident natural cadence:
+      utterance.pitch = voiceGender === 'male' ? 0.94 : 1.0;
+      utterance.rate = 1.02;
 
       utterance.onstart = () => {
         isAISpeakingRef.current = true;
@@ -393,8 +459,32 @@ const InterviewRoom = () => {
           </span>
         </div>
 
-        {/* Timer & Finish Button */}
-        <div className="flex items-center gap-4">
+        {/* Controls: Voice Persona, Timer & Finish Button */}
+        <div className="flex items-center gap-3 sm:gap-4">
+          {/* Natural Voice Selector */}
+          <div className="flex items-center gap-1.5 bg-dark-950/80 border border-white/10 px-2.5 py-1.5 rounded-lg text-xs">
+            <Volume2 className="w-3.5 h-3.5 text-neon-green shrink-0" />
+            <select
+              value={voiceGender}
+              onChange={(e) => {
+                setVoiceGender(e.target.value);
+                toast.success(
+                  `Voice set to ${
+                    e.target.value === 'male' ? 'Alex / Adam (Natural Male)' : 'Bella / Jenny (Natural Female)'
+                  }`
+                );
+              }}
+              className="bg-transparent text-white text-xs font-semibold focus:outline-none cursor-pointer pr-1"
+            >
+              <option value="male" className="bg-dark-900 text-white">
+                Alex (Natural Male)
+              </option>
+              <option value="female" className="bg-dark-900 text-white">
+                Bella (Natural Female)
+              </option>
+            </select>
+          </div>
+
           <div className="flex items-center gap-2 font-mono text-sm text-dark-300 bg-dark-950/80 px-3 py-1.5 rounded-lg border border-white/10">
             <Clock className="w-4 h-4 text-neon-green" />
             {formatTime(elapsedSeconds)}
