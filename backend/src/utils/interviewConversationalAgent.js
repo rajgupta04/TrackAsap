@@ -13,9 +13,7 @@ const MODE_DEFINITIONS = {
     persona:
       'You are a rigorous algorithms and data structures technical interviewer at a top tech company. ' +
       'This is a VERBAL DSA interview—the candidate explains intuition, algorithm choice, edge cases, and Big-O complexity out loud without writing code. ' +
-      'Keep your responses to 1-3 spoken conversational sentences. Acknowledge their idea, challenge edge cases (e.g. negative numbers, empty array, overflow), and ask for precise time and space complexity.',
-    defaultFirstQuestion: (name, role, company) =>
-      `Hello ${name}! Welcome to your Verbal DSA and Problem Solving round for ${role}${company ? ` at ${company}` : ''}. Today we will explore algorithmic intuition, data structure selection, and Big-O complexity out loud without writing code. Let's dive right into your first problem: suppose you are given an integer array and need to find the contiguous subarray with the largest sum in linear time. What algorithmic approach comes to mind first, and how would you explain your intuition?`,
+      'Keep your responses to 1-3 spoken conversational sentences. Acknowledge their idea, challenge edge cases, and ask for precise time and space complexity.',
   },
   system_design: {
     title: 'System Design & Scalability',
@@ -23,8 +21,6 @@ const MODE_DEFINITIONS = {
       'You are a Principal Infrastructure Architect conducting a high-level System Design interview. ' +
       'Focus on scale, distributed consensus, data storage (SQL vs NoSQL), caching strategies, load balancing, message queues, and single points of failure. ' +
       'Keep your spoken responses to 1-3 sentences. Challenge assumptions and ask what happens when traffic spikes 50x.',
-    defaultFirstQuestion: (name, role, company) =>
-      `Hello ${name}! Welcome to your System Design and Scalability round for ${role}${company ? ` at ${company}` : ''}. Today we will architect a high-scale distributed system from scratch. Imagine you are tasked with designing a real-time Notification Service or a distributed Rate Limiter that must support 100,000 requests per second with high availability. How would you begin by defining the functional and non-functional requirements?`,
   },
   backend_interview: {
     title: 'Backend Engineering',
@@ -32,8 +28,6 @@ const MODE_DEFINITIONS = {
       'You are a Senior Backend Engineering Interviewer specializing in high-throughput server systems, databases, APIs, and security. ' +
       'Drill into Node.js event loop / concurrency, SQL indexing (B-trees) vs NoSQL document stores, Redis caching invalidation, connection pooling, and JWT/OAuth security. ' +
       'Keep responses to 1-3 punchy spoken sentences.',
-    defaultFirstQuestion: (name, role, company) =>
-      `Hello ${name}! Welcome to the Backend Engineering technical round for ${role}${company ? ` at ${company}` : ''}. We'll focus on server runtimes, database indexing, caching layers, and API resilience. To kick off: when architecting a high-throughput backend API in Node.js or Go, how do you manage asynchronous I/O and prevent database connection exhaustion under burst traffic?`,
   },
   resume_interview: {
     title: 'Resume & Projects Deep Dive',
@@ -41,12 +35,6 @@ const MODE_DEFINITIONS = {
       'You are an Engineering Hiring Manager conducting an in-depth technical drill into the candidate’s actual resume and projects. ' +
       'Probe deep into architectural choices, their personal contributions vs team work, database schemas, and production bugs they resolved. ' +
       'Keep responses to 1-3 spoken sentences. Ask "Why did you build it that way instead of using standard solutions?"',
-    defaultFirstQuestion: (name, role, company, resumeText) => {
-      if (resumeText && resumeText.length > 50) {
-        return `Hello ${name}! Welcome to your Resume and Project Deep-Dive for ${role}. I have reviewed your resume and background. Let's jump straight into your flagship engineering project: walk me through the high-level architecture, your individual contribution, and the most complex technical hurdle you had to solve.`;
-      }
-      return `Hello ${name}! Welcome to your Resume and Project Deep-Dive for ${role}. Let's jump right into your most technically challenging project: walk me through the system architecture, the tech stack decisions you made, and what went wrong during development.`;
-    },
   },
   jd_interview: {
     title: 'Job Description Calibrated Interview',
@@ -54,32 +42,205 @@ const MODE_DEFINITIONS = {
       'You are a Lead Hiring Engineer interviewing a candidate specifically against the requirements in the provided Job Description. ' +
       'Validate hands-on proficiency with the required skills, libraries, and architectural paradigms mentioned in the JD. ' +
       'Keep responses to 1-3 spoken sentences.',
-    defaultFirstQuestion: (name, role, company, resumeText, jobDescription) =>
-      `Hello ${name}! Welcome to your technical interview for ${role}${company ? ` at ${company}` : ''}. I have calibrated our interview specifically to the requirements of this job description. To start off, could you highlight how your hands-on production experience directly aligns with the core technical requirements of this role?`,
   },
   general_sde: {
     title: 'General SDE Comprehensive Round',
     persona:
       'You are a Senior SDE Interviewer conducting a well-rounded software engineering interview covering CS fundamentals, problem-solving, architectural trade-offs, and engineering judgment. ' +
       'Keep responses to 1-3 spoken conversational sentences.',
-    defaultFirstQuestion: (name, role, company) =>
-      `Hello ${name}! Welcome to your General SDE mock interview for ${role}${company ? ` at ${company}` : ''}. We'll cover computer science core concepts, algorithmic problem solving, and engineering trade-offs. To get started, could you give a brief 60-second introduction of your technical background and your favorite engineering challenge to date?`,
   },
 };
 
 /**
- * Returns the mode-tailored opening question
+ * Diverse Fallback Question Pool (randomized to guarantee fresh questions even offline)
  */
-export const getInitialQuestion = (session, user) => {
+const FALLBACK_POOLS = {
+  dsa_interview: [
+    (name) => `Hello ${name}! Welcome to your Verbal DSA round. Let's start with an algorithmic problem: suppose you are given a string of characters and need to find the length of the longest contiguous substring without any repeating characters. What algorithmic approach and data structures come to mind first?`,
+    (name) => `Hello ${name}! Welcome to your Verbal DSA round. Here is your first problem: you are given an array of intervals representing meeting schedules, and you need to merge all overlapping intervals into the minimum number of slots. How would you solve this, and what is your time complexity?`,
+    (name) => `Hello ${name}! Welcome to your Verbal DSA interview. Let's jump into your first challenge: suppose you have an array representing elevation heights, and you need to compute how much rainwater can be trapped after raining. What intuition and pointer technique would you use?`,
+    (name) => `Hello ${name}! Welcome to your Verbal DSA round. Imagine you are given a directed graph of course prerequisites and need to find an ordering in which all courses can be taken, or detect if a circular cycle exists. How would you approach this algorithmically?`,
+    (name) => `Hello ${name}! Welcome to your Verbal DSA round. Consider an unsorted integer array where you need to find the Kth largest element in expected linear time without fully sorting the array. Which data structure or partitioning algorithm would you select?`,
+    (name) => `Hello ${name}! Welcome to your Verbal DSA round. Suppose you are given an integer array that was originally sorted in ascending order but has been rotated at an unknown pivot. How would you search for a target value in logarithmic time?`,
+    (name) => `Hello ${name}! Welcome to your Verbal DSA round. Suppose you are given a binary tree and two target nodes. How would you find their Lowest Common Ancestor efficiently, and what are your time and space bounds?`,
+    (name) => `Hello ${name}! Welcome to your Verbal DSA round. Let's begin with a classic problem: suppose you are given an integer array and need to find the contiguous subarray with the largest sum in linear time. What algorithmic approach comes to mind first, and how would you explain your intuition?`,
+  ],
+  system_design: [
+    (name) => `Hello ${name}! Welcome to your System Design round. Today let's architect a distributed URL Shortener service like TinyURL that generates short aliases and handles 50,000 read requests per second. How would you start by defining functional requirements and estimating storage?`,
+    (name) => `Hello ${name}! Welcome to your System Design round. Imagine you are tasked with designing a real-time collaborative document editing system like Google Docs where multiple users edit simultaneously. What data synchronization models or conflict resolution techniques would you consider?`,
+    (name) => `Hello ${name}! Welcome to your System Design round. Let's design a high-throughput Distributed Rate Limiter that protects our API gateway across multiple global data centers. How would you manage rate limit counters and minimize latency?`,
+    (name) => `Hello ${name}! Welcome to your System Design round. Imagine we are building a video streaming platform like YouTube. How would you design the video ingestion, transcoding pipeline, and CDN delivery strategy for low latency playback?`,
+    (name) => `Hello ${name}! Welcome to your System Design round. Today let's architect a proximity service like Yelp or Uber that returns nearby drivers or restaurants within a 5-mile radius with sub-50ms latency. How would you index geospatial coordinates?`,
+    (name) => `Hello ${name}! Welcome to your System Design round. Let's design a distributed notification engine that dispatches push notifications, SMS, and emails to tens of millions of users daily with at-least-once delivery guarantees. How would you architect the message queue and worker layers?`,
+  ],
+  backend_interview: [
+    (name) => `Hello ${name}! Welcome to your Backend Engineering round. To kick off: when architecting a high-throughput backend API in Node.js or Go, how do you manage asynchronous I/O and prevent database connection exhaustion under burst traffic?`,
+    (name) => `Hello ${name}! Welcome to your Backend Engineering round. In distributed payment systems, how do you guarantee idempotency on mutating financial transactions to ensure network timeouts never trigger duplicate charges?`,
+    (name) => `Hello ${name}! Welcome to your Backend Engineering round. Suppose your production database CPU spikes to 100% due to slow queries. Walk me through how you would inspect query execution plans and optimize B-tree indexes.`,
+    (name) => `Hello ${name}! Welcome to your Backend Engineering round. How do you implement a distributed cache invalidation strategy with Redis that prevents both cache stampedes and stale data under high write concurrency?`,
+    (name) => `Hello ${name}! Welcome to your Backend Engineering round. When migrating database schemas with millions of active rows in a zero-downtime production environment, what deployment strategy and schema versioning approach do you use?`,
+  ],
+  resume_interview: [
+    (name) => `Hello ${name}! Welcome to your Resume and Project Deep-Dive. Walk me through your most technically complex software project: what was the core architecture, what technical trade-offs did you make, and how did you measure performance?`,
+    (name) => `Hello ${name}! Welcome to your Resume Deep-Dive. Looking across your technical background, what has been the most challenging production outage or latency bottleneck you personally diagnosed and resolved?`,
+    (name) => `Hello ${name}! Welcome to your Project Deep-Dive. Choose an architectural decision you made in your past work that you would design differently today in hindsight, and explain why.`,
+  ],
+  jd_interview: [
+    (name) => `Hello ${name}! Welcome to your technical interview calibrated to this job description. To start, how does your hands-on production experience directly align with the core technical architecture and responsibilities of this role?`,
+    (name) => `Hello ${name}! Welcome to your interview. Based on the target engineering requirements for this position, what is your approach to designing resilient, maintainable services that scale with team and traffic growth?`,
+  ],
+  general_sde: [
+    (name) => `Hello ${name}! Welcome to your General SDE interview. To start us off, could you give a brief 60-second summary of your technical background and highlight the most interesting engineering challenge you have tackled?`,
+    (name) => `Hello ${name}! Welcome to your SDE round. In high-performance backend systems, how do you evaluate the architectural trade-offs between a modular monolith and microservices for a growing engineering team?`,
+    (name) => `Hello ${name}! Welcome to your General SDE interview. Let's begin with a core systems question: how does the operating system event loop and thread scheduling differ between CPU-bound workloads and I/O-bound microservices?`,
+  ],
+};
+
+const getRandomPoolQuestion = (modeKey, name) => {
+  const pool = FALLBACK_POOLS[modeKey] || FALLBACK_POOLS.general_sde;
+  const picker = pool[Math.floor(Math.random() * pool.length)];
+  return picker(name);
+};
+
+/**
+ * Returns a dynamic, mode-tailored opening question generated via LLM (Groq / Gemini)
+ * with randomized fallback pool to ensure every session has a unique question.
+ */
+export const getInitialQuestion = async (session, user) => {
   const modeKey = session?.mode || 'general_sde';
   const modeConfig = MODE_DEFINITIONS[modeKey] || MODE_DEFINITIONS.general_sde;
   const name = user?.name?.split(' ')?.[0] || 'there';
   const role = session?.targetRole || 'Software Development Engineer';
-  const company = session?.targetCompany || '';
-  const resumeText = session?.resumeText || '';
-  const jobDescription = session?.jobDescription || '';
+  const company = session?.targetCompany ? ` at ${session.targetCompany}` : '';
+  const difficulty = session?.difficulty || 'medium';
+  const resumeText = session?.resumeText ? `\n\nCANDIDATE RESUME PROFILE:\n${session.resumeText.slice(0, 1200)}` : '';
+  const jdText = session?.jobDescription ? `\n\nTARGET JOB SPECIFICATION:\n${session.jobDescription.slice(0, 1200)}` : '';
 
-  return modeConfig.defaultFirstQuestion(name, role, company, resumeText, jobDescription);
+  // Mode-specific dynamic generation directives
+  let modeDirective = '';
+  if (modeKey === 'dsa_interview') {
+    const dsaTopics = [
+      'Sliding Window (e.g. longest substring, minimum window substring)',
+      'Binary Search on Answer Space (e.g. capacity to ship packages, aggressive cows)',
+      'Dynamic Programming (e.g. coin change, word break, house robber)',
+      'Topological Sort and Graphs (e.g. course schedule, alien dictionary)',
+      'Trees and Binary Search Trees (e.g. lowest common ancestor, diameter of binary tree)',
+      'Monotonic Stack or Queue (e.g. next greater element, daily temperatures)',
+      'Two Pointers (e.g. 3Sum, container with most water, remove duplicates)',
+      'Heaps and Priority Queues (e.g. merge k sorted lists, find median from data stream)',
+      'Intervals (e.g. merge intervals, insert interval, meeting rooms)',
+    ];
+    const chosenTopic = dsaTopics[Math.floor(Math.random() * dsaTopics.length)];
+    modeDirective =
+      `Pick an interview problem on the topic of: ${chosenTopic}. ` +
+      `Calibrate to ${difficulty} difficulty. ` +
+      'Describe the scenario clearly in 2 spoken sentences and ask the candidate for their intuition, data structure choice, and time complexity out loud without writing code.';
+  } else if (modeKey === 'system_design') {
+    const sysTopics = [
+      'Distributed Key-Value Store with partition tolerance and tunable consistency',
+      'URL Shortener service like TinyURL at 100k requests/sec',
+      'Video Ingestion and Transcoding Pipeline like YouTube',
+      'Distributed Rate Limiter across multiple cloud regions',
+      'Proximity / Ride-Sharing Dispatch Service like Uber with sub-50ms driver matching',
+      'Real-Time Chat & Messaging Infrastructure like WhatsApp with message ordering',
+      'Metrics Aggregation and Alerting Dashboard like Datadog',
+      'Collaborative Document Editing System like Google Docs using CRDT or OT',
+    ];
+    const chosenSys = sysTopics[Math.floor(Math.random() * sysTopics.length)];
+    modeDirective =
+      `Scenario: Architect a ${chosenSys}. ` +
+      `Target a ${difficulty} scale challenge. Ask the candidate to define the core functional requirements and propose an initial high-level architecture.`;
+  } else if (modeKey === 'backend_interview') {
+    const backendTopics = [
+      'Handling database deadlocks and row-level locking under high concurrent write loads',
+      'Preventing cache stampede and thundering herd when high-traffic Redis keys expire',
+      'Connection pooling saturation and managing database thread pools under traffic bursts',
+      'Designing idempotent payment processing webhooks to prevent duplicate charges',
+      'Evaluating B-tree vs LSM tree database index performance for write-heavy services',
+      'Zero-downtime database schema migrations with multi-version API support',
+      'Asynchronous task workers with retry policies, exponential backoff, and dead-letter queues',
+    ];
+    const chosenBackend = backendTopics[Math.floor(Math.random() * backendTopics.length)];
+    modeDirective =
+      `Scenario: ${chosenBackend}. ` +
+      `Target ${difficulty} level. Formulate a real-world engineering scenario and ask how they would diagnose or architect the solution.`;
+  } else if (modeKey === 'resume_interview') {
+    modeDirective =
+      'Inspect the provided candidate resume profile. Pick ONE specific project, architecture claim, or technology stack mentioned. ' +
+      'Ask an insightful, probing engineering question about why they chose that architecture, how it scaled, or a major technical bottleneck they encountered.';
+  } else if (modeKey === 'jd_interview') {
+    modeDirective =
+      'Inspect the target job specification. Formulate a high-impact opening question directly assessing their real-world production experience with the key requirements and architectural patterns described.';
+  } else {
+    modeDirective =
+      'Generate a fresh, engaging software engineering question combining computer science fundamentals, concurrency or system internals, and practical engineering trade-offs.';
+  }
+
+  const prompt =
+    `You are a top-tier technical interviewer conducting a live voice mock interview for a ${role}${company} position.\n` +
+    `Mode: "${modeConfig.title}". Difficulty: "${difficulty}". Candidate Name: "${name}".\n` +
+    `${modeDirective}${resumeText}${jdText}\n\n` +
+    'CONVERSATIONAL VOICE RULES:\n' +
+    '1. Start with a warm, brief 1-sentence greeting to the candidate.\n' +
+    '2. Present the technical question or scenario clearly in 2 natural sentences.\n' +
+    '3. Total response MUST be 2 to 3 spoken conversational sentences maximum (suitable for text-to-speech).\n' +
+    '4. Do NOT use bullet points, markdown symbols, or long lectures.\n' +
+    '5. Return ONLY the spoken dialogue.';
+
+  // 1. Try Groq (fastest, ~1s) with temperature 0.85 for high diversity
+  if (process.env.GROQ_API_KEY) {
+    try {
+      const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: process.env.GROQ_LLM_MODEL || 'qwen/qwen3.8-27b',
+          messages: [{ role: 'user', content: prompt }],
+          temperature: 0.85,
+          max_tokens: 180,
+        }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const content = data.choices?.[0]?.message?.content?.trim();
+        if (content) return cleanSpokenText(content);
+      }
+    } catch (e) {
+      console.warn('Groq initial question generation error:', e.message);
+    }
+  }
+
+  // 2. Try Gemini fallback (gemini-3.6-flash) with temperature 0.85
+  if (process.env.GEMINI_API_KEY) {
+    try {
+      const model = process.env.GEMINI_LLM_MODEL || 'gemini-3.6-flash';
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${process.env.GEMINI_API_KEY}`;
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: {
+            maxOutputTokens: 250,
+            temperature: 0.85,
+          },
+        }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const content = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+        if (content) return cleanSpokenText(content);
+      }
+    } catch (e) {
+      console.warn('Gemini initial question generation error:', e.message);
+    }
+  }
+
+  // 3. Diverse fallback pool (never repeats the same static question)
+  return getRandomPoolQuestion(modeKey, name);
 };
 
 /**

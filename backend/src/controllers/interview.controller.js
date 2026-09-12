@@ -461,7 +461,7 @@ export const getInitialTurn = async (req, res) => {
       return res.status(403).json({ message: 'Not authorized' });
     }
 
-    const question = getInitialQuestion(session, req.user);
+    const question = await getInitialQuestion(session, req.user);
 
     // If transcript is empty, register opening AI turn
     if (session.transcript.length === 0) {

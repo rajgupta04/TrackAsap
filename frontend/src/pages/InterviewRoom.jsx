@@ -183,125 +183,114 @@ const InterviewRoom = () => {
     return false;
   };
 
-  // Mode-tailored opening question helper (used as instant fallback if backend call times out)
+  // Mode-tailored opening question helper (used as resilient fallback if backend takes long to respond)
   const getClientOpeningQuestion = (session, currentUser) => {
     const mode = session?.mode || 'general_sde';
     const name = currentUser?.name?.split(' ')?.[0] || 'there';
     const role = session?.targetRole || 'Software Development Engineer';
     const company = session?.targetCompany ? ` at ${session.targetCompany}` : '';
 
-    switch (mode) {
-      case 'dsa_interview':
-        return `Hello ${name}! Welcome to your Verbal DSA and Problem Solving round for ${role}${company}. Today we will explore algorithmic intuition, data structure selection, and Big-O complexity out loud without writing code. Let's dive right into your first problem: suppose you are given an integer array and need to find the contiguous subarray with the largest sum in linear time. What algorithmic approach comes to mind first, and how would you explain your intuition?`;
-      case 'system_design':
-        return `Hello ${name}! Welcome to your System Design and Scalability round for ${role}${company}. Today we will architect a high-scale distributed system from scratch. Imagine you are tasked with designing a real-time Notification Service or a distributed Rate Limiter that must support 100,000 requests per second with high availability. How would you begin by defining the functional and non-functional requirements?`;
-      case 'backend_interview':
-        return `Hello ${name}! Welcome to the Backend Engineering technical round for ${role}${company}. We'll focus on server runtimes, database indexing, caching layers, and API resilience. To kick off: when architecting a high-throughput backend API in Node.js or Go, how do you manage asynchronous I/O and prevent database connection exhaustion under burst traffic?`;
-      case 'resume_interview':
-        return `Hello ${name}! Welcome to your Resume and Project Deep-Dive for ${role}${company}. Let's jump straight into your flagship engineering project: walk me through the high-level architecture, your individual contribution, and the most complex technical hurdle you had to solve.`;
-      case 'jd_interview':
-        return `Hello ${name}! Welcome to your technical round for ${role}${company} calibrated to the job description. To start off, could you highlight how your hands-on production experience directly aligns with the core technical requirements of this role?`;
-      default:
-        return `Hello ${name}! Welcome to your General SDE mock interview for ${role}${company}. We will cover computer science core concepts, algorithmic problem solving, and engineering trade-offs. To get started, could you give a brief 60-second introduction of your technical background and your favorite engineering challenge to date?`;
-    }
+    const fallbackBank = {
+      dsa_interview: [
+        `Hello ${name}! Welcome to your Verbal DSA round for ${role}${company}. Let's start with an algorithmic problem: suppose you are given a string of characters and need to find the length of the longest contiguous substring without any repeating characters. What algorithmic approach and data structures come to mind first?`,
+        `Hello ${name}! Welcome to your Verbal DSA round for ${role}${company}. Here is your first problem: you are given an array of intervals representing meeting schedules, and you need to merge all overlapping intervals into the minimum number of slots. How would you solve this, and what is your time complexity?`,
+        `Hello ${name}! Welcome to your Verbal DSA interview for ${role}${company}. Let's jump into your first challenge: suppose you have an array representing elevation heights, and you need to compute how much rainwater can be trapped after raining. What intuition and pointer technique would you use?`,
+        `Hello ${name}! Welcome to your Verbal DSA round for ${role}${company}. Imagine you are given a directed graph of course prerequisites and need to find an ordering in which all courses can be taken, or detect if a cycle exists. How would you approach this algorithmically?`,
+        `Hello ${name}! Welcome to your Verbal DSA round for ${role}${company}. Consider an unsorted integer array where you need to find the Kth largest element in expected linear time without fully sorting the array. Which data structure or partitioning algorithm would you select?`,
+        `Hello ${name}! Welcome to your Verbal DSA round for ${role}${company}. Suppose you are given an integer array that was originally sorted in ascending order but has been rotated at an unknown pivot. How would you search for a target value in logarithmic time?`,
+      ],
+      system_design: [
+        `Hello ${name}! Welcome to your System Design round for ${role}${company}. Today let's architect a distributed URL Shortener service like TinyURL that handles 50,000 read requests per second. How would you start by defining functional requirements and estimating storage?`,
+        `Hello ${name}! Welcome to your System Design round for ${role}${company}. Imagine you are tasked with designing a real-time collaborative document editing system like Google Docs where multiple users edit simultaneously. What data synchronization models or conflict resolution techniques would you consider?`,
+        `Hello ${name}! Welcome to your System Design round for ${role}${company}. Let's design a high-throughput Distributed Rate Limiter that protects our API gateway across multiple global data centers. How would you manage rate limit counters and minimize latency?`,
+        `Hello ${name}! Welcome to your System Design round for ${role}${company}. Imagine we are building a video streaming platform like YouTube. How would you design the video ingestion, transcoding pipeline, and CDN delivery strategy for low latency playback?`,
+        `Hello ${name}! Welcome to your System Design round for ${role}${company}. Today let's architect a proximity service like Yelp or Uber that returns nearby drivers or restaurants within a 5-mile radius with sub-50ms latency. How would you index geospatial coordinates?`,
+      ],
+      backend_interview: [
+        `Hello ${name}! Welcome to your Backend Engineering round for ${role}${company}. To kick off: when architecting a high-throughput backend API in Node.js or Go, how do you manage asynchronous I/O and prevent database connection exhaustion under burst traffic?`,
+        `Hello ${name}! Welcome to your Backend Engineering round for ${role}${company}. In distributed payment systems, how do you guarantee idempotency on mutating financial transactions to ensure network timeouts never trigger duplicate charges?`,
+        `Hello ${name}! Welcome to your Backend Engineering round for ${role}${company}. Suppose your production database CPU spikes to 100% due to slow queries. Walk me through how you would inspect query execution plans and optimize B-tree indexes.`,
+        `Hello ${name}! Welcome to your Backend Engineering round for ${role}${company}. How do you implement a distributed cache invalidation strategy with Redis that prevents both cache stampedes and stale data under high write concurrency?`,
+      ],
+      resume_interview: [
+        `Hello ${name}! Welcome to your Resume and Project Deep-Dive for ${role}${company}. Walk me through your most technically complex software project: what was the core architecture, what technical trade-offs did you make, and how did you measure performance?`,
+        `Hello ${name}! Welcome to your Resume Deep-Dive for ${role}${company}. Looking across your technical background, what has been the most challenging production outage or latency bottleneck you personally diagnosed and resolved?`,
+      ],
+      jd_interview: [
+        `Hello ${name}! Welcome to your technical interview for ${role}${company} calibrated to this job description. To start, how does your hands-on production experience directly align with the core technical architecture and responsibilities of this role?`,
+        `Hello ${name}! Welcome to your interview for ${role}${company}. Based on the target engineering requirements for this position, what is your approach to designing resilient, maintainable services that scale with team and traffic growth?`,
+      ],
+      general_sde: [
+        `Hello ${name}! Welcome to your General SDE interview for ${role}${company}. To start us off, could you give a brief 60-second summary of your technical background and highlight the most interesting engineering challenge you have tackled?`,
+        `Hello ${name}! Welcome to your SDE round for ${role}${company}. In high-performance backend systems, how do you evaluate the architectural trade-offs between a modular monolith and microservices for a growing engineering team?`,
+        `Hello ${name}! Welcome to your General SDE interview for ${role}${company}. Let's begin with a core systems question: how does the operating system event loop and thread scheduling differ between CPU-bound workloads and I/O-bound microservices?`,
+      ],
+    };
+
+    const pool = fallbackBank[mode] || fallbackBank.general_sde;
+    return pool[Math.floor(Math.random() * pool.length)];
   };
 
-  // Mode-specific fallback matrix for resilient follow-up questioning
+  // Adaptive mode-specific fallback matrix for resilient follow-up questioning
   const getModeSpecificFallback = (mode, candidateAnswer = '', turnCount = 0) => {
-    const lower = candidateAnswer.toLowerCase();
-
     if (mode === 'dsa_interview') {
-      if (lower.includes('kadane') || lower.includes('array') || lower.includes('subarray')) {
-        return {
-          aiResponse:
-            "That makes sense with Kadane's algorithm. How does your logic handle an array where every single element is negative, and what is your exact Big-O time and space complexity?",
-          section: 'problem_solving',
-        };
-      }
-      if (lower.includes('negative') || lower.includes('hash') || lower.includes('map') || lower.includes('index')) {
-        return {
-          aiResponse:
-            'Good catch on handling negative elements. Now, if we need to return the starting and ending indices of the maximum subarray rather than just the sum, how would you adjust your pointer tracking?',
-          section: 'complexity_analysis',
-        };
-      }
-      if (turnCount > 4) {
-        return {
-          aiResponse:
-            'Excellent analysis. What would be the worst-case space complexity if you were asked to solve this recursively using divide and conquer instead of iteratively?',
-          section: 'complexity_analysis',
-        };
-      }
+      const dsaFollowups = [
+        "That's a solid initial intuition. How does your proposed logic handle extreme edge cases such as an empty input array, duplicate values, or negative numbers?",
+        "Good approach. Could you walk me through the exact worst-case Big-O time and space complexity of that solution, and where the memory bottleneck lies?",
+        "Makes sense. If we needed to optimize the space complexity to O(1) auxiliary space, what trade-offs or pointer techniques would you explore?",
+        "Well reasoned. How would you adapt this algorithm if the input data were a continuous stream that cannot fit entirely into main memory?",
+      ];
       return {
-        aiResponse:
-          'Understood. Could you walk me through an edge case with duplicate elements or an empty input array, and confirm your Big-O time complexity?',
-        section: 'problem_solving',
+        aiResponse: dsaFollowups[turnCount % dsaFollowups.length],
+        section: turnCount > 3 ? 'complexity_analysis' : 'problem_solving',
       };
     }
 
     if (mode === 'system_design') {
-      if (lower.includes('database') || lower.includes('sql') || lower.includes('nosql')) {
-        return {
-          aiResponse:
-            'That architectural choice makes sense for standard traffic. How would you partition or shard the data across database nodes when daily writes exceed 100 million records?',
-          section: 'system_design',
-        };
-      }
-      if (lower.includes('cache') || lower.includes('redis')) {
-        return {
-          aiResponse:
-            'Using a distributed cache is vital here. What eviction strategy would you configure, and how would you prevent cache stampede when popular keys expire simultaneously?',
-          section: 'scaling_and_bottlenecks',
-        };
-      }
+      const sysFollowups = [
+        "That architectural choice makes sense for standard traffic. How would you partition or shard the data across nodes when daily writes exceed 100 million records?",
+        "Using a distributed cache is vital here. What eviction strategy would you configure, and how would you prevent cache stampede when popular keys expire simultaneously?",
+        "Good high-level breakdown. If this service suffered a sudden regional datacenter outage, how would your architecture guarantee high availability without risking data inconsistency?",
+        "How would you monitor service health, and what metrics or distributed tracing signals would you rely on to detect latency degradations in real time?",
+      ];
       return {
-        aiResponse:
-          'Good high-level breakdown. If this service suffered a sudden regional datacenter outage, how would your architecture guarantee high availability without risking data inconsistency?',
-        section: 'system_design',
+        aiResponse: sysFollowups[turnCount % sysFollowups.length],
+        section: turnCount > 3 ? 'scaling_and_bottlenecks' : 'system_design',
       };
     }
 
     if (mode === 'backend_interview') {
-      if (lower.includes('mongo') || lower.includes('postgres') || lower.includes('index')) {
-        return {
-          aiResponse:
-            'Indexes are crucial there. How do B-tree indexes behave differently under heavy writes compared to LSM trees, and how do you monitor slow query execution plans in production?',
-          section: 'databases_and_caching',
-        };
-      }
-      if (lower.includes('async') || lower.includes('event') || lower.includes('thread') || lower.includes('loop')) {
-        return {
-          aiResponse:
-            'Right on the event loop mechanics. When CPU-intensive tasks block the main thread, how do you offload that work to worker threads or background workers to keep the API responsive?',
-          section: 'technical',
-        };
-      }
+      const backendFollowups = [
+        "Good breakdown. How do B-tree indexes behave differently under heavy writes compared to LSM trees, and how do you monitor slow query execution plans?",
+        "Right on the concurrency model. When CPU-intensive tasks block the main thread, how do you offload that work to keep the API responsive?",
+        "Solid points. How do you implement rate limiting and idempotency on state-mutating endpoints to prevent race conditions or duplicate submissions?",
+        "How would you handle database connection pooling and failover under a sudden 10x traffic surge?",
+      ];
       return {
-        aiResponse:
-          'Solid points. How do you implement rate limiting and idempotency on financial or state-mutating endpoints to prevent duplicate operations during network retries?',
-        section: 'technical',
+        aiResponse: backendFollowups[turnCount % backendFollowups.length],
+        section: turnCount > 3 ? 'databases_and_caching' : 'technical',
       };
     }
 
     if (mode === 'resume_interview') {
+      const resumeFollowups = [
+        "Interesting. In that specific project, what was the biggest technical trade-off you made between development velocity and long-term architectural maintainability?",
+        "Walk me through a critical production bug or performance bottleneck that occurred in that system, and how you tracked down the root cause.",
+        "If you were to re-architect that solution today with everything you learned, what technology or design choice would you replace?",
+      ];
       return {
-        aiResponse:
-          'In that project, what was the biggest technical trade-off you made between development velocity and long-term architectural maintainability?',
+        aiResponse: resumeFollowups[turnCount % resumeFollowups.length],
         section: 'project_deepdive',
       };
     }
 
-    if (mode === 'jd_interview') {
-      return {
-        aiResponse:
-          'That experience is directly relevant to this job description. If you encountered a critical production outage in that subsystem during your first week, what would be your step-by-step diagnostic process?',
-        section: 'technical',
-      };
-    }
-
+    const generalFollowups = [
+      "Good explanation. If you were building this from scratch today with 10x scale, what architectural component would you design differently?",
+      "Could you elaborate on the operational trade-offs of that approach, particularly regarding observability, debugging, and maintenance?",
+      "That makes sense. What would be your testing strategy—unit, integration, and load testing—to ensure this doesn't break in production?",
+    ];
     return {
-      aiResponse:
-        'Good explanation. If you were building this from scratch today with 10x scale, what architectural component would you design differently?',
+      aiResponse: generalFollowups[turnCount % generalFollowups.length],
       section: 'technical',
     };
   };
