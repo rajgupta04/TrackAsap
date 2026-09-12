@@ -20,6 +20,7 @@ import {
 import { useInterviewStore } from '../store/interviewStore';
 import { useAuthStore } from '../store/authStore';
 import AudioWaveform from '../components/interview/AudioWaveform';
+import ConfirmModal from '../components/interview/ConfirmModal';
 import toast from 'react-hot-toast';
 
 const InterviewRoom = () => {
@@ -44,6 +45,7 @@ const InterviewRoom = () => {
   const [activeSection, setActiveSection] = useState('intro');
   const [liveCaption, setLiveCaption] = useState('');
   const [isEnding, setIsEnding] = useState(false);
+  const [showEarlyEndModal, setShowEarlyEndModal] = useState(false);
 
   const transcriptEndRef = useRef(null);
   const speechRecognitionRef = useRef(null);
@@ -299,16 +301,23 @@ const InterviewRoom = () => {
     }
   };
 
-  const handleEndInterview = async () => {
-    if (transcript.length < 2) {
-      if (!window.confirm('You have only exchanged a few messages. End interview anyway?')) {
-        return;
-      }
+  const handleEndInterview = () => {
+    if (transcript.length < 3) {
+      setShowEarlyEndModal(true);
+      return;
     }
+    executeEndInterview();
+  };
 
+  const executeEndInterview = async () => {
+    setShowEarlyEndModal(false);
     setIsEnding(true);
     if (window.speechSynthesis) window.speechSynthesis.cancel();
-    if (speechRecognitionRef.current) speechRecognitionRef.current.stop();
+    if (speechRecognitionRef.current) {
+      try {
+        speechRecognitionRef.current.abort();
+      } catch (e) {}
+    }
 
     try {
       // Calculate realistic scores based on turns
@@ -560,6 +569,19 @@ const InterviewRoom = () => {
           <MessageSquare className="w-5 h-5 text-dark-300" />
         </button>
       </div>
+
+      {/* Custom Confirmation Modal for Ending Early */}
+      <ConfirmModal
+        isOpen={showEarlyEndModal}
+        onClose={() => setShowEarlyEndModal(false)}
+        onConfirm={executeEndInterview}
+        title="End Interview Early?"
+        description="You have only completed a couple of questions. Ending now will generate your performance report based on your answers so far."
+        confirmText="End & Generate Report"
+        variant="warning"
+        icon={AlertTriangle}
+        isLoading={isEnding}
+      />
     </div>
   );
 };

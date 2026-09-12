@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { useInterviewStore } from '../store/interviewStore';
 import { useAuthStore } from '../store/authStore';
+import ConfirmModal from '../components/interview/ConfirmModal';
 import toast from 'react-hot-toast';
 
 const MODES = [
@@ -96,6 +97,8 @@ const Interview = () => {
   const [resumeText, setResumeText] = useState('');
   const [jobDescription, setJobDescription] = useState('');
   const [isStarting, setIsStarting] = useState(false);
+  const [sessionToDelete, setSessionToDelete] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     fetchSessions(1, 6);
@@ -128,11 +131,22 @@ const Interview = () => {
     }
   };
 
-  const handleDelete = async (e, sessionId) => {
+  const openDeleteModal = (e, session) => {
     e.stopPropagation();
-    if (window.confirm('Delete this interview session and transcript permanently?')) {
-      await deleteSession(sessionId);
-      toast.success('Interview session deleted');
+    setSessionToDelete(session);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!sessionToDelete) return;
+    setIsDeleting(true);
+    try {
+      await deleteSession(sessionToDelete._id);
+      toast.success('Interview session permanently deleted');
+      setSessionToDelete(null);
+    } catch (err) {
+      toast.error('Failed to delete session');
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -439,8 +453,9 @@ const Interview = () => {
                         )}
                         <button
                           type="button"
-                          onClick={(e) => handleDelete(e, sess._id)}
-                          className="text-dark-500 hover:text-red-400 p-1 rounded transition-colors"
+                          onClick={(e) => openDeleteModal(e, sess)}
+                          className="text-dark-500 hover:text-red-400 p-1.5 rounded-lg hover:bg-red-500/10 transition-colors"
+                          title="Delete interview session"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
@@ -453,6 +468,19 @@ const Interview = () => {
           </div>
         </div>
       </div>
+
+      {/* Custom Confirmation Modal for Deleting Sessions */}
+      <ConfirmModal
+        isOpen={Boolean(sessionToDelete)}
+        onClose={() => setSessionToDelete(null)}
+        onConfirm={handleConfirmDelete}
+        title="Delete Interview Session"
+        description="Permanently delete this interview session, performance scores, and audio transcript? This cannot be undone."
+        confirmText="Delete Permanently"
+        variant="danger"
+        icon={Trash2}
+        isLoading={isDeleting}
+      />
     </div>
   );
 };
