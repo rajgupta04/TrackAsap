@@ -57,6 +57,8 @@ export const createSession = async (req, res) => {
       jobDescription = '',
       resumeText = '',
       durationMinutes = 20,
+      interviewerMode = 'single',
+      interviewerPersona = 'alex',
     } = req.body;
 
     const roomSuffix = Math.random().toString(36).substring(2, 7);
@@ -72,6 +74,8 @@ export const createSession = async (req, res) => {
       jobDescription,
       resumeText,
       durationMinutes,
+      interviewerMode,
+      interviewerPersona,
       status: 'created',
       transcript: [],
     });

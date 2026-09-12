@@ -23,6 +23,8 @@ import {
   FileCheck,
   Eye,
   Loader2,
+  Users,
+  Volume2,
 } from 'lucide-react';
 import { useInterviewStore } from '../store/interviewStore';
 import { useAuthStore } from '../store/authStore';
@@ -81,6 +83,49 @@ const MODES = [
   },
 ];
 
+const INTERVIEWER_OPTIONS = [
+  {
+    id: 'alex',
+    title: 'Alex Rivera (1:1)',
+    format: 'Single Interviewer',
+    badge: 'Natural Male',
+    role: 'Lead Systems Architect',
+    emoji: '⚡',
+    color: 'from-cyan-500/20 to-blue-500/10 border-cyan-500/30 text-cyan-400',
+    description: 'Direct 1-on-1 interview with Alex using high-fidelity natural male voice. Focuses on architecture, clean code, and design.',
+  },
+  {
+    id: 'bella',
+    title: 'Dr. Bella Chen (1:1)',
+    format: 'Single Interviewer',
+    badge: 'Natural Female',
+    role: 'Staff Algorithms Lead',
+    emoji: '🧠',
+    color: 'from-pink-500/20 to-purple-500/10 border-pink-500/30 text-pink-400',
+    description: 'Direct 1-on-1 interview with Dr. Bella using high-fidelity natural female voice. Focuses on algorithms and optimization.',
+  },
+  {
+    id: 'multi_panel',
+    title: 'Multi-Panel Board',
+    format: '2-Person Technical Board',
+    badge: 'Dynamic Team',
+    role: 'Alex & Dr. Bella Alternating',
+    emoji: '🤼',
+    color: 'from-emerald-500/20 to-teal-500/10 border-emerald-500/30 text-emerald-400',
+    description: 'Simulates a real FAANG board loop: Alex and Dr. Bella take turns questioning you across rounds with natural voices.',
+  },
+  {
+    id: 'random',
+    title: 'Random Interviewer',
+    format: 'Surprise Setup',
+    badge: 'Surprise Me',
+    role: 'Alex or Dr. Bella Assigned',
+    emoji: '🎲',
+    color: 'from-amber-500/20 to-orange-500/10 border-amber-500/30 text-amber-400',
+    description: 'Randomly assigns either Alex (Natural Male) or Dr. Bella (Natural Female) when the room begins.',
+  },
+];
+
 const Interview = () => {
   const navigate = useNavigate();
   const { user } = useAuthStore();
@@ -111,6 +156,13 @@ const Interview = () => {
   const [isStarting, setIsStarting] = useState(false);
   const [sessionToDelete, setSessionToDelete] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [interviewerPersona, setInterviewerPersona] = useState(() => {
+    return localStorage.getItem('trackasap_interview_persona') || 'alex';
+  });
+
+  const currentInterviewerOption =
+    INTERVIEWER_OPTIONS.find((opt) => opt.id === interviewerPersona) ||
+    INTERVIEWER_OPTIONS[0];
 
   useEffect(() => {
     fetchSessions(1, 6);
@@ -154,6 +206,7 @@ const Interview = () => {
   const handleStartInterview = async () => {
     setIsStarting(true);
     try {
+      localStorage.setItem('trackasap_interview_persona', interviewerPersona);
       const res = await createSession({
         mode: selectedMode,
         targetRole,
@@ -162,6 +215,13 @@ const Interview = () => {
         durationMinutes,
         resumeText,
         jobDescription,
+        interviewerPersona,
+        interviewerMode:
+          interviewerPersona === 'multi_panel'
+            ? 'multi_panel'
+            : interviewerPersona === 'random'
+            ? 'random'
+            : 'single',
       });
 
       if (res.success && res.session?._id) {
@@ -568,6 +628,68 @@ const Interview = () => {
               )}
             </div>
           </div>
+
+          {/* Section: Interviewer Setup (1:1 vs Multi-Panel Board) */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                <Users className="w-5 h-5 text-neon-green" />
+                3. Choose Interviewer Setup
+              </h2>
+              <span className="text-xs text-neon-green/90 font-medium px-2.5 py-0.5 rounded-full bg-neon-green/10 border border-neon-green/20">
+                ✨ High-Fidelity Natural Voices
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+              {INTERVIEWER_OPTIONS.map((opt) => {
+                const isSelected = interviewerPersona === opt.id;
+                return (
+                  <motion.div
+                    key={opt.id}
+                    whileHover={{ scale: 1.01 }}
+                    whileTap={{ scale: 0.99 }}
+                    onClick={() => {
+                      setInterviewerPersona(opt.id);
+                      localStorage.setItem('trackasap_interview_persona', opt.id);
+                      toast.success(`Interviewer format set to: ${opt.title}`);
+                    }}
+                    className={`cursor-pointer rounded-xl p-4 border transition-all relative overflow-hidden ${
+                      isSelected
+                        ? 'bg-dark-900 border-neon-green shadow-lg shadow-neon-green/10 ring-1 ring-neon-green/40'
+                        : 'bg-dark-900/50 border-white/10 hover:border-white/20 hover:bg-dark-900/80'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between mb-2">
+                      <div className="flex items-center gap-2.5">
+                        <span className="text-2xl">{opt.emoji}</span>
+                        <div>
+                          <h3 className="font-bold text-white text-sm leading-tight flex items-center gap-1.5">
+                            {opt.title}
+                          </h3>
+                          <span className="text-[11px] text-dark-400 block font-mono">
+                            {opt.role}
+                          </span>
+                        </div>
+                      </div>
+                      <span
+                        className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                          isSelected
+                            ? 'bg-neon-green/20 text-neon-green border-neon-green/40'
+                            : 'bg-white/5 text-dark-400 border-white/10'
+                        }`}
+                      >
+                        {opt.badge}
+                      </span>
+                    </div>
+                    <p className="text-xs text-dark-400 line-clamp-2 leading-relaxed mt-1">
+                      {opt.description}
+                    </p>
+                  </motion.div>
+                );
+              })}
+            </div>
+          </div>
         </div>
 
         {/* Right Col: Readiness & Launch Action */}
@@ -583,6 +705,28 @@ const Interview = () => {
                 Connect your microphone and speak naturally. The AI will start the round by greeting you and
                 introducing the interview context.
               </p>
+            </div>
+
+            {/* Selected Interviewer & Mode Summary */}
+            <div className="bg-dark-950/90 border border-white/10 rounded-xl p-3.5 space-y-2 text-xs">
+              <div className="flex items-center justify-between text-dark-300">
+                <span className="text-[11px] uppercase tracking-wider font-semibold text-dark-400">Interviewer</span>
+                <span className="text-white font-bold flex items-center gap-1.5">
+                  <span>{currentInterviewerOption.emoji}</span>
+                  <span>{currentInterviewerOption.title}</span>
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-dark-300">
+                <span className="text-[11px] uppercase tracking-wider font-semibold text-dark-400">Voice Quality</span>
+                <span className="text-neon-green font-semibold flex items-center gap-1">
+                  <Volume2 className="w-3.5 h-3.5 text-neon-green" />
+                  Natural Human
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-dark-300">
+                <span className="text-[11px] uppercase tracking-wider font-semibold text-dark-400">Setup Mode</span>
+                <span className="text-white font-medium">{currentInterviewerOption.badge}</span>
+              </div>
             </div>
 
             {/* Readiness Checklist */}

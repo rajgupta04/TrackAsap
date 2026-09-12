@@ -57,9 +57,18 @@ const InterviewRoom = () => {
   const [isEnding, setIsEnding] = useState(false);
   const [showEarlyEndModal, setShowEarlyEndModal] = useState(false);
 
-  // Multi-Panel Interview mode: 'multi_panel' (default, rotates Alex, Bella, Marcus & Sophia) | 'alex' | 'bella' | 'marcus' | 'sophia' | 'random'
-  const [voiceMode, setVoiceMode] = useState('multi_panel');
+  // Interviewer Persona / Setup Mode: 'alex' | 'bella' | 'multi_panel' | 'random'
+  const [voiceMode, setVoiceMode] = useState(() => {
+    return localStorage.getItem('trackasap_interview_persona') || 'alex';
+  });
   const [currentPanelistIndex, setCurrentPanelistIndex] = useState(0);
+
+  // Sync with session if configured from lobby
+  useEffect(() => {
+    if (currentSession?.interviewerPersona) {
+      setVoiceMode(currentSession.interviewerPersona);
+    }
+  }, [currentSession?.interviewerPersona]);
 
   const activePanelist = useMemo(() => {
     if (voiceMode === 'multi_panel' || voiceMode === 'random') {
@@ -143,7 +152,7 @@ const InterviewRoom = () => {
     }
   }, []);
 
-  // Natural voice matching algorithm calibrated per panelist
+  // High-fidelity natural voice matching algorithm (actively filters out legacy robotic desktop voices)
   const getPreferredVoiceForPanelist = (panelist) => {
     if (!window.speechSynthesis) return null;
     const voices = window.speechSynthesis.getVoices();
@@ -152,41 +161,61 @@ const InterviewRoom = () => {
     const enVoices = voices.filter((v) => v.lang.startsWith('en'));
     const pool = enVoices.length > 0 ? enVoices : voices;
 
-    // Check specific preferences for this panelist
+    // Filter out robotic legacy desktop voices (e.g. Microsoft David Desktop, Microsoft Zira Desktop)
+    const cleanNaturalPool = pool.filter((v) => {
+      const name = v.name.toLowerCase();
+      return (
+        !name.includes('david') &&
+        !name.includes('zira') &&
+        !name.includes('hazel') &&
+        !name.includes('desktop')
+      );
+    });
+
+    const searchPool = cleanNaturalPool.length > 0 ? cleanNaturalPool : pool;
+
+    // 1. Check specific preferences for this panelist in the clean natural pool
     if (panelist?.voicePreferences) {
       for (const pref of panelist.voicePreferences) {
-        const found = pool.find((v) => v.name.toLowerCase().includes(pref));
+        const found = searchPool.find((v) => v.name.toLowerCase().includes(pref));
         if (found) return found;
       }
     }
 
     const isFemale = panelist?.gender === 'female';
     if (isFemale) {
-      const anyFemale = pool.find(
+      // Prioritize natural female voices (Edge Online Neural, Apple Samantha/Victoria, Chrome)
+      const femaleOnline = searchPool.find(
         (v) =>
-          v.name.toLowerCase().includes('female') ||
-          v.name.toLowerCase().includes('zira') ||
-          v.name.toLowerCase().includes('susan') ||
+          v.name.toLowerCase().includes('natural') ||
           v.name.toLowerCase().includes('jenny') ||
           v.name.toLowerCase().includes('aria') ||
-          v.name.toLowerCase().includes('samantha')
+          v.name.toLowerCase().includes('samantha') ||
+          v.name.toLowerCase().includes('victoria') ||
+          v.name.toLowerCase().includes('google us english')
       );
+      if (femaleOnline) return femaleOnline;
+
+      const anyFemale = searchPool.find((v) => v.name.toLowerCase().includes('female'));
       if (anyFemale) return anyFemale;
     } else {
-      const anyMale = pool.find(
+      // Prioritize natural male voices (Edge Online Neural, Apple Alex, Chrome)
+      const maleOnline = searchPool.find(
         (v) =>
-          v.name.toLowerCase().includes('male') ||
-          (!v.name.toLowerCase().includes('female') &&
-            !v.name.toLowerCase().includes('zira') &&
-            !v.name.toLowerCase().includes('susan') &&
-            !v.name.toLowerCase().includes('jenny') &&
-            !v.name.toLowerCase().includes('aria') &&
-            !v.name.toLowerCase().includes('samantha'))
+          v.name.toLowerCase().includes('natural') ||
+          v.name.toLowerCase().includes('ryan') ||
+          v.name.toLowerCase().includes('guy') ||
+          v.name.toLowerCase().includes('christopher') ||
+          v.name.toLowerCase().includes('alex') ||
+          v.name.toLowerCase().includes('google us english')
       );
+      if (maleOnline) return maleOnline;
+
+      const anyMale = searchPool.find((v) => v.name.toLowerCase().includes('male'));
       if (anyMale) return anyMale;
     }
 
-    return pool[0];
+    return searchPool[0] || pool[0];
   };
 
   // Multi-layer Echo detection: exact substring + word-level token overlap against recent AI prompts
@@ -921,20 +950,14 @@ const InterviewRoom = () => {
               }}
               className="bg-transparent text-white text-xs font-semibold focus:outline-none cursor-pointer pr-1"
             >
-              <option value="multi_panel" className="bg-dark-900 text-white">
-                🤼 Multi-Panel Board (Alex, Dr. Bella & Team)
-              </option>
               <option value="alex" className="bg-dark-900 text-white">
-                ⚡ Alex Rivera · Lead Systems Architect (Male)
+                ⚡ Alex Rivera · Systems Architect (Natural Male)
               </option>
               <option value="bella" className="bg-dark-900 text-white">
-                🧠 Dr. Bella Chen · Algorithms Lead (Female)
+                🧠 Dr. Bella Chen · Algorithms Lead (Natural Female)
               </option>
-              <option value="marcus" className="bg-dark-900 text-white">
-                💼 Marcus Vance · Director of Eng (Male)
-              </option>
-              <option value="sophia" className="bg-dark-900 text-white">
-                🛡️ Sophia Sterling · Infrastructure Lead (Female)
+              <option value="multi_panel" className="bg-dark-900 text-white">
+                🤼 Multi-Panel Board (Alex & Dr. Bella)
               </option>
               <option value="random" className="bg-dark-900 text-white">
                 🎲 Random ({activePanelist?.shortName})

@@ -93,6 +93,15 @@ const InterviewSessionSchema = new mongoose.Schema(
       type: Number,
       default: 20,
     },
+    interviewerMode: {
+      type: String,
+      enum: ['single', 'multi_panel', 'random'],
+      default: 'single',
+    },
+    interviewerPersona: {
+      type: String,
+      default: 'alex',
+    },
     startedAt: {
       type: Date,
     },
