@@ -10,11 +10,13 @@ import {
   Compass,
   Flame,
   MessageSquare,
+  Bot,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 const navPiles = [
   { path: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+  { path: '/interview', icon: Bot, label: 'Interview' },
   { path: '/arena', icon: Flame, label: 'Arena' },
   { path: '/roadmap', icon: Compass, label: 'Roadmap' },
   { path: '/sheets', icon: BookOpen, label: 'Sheets' },

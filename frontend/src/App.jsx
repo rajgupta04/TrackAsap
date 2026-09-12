@@ -26,6 +26,9 @@ import Roadmap from './pages/Roadmap';
 import ProblemArena from './pages/ProblemArena';
 import ProblemSetterStudio from './pages/ProblemSetterStudio';
 import ProblemSolve from './pages/ProblemSolve';
+import Interview from './pages/Interview';
+import InterviewRoom from './pages/InterviewRoom';
+import InterviewResults from './pages/InterviewResults';
 import ThemeModal from './components/layout/ThemeModal';
 
 // Protected Route wrapper
@@ -180,6 +183,8 @@ function App() {
         <Route path="playground" element={<Playground />} />
         <Route path="discussion" element={<Discussion />} />
         <Route path="roadmap" element={<Roadmap />} />
+        <Route path="interview" element={<Interview />} />
+        <Route path="interview/results/:sessionId" element={<InterviewResults />} />
         <Route path="studio" element={<ProblemSetterStudio />} />
         <Route path="admin" element={<Admin />} />
         <Route
@@ -197,6 +202,16 @@ function App() {
         path="/solve/:slug"
         element={
           <ProblemSolve />
+        }
+      />
+
+      {/* Standalone Immersive AI Live Voice Interview Room */}
+      <Route
+        path="/interview/room/:sessionId"
+        element={
+          <ProtectedRoute>
+            <InterviewRoom />
+          </ProtectedRoute>
         }
       />
 
