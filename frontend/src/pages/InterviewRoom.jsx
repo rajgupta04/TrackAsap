@@ -19,6 +19,8 @@ import {
   BrainCircuit,
   Shuffle,
   Users,
+  LogOut,
+  X,
 } from 'lucide-react';
 import { useInterviewStore } from '../store/interviewStore';
 import { useAuthStore } from '../store/authStore';
@@ -42,6 +44,7 @@ const InterviewRoom = () => {
     appendTranscriptTurn,
     submitEvaluation,
     evaluateSession,
+    endSessionWithoutReport,
     getInitialQuestion,
     getNextTurn,
   } = useInterviewStore();
@@ -56,6 +59,8 @@ const InterviewRoom = () => {
   const [liveCaption, setLiveCaption] = useState('');
   const [isEnding, setIsEnding] = useState(false);
   const [showEarlyEndModal, setShowEarlyEndModal] = useState(false);
+  const [showEndOptionsModal, setShowEndOptionsModal] = useState(false);
+  const [showExitConfirmModal, setShowExitConfirmModal] = useState(false);
 
   // Interviewer Persona / Setup Mode: 'alex' | 'bella' | 'multi_panel' | 'random'
   const [voiceMode, setVoiceMode] = useState(() => {
@@ -841,17 +846,61 @@ const InterviewRoom = () => {
   };
 
   const handleEndInterview = () => {
-    if (transcript.length < 3) {
-      setShowEarlyEndModal(true);
-      return;
+    // Open End Interview Options Modal allowing candidate to choose between Report vs No Report
+    setShowEndOptionsModal(true);
+  };
+
+  const executeEndWithoutReport = async () => {
+    // 1. Instantly mark session as inactive so no background promise/timeout can trigger speech or recognition
+    isSessionActiveRef.current = false;
+    setShowEarlyEndModal(false);
+    setShowEndOptionsModal(false);
+    setShowExitConfirmModal(false);
+    setIsEnding(true);
+
+    if (silenceTimeoutRef.current) {
+      clearTimeout(silenceTimeoutRef.current);
+      silenceTimeoutRef.current = null;
     }
-    executeEndInterview();
+    candidateAccumulatorRef.current = '';
+
+    if (initialTimeoutRef.current) clearTimeout(initialTimeoutRef.current);
+    if (followupTimeoutRef.current) clearTimeout(followupTimeoutRef.current);
+
+    // 2. Thoroughly flush all audio and pending browser utterances
+    flushSpeechQueue();
+
+    // 3. Dismantle speech recognition engine
+    if (speechRecognitionRef.current) {
+      try {
+        speechRecognitionRef.current.onend = null;
+        speechRecognitionRef.current.onerror = null;
+        speechRecognitionRef.current.onresult = null;
+        speechRecognitionRef.current.onstart = null;
+        speechRecognitionRef.current.stop();
+        speechRecognitionRef.current.abort();
+      } catch (e) {}
+      speechRecognitionRef.current = null;
+    }
+
+    try {
+      await endSessionWithoutReport(sessionId, transcript);
+      toast.success('Interview ended without generating a report.');
+    } catch (err) {
+      console.warn('Failed to end session without report:', err);
+    } finally {
+      setIsEnding(false);
+      flushSpeechQueue();
+      navigate('/interview');
+    }
   };
 
   const executeEndInterview = async () => {
     // 1. Instantly mark session as inactive so no background promise/timeout can trigger speech or recognition
     isSessionActiveRef.current = false;
     setShowEarlyEndModal(false);
+    setShowEndOptionsModal(false);
+    setShowExitConfirmModal(false);
     setIsEnding(true);
 
     if (silenceTimeoutRef.current) {
@@ -984,15 +1033,29 @@ const InterviewRoom = () => {
             {formatTime(elapsedSeconds)}
           </div>
 
-          <button
-            type="button"
-            disabled={isEnding}
-            onClick={handleEndInterview}
-            className="flex items-center gap-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/40 text-xs font-bold py-2 px-3.5 rounded-xl transition-all"
-          >
-            <PhoneOff className="w-3.5 h-3.5" />
-            End & Evaluate
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              disabled={isEnding}
+              onClick={handleEndInterview}
+              className="flex items-center gap-1.5 bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/40 text-xs font-bold py-2 px-3 rounded-xl transition-all shadow-sm"
+              title="End interview and choose report options"
+            >
+              <PhoneOff className="w-3.5 h-3.5" />
+              <span>End & Evaluate</span>
+            </button>
+
+            <button
+              type="button"
+              disabled={isEnding}
+              onClick={() => setShowExitConfirmModal(true)}
+              className="flex items-center gap-1.5 bg-dark-950/80 hover:bg-white/10 text-dark-300 hover:text-white border border-white/10 text-xs font-semibold py-2 px-2.5 rounded-xl transition-all"
+              title="Exit interview immediately without generating an evaluation report"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Exit (No Report)</span>
+            </button>
+          </div>
         </div>
       </header>
 
@@ -1215,6 +1278,136 @@ const InterviewRoom = () => {
         icon={AlertTriangle}
         isLoading={isEnding}
       />
+
+      {/* Confirmation Modal for Quick Exit Without Report */}
+      <ConfirmModal
+        isOpen={showExitConfirmModal}
+        onClose={() => setShowExitConfirmModal(false)}
+        onConfirm={executeEndWithoutReport}
+        title="Exit Without Generating Report?"
+        description="Are you sure you want to exit? Your session will end immediately and you will return to the lobby without generating any AI evaluation report or scorecard."
+        confirmText="Exit Without Report"
+        cancelText="Continue Interview"
+        variant="danger"
+        icon={LogOut}
+        isLoading={isEnding}
+      />
+
+      {/* Interactive Modal: End Interview with Choice of Report vs No Report */}
+      <AnimatePresence>
+        {showEndOptionsModal && (
+          <div
+            className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md"
+            onClick={() => setShowEndOptionsModal(false)}
+          >
+            <motion.div
+              onClick={(e) => e.stopPropagation()}
+              initial={{ opacity: 0, scale: 0.95, y: 15 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 15 }}
+              transition={{ duration: 0.2, ease: 'easeOut' }}
+              className="w-full max-w-lg bg-dark-900 border border-white/10 rounded-2xl shadow-2xl overflow-hidden relative"
+            >
+              <div className="p-6 space-y-5">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-neon-green/10 border border-neon-green/30 text-neon-green flex items-center justify-center">
+                      <PhoneOff className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h3 className="text-base font-bold text-white tracking-tight">
+                        Conclude Interview Session
+                      </h3>
+                      <p className="text-xs text-dark-400 mt-0.5">
+                        Choose how you would like to end this interview round:
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowEndOptionsModal(false)}
+                    className="text-dark-400 hover:text-white p-1 rounded-lg hover:bg-white/5 transition-colors"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-1">
+                  {/* Option 1: End & Generate Evaluation Report */}
+                  <div
+                    onClick={executeEndInterview}
+                    className="cursor-pointer bg-dark-950/80 hover:bg-dark-950 border border-neon-green/30 hover:border-neon-green rounded-xl p-4 transition-all group flex flex-col justify-between space-y-3"
+                  >
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <span className="w-8 h-8 rounded-lg bg-neon-green/10 border border-neon-green/30 text-neon-green flex items-center justify-center">
+                          <BrainCircuit className="w-4 h-4" />
+                        </span>
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-neon-green/10 text-neon-green border border-neon-green/30">
+                          Recommended
+                        </span>
+                      </div>
+                      <h4 className="text-xs font-bold text-white group-hover:text-neon-green transition-colors">
+                        End & Generate Report
+                      </h4>
+                      <p className="text-[11px] text-dark-400 leading-relaxed">
+                        AI evaluates your technical responses and generates a complete performance report.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      disabled={isEnding}
+                      className="w-full py-2 px-3 rounded-lg bg-neon-green hover:bg-neon-green/90 text-dark-950 text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow-sm"
+                    >
+                      Generate Report →
+                    </button>
+                  </div>
+
+                  {/* Option 2: Exit Without Generating Report */}
+                  <div
+                    onClick={executeEndWithoutReport}
+                    className="cursor-pointer bg-dark-950/80 hover:bg-dark-950 border border-white/10 hover:border-red-500/40 rounded-xl p-4 transition-all group flex flex-col justify-between space-y-3"
+                  >
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <span className="w-8 h-8 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 flex items-center justify-center">
+                          <LogOut className="w-4 h-4" />
+                        </span>
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-white/5 text-dark-400 border border-white/10">
+                          No Report
+                        </span>
+                      </div>
+                      <h4 className="text-xs font-bold text-white group-hover:text-red-400 transition-colors">
+                        Exit Without Report
+                      </h4>
+                      <p className="text-[11px] text-dark-400 leading-relaxed">
+                        Stop audio immediately and return to lobby. No AI evaluation report will be generated.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      disabled={isEnding}
+                      className="w-full py-2 px-3 rounded-lg bg-white/5 hover:bg-red-500/20 text-dark-300 hover:text-red-300 border border-white/10 hover:border-red-500/30 text-xs font-semibold transition-all flex items-center justify-center gap-1.5"
+                    >
+                      Exit (No Report)
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex justify-end pt-1">
+                  <button
+                    type="button"
+                    onClick={() => setShowEndOptionsModal(false)}
+                    className="text-xs text-dark-400 hover:text-white transition-colors px-3 py-1.5 rounded-lg hover:bg-white/5"
+                  >
+                    Cancel & Continue Interview
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

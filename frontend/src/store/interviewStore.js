@@ -145,6 +145,20 @@ export const useInterviewStore = create((set, get) => ({
     }
   },
 
+  endSessionWithoutReport: async (sessionId, transcript = null) => {
+    try {
+      const data = await interviewService.endSessionWithoutReport(sessionId, transcript);
+      if (data.success) {
+        set({ currentSession: data.session });
+        return { success: true, session: data.session };
+      }
+      return { success: false, error: data.message };
+    } catch (err) {
+      console.error('Failed to end session without report:', err);
+      return { success: false, error: err.response?.data?.message || err.message };
+    }
+  },
+
   deleteSession: async (sessionId) => {
     try {
       await interviewService.deleteSession(sessionId);

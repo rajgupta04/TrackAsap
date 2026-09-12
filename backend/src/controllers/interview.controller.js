@@ -323,6 +323,43 @@ export const evaluateSession = async (req, res) => {
 };
 
 /**
+ * @route   POST /api/interview/session/:id/end
+ * @desc    End interview without generating evaluation report
+ * @access  Private
+ */
+export const endSessionWithoutReport = async (req, res) => {
+  try {
+    const session = await InterviewSession.findById(req.params.id);
+
+    if (!session) {
+      return res.status(404).json({ message: 'Interview session not found' });
+    }
+
+    if (session.user.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Not authorized' });
+    }
+
+    const clientTranscript = req.body.transcript;
+    if (Array.isArray(clientTranscript) && clientTranscript.length > session.transcript.length) {
+      session.transcript = clientTranscript;
+    }
+
+    session.status = 'completed';
+    session.endedAt = new Date();
+    await session.save();
+
+    res.json({
+      success: true,
+      message: 'Interview session ended without evaluation',
+      session,
+    });
+  } catch (error) {
+    console.error('End interview session error:', error);
+    res.status(500).json({ message: 'Failed to end interview session', error: error.message });
+  }
+};
+
+/**
  * @route   DELETE /api/interview/session/:id
  * @desc    Delete an interview session and its transcript (Privacy/User sovereignty)
  * @access  Private

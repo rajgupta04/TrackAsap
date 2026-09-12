@@ -8,6 +8,7 @@ import {
   addTranscriptTurn,
   submitEvaluation,
   evaluateSession,
+  endSessionWithoutReport,
   deleteSession,
   getUserContext,
   uploadResume,
@@ -36,6 +37,7 @@ router.post('/session/:id/token', getSessionToken);
 router.post('/session/:id/transcript', addTranscriptTurn);
 router.post('/session/:id/evaluation', submitEvaluation);
 router.post('/session/:id/evaluate', evaluateSession);
+router.post('/session/:id/end', endSessionWithoutReport);
 router.post('/upload-resume', resumeUpload.single('resume'), uploadResume);
 router.delete('/session/:id', deleteSession);
 
