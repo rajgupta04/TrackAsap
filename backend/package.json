@@ -7,6 +7,9 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
+    "test": "cross-env NODE_OPTIONS=--experimental-vm-modules jest --runInBand --forceExit",
+    "test:watch": "cross-env NODE_OPTIONS=--experimental-vm-modules jest --watch",
+    "test:coverage": "cross-env NODE_OPTIONS=--experimental-vm-modules jest --coverage --runInBand --forceExit",
     "seed": "node src/seed-buckets.js",
     "seed:a2z": "node src/seed-buckets.js",
     "seed:a2z:dry": "node src/seed-buckets.js --dry-run",
@@ -36,7 +39,11 @@
     "uuid": "^14.0.1"
   },
   "devDependencies": {
-    "nodemon": "^3.0.2"
+    "cross-env": "^10.1.0",
+    "jest": "^30.5.0",
+    "mongodb-memory-server": "^11.2.0",
+    "nodemon": "^3.0.2",
+    "supertest": "^7.2.2"
   },
   "overrides": {
     "multer-storage-cloudinary": {

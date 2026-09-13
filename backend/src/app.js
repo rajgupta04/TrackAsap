@@ -1,0 +1,121 @@
+import express from 'express';
+import cors from 'cors';
+import dotenv from 'dotenv';
+import authRoutes from './routes/auth.routes.js';
+import taskRoutes from './routes/task.routes.js';
+import physiqueRoutes from './routes/physique.routes.js';
+import analyticsRoutes from './routes/analytics.routes.js';
+import problemRoutes from './routes/problem.routes.js';
+import sheetRoutes from './routes/sheet.routes.js';
+import sheetProblemRoutes from './routes/sheetProblem.routes.js';
+import sheetBucketRoutes from './routes/sheetBucket.routes.js';
+import platformStatsRoutes from './routes/platformStats.routes.js';
+import leaderboardRoutes from './routes/leaderboard.routes.js';
+import githubRoutes from './routes/github.routes.js';
+import discussionRoutes from './routes/discussion.routes.js';
+import adminRoutes from './routes/admin.routes.js';
+import extensionRoutes from './routes/extension.routes.js';
+import aiRoutes from './routes/ai.routes.js';
+import compilerRoutes from './routes/compiler.routes.js';
+import emailRoutes from './routes/email.routes.js';
+import roadmapRoutes from './routes/roadmap.routes.js';
+import judgeProblemRoutes from './routes/judgeProblem.routes.js';
+import judgeRoutes from './routes/judge.routes.js';
+import featureRoutes from './routes/feature.routes.js';
+import telemetryRoutes from './routes/telemetry.routes.js';
+import path from 'path';
+import dailyPlanRoutes from './routes/dailyPlan.routes.js';
+import interviewRoutes from './routes/interview.routes.js';
+import { requestLogger } from './analytics/middlewares/requestLogger.js';
+import systemAnalyticsRoutes from './analytics/admin/analytics.routes.js';
+import { errorHandler, notFound } from './middleware/error.middleware.js';
+
+dotenv.config();
+
+const app = express();
+
+// Middleware
+app.use(cors({
+  origin: (origin, callback) => {
+    // Allow requests with no origin (mobile apps, curl, etc.)
+    if (!origin) return callback(null, true);
+    // Allow chrome-extension:// origins for TrackEx
+    if (origin.startsWith('chrome-extension://')) return callback(null, true);
+    // Allow all other origins (existing behavior)
+    return callback(null, true);
+  },
+  credentials: true,
+}));
+app.use(express.json());
+app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
+
+// System Request Logging Middleware
+if (process.env.NODE_ENV !== 'test') {
+  app.use(requestLogger);
+}
+
+// Routes
+app.use('/api/auth', authRoutes);
+app.use('/api/tasks', taskRoutes);
+app.use('/api/physique', physiqueRoutes);
+app.use('/api/analytics', analyticsRoutes);
+app.use('/api/problems', problemRoutes);
+app.use('/api/sheets', sheetRoutes);
+app.use('/api/sheet-problems', sheetProblemRoutes);
+app.use('/api/buckets', sheetBucketRoutes);
+app.use('/api/platform-stats', platformStatsRoutes);
+app.use('/api/leaderboard', leaderboardRoutes);
+app.use('/api/github', githubRoutes);
+app.use('/api/discussions', discussionRoutes);
+app.use('/api/hub', discussionRoutes);
+app.use('/api/admin', adminRoutes);
+app.use('/api/extension', extensionRoutes);
+app.use('/api/ai', aiRoutes);
+app.use('/api/compiler', compilerRoutes);
+app.use('/api/email', emailRoutes);
+app.use('/api/roadmap', roadmapRoutes);
+app.use('/api/judge-problems', judgeProblemRoutes);
+app.use('/api/judge', judgeRoutes);
+app.use('/api/features', featureRoutes);
+app.use('/api/telemetry', telemetryRoutes);
+app.use('/api/daily-plan', dailyPlanRoutes);
+app.use('/api/interview', interviewRoutes);
+
+// System Analytics (Admin only)
+app.use('/api/system-analytics', systemAnalyticsRoutes);
+
+// Root route
+app.get('/', (req, res) => {
+  res.json({
+    status: 'ok',
+    message: '75-Day Tracker API is running',
+    endpoints: {
+      health: '/api/health',
+      auth: '/api/auth',
+      tasks: '/api/tasks',
+      physique: '/api/physique',
+      analytics: '/api/analytics',
+      problems: '/api/problems',
+      sheets: '/api/sheets',
+      platformStats: '/api/platform-stats',
+      github: '/api/github',
+      discussions: '/api/discussions',
+      admin: '/api/admin',
+      extension: '/api/extension',
+    }
+  });
+});
+
+// Health check
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok', message: 'TrackAsap API is running' });
+});
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok', message: 'TrackAsap API is running' });
+});
+
+// Error handling
+app.use(notFound);
+app.use(errorHandler);
+
+export default app;
