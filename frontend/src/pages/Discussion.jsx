@@ -32,6 +32,7 @@ import { useDiscussionStore } from '../store/discussionStore';
 import sheetService from '../services/sheetService';
 import { getAvatarSrc } from '../utils/avatar';
 import UserAgreementModal from '../components/discussion/UserAgreementModal';
+import PdfFlipViewer from '../components/hub/PdfFlipViewer';
 import toast from 'react-hot-toast';
 
 const CATEGORIES = [
@@ -120,6 +121,7 @@ const Discussion = () => {
 
   // Modals & comments
   const [showAgreement, setShowAgreement] = useState(false);
+  const [activePdfPreview, setActivePdfPreview] = useState(null);
   const [expandedComments, setExpandedComments] = useState({});
   const [commentInputs, setCommentInputs] = useState({});
   const [searchInput, setSearchInput] = useState(searchQuery || '');
@@ -897,18 +899,48 @@ const Discussion = () => {
                       </div>
 
                       <div className="flex items-center gap-2 w-full sm:w-auto shrink-0 justify-end">
-                        <a
-                          href={post.attachment.fileUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-dark-700/60 hover:bg-dark-700 text-dark-300 hover:text-white border border-dark-600 transition-all"
-                        >
-                          <ExternalLink size={12} />
-                          Preview
-                        </a>
+                        {post.attachment.fileType === 'pdf' ||
+                        post.attachment.fileName?.toLowerCase().endsWith('.pdf') ||
+                        post.attachment.fileUrl?.toLowerCase().includes('.pdf') ? (
+                          <>
+                            <button
+                              onClick={() =>
+                                setActivePdfPreview({
+                                  url: post.attachment.fileUrl,
+                                  name: post.attachment.fileName || post.title || 'PDF Document',
+                                  post: post,
+                                })
+                              }
+                              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-neon-green/15 text-neon-green hover:bg-neon-green/25 border border-neon-green/30 transition-all shadow-[0_0_12px_rgba(57,255,20,0.12)] group"
+                              title="Open interactive 3D page-flipping preview"
+                            >
+                              <BookOpen size={13} className="group-hover:rotate-6 transition-transform" />
+                              <span>Preview</span>
+                            </button>
+                            <a
+                              href={post.attachment.fileUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="p-1.5 rounded-lg text-dark-400 hover:text-white bg-dark-700/60 hover:bg-dark-700 border border-dark-600 transition-all"
+                              title="Open raw PDF in new browser tab"
+                            >
+                              <ExternalLink size={13} />
+                            </a>
+                          </>
+                        ) : (
+                          <a
+                            href={post.attachment.fileUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-dark-700/60 hover:bg-dark-700 text-dark-300 hover:text-white border border-dark-600 transition-all"
+                          >
+                            <ExternalLink size={12} />
+                            Preview
+                          </a>
+                        )}
                         <button
                           onClick={() => handleDownloadAttachment(post)}
-                          className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-neon-green/15 text-neon-green hover:bg-neon-green/25 border border-neon-green/30 transition-all shadow-sm"
+                          className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-dark-700/80 hover:bg-dark-700 text-dark-200 hover:text-white border border-dark-600 transition-all shadow-sm"
                         >
                           <Download size={12} />
                           Download
@@ -1099,6 +1131,16 @@ const Discussion = () => {
         onAccept={handleAcceptAgreement}
         onClose={() => setShowAgreement(false)}
       />
+
+      {/* Interactive 3D Page Flip PDF Previewer Modal */}
+      {activePdfPreview && (
+        <PdfFlipViewer
+          fileUrl={activePdfPreview.url}
+          fileName={activePdfPreview.name}
+          onClose={() => setActivePdfPreview(null)}
+          onDownload={() => handleDownloadAttachment(activePdfPreview.post)}
+        />
+      )}
     </div>
   );
 };
