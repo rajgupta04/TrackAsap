@@ -23,7 +23,9 @@ import judgeProblemRoutes from './routes/judgeProblem.routes.js';
 import judgeRoutes from './routes/judge.routes.js';
 import featureRoutes from './routes/feature.routes.js';
 import telemetryRoutes from './routes/telemetry.routes.js';
+import path from 'path';
 import dailyPlanRoutes from './routes/dailyPlan.routes.js';
+import interviewRoutes from './routes/interview.routes.js';
 import { requestLogger } from './analytics/middlewares/requestLogger.js';
 import systemAnalyticsRoutes from './analytics/admin/analytics.routes.js';
 import { errorHandler, notFound } from './middleware/error.middleware.js';
@@ -45,6 +47,7 @@ app.use(cors({
   credentials: true,
 }));
 app.use(express.json());
+app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
 // System Request Logging Middleware
 if (process.env.NODE_ENV !== 'test') {
@@ -64,6 +67,7 @@ app.use('/api/platform-stats', platformStatsRoutes);
 app.use('/api/leaderboard', leaderboardRoutes);
 app.use('/api/github', githubRoutes);
 app.use('/api/discussions', discussionRoutes);
+app.use('/api/hub', discussionRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/extension', extensionRoutes);
 app.use('/api/ai', aiRoutes);
@@ -75,6 +79,7 @@ app.use('/api/judge', judgeRoutes);
 app.use('/api/features', featureRoutes);
 app.use('/api/telemetry', telemetryRoutes);
 app.use('/api/daily-plan', dailyPlanRoutes);
+app.use('/api/interview', interviewRoutes);
 
 // System Analytics (Admin only)
 app.use('/api/system-analytics', systemAnalyticsRoutes);

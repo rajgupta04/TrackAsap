@@ -42,6 +42,18 @@
 - `PATCH /api/daily-plan/:id/toggle-task` - Toggle completion status of a task (Protected)
 - `POST /api/daily-plan/:id/end-session` - Complete session & generate report (Protected)
 
+### AI Live Mock Interviewer (NEW! 🐰)
+- `POST /api/interview/session` - Create interview session (mode, role, difficulty) (Protected)
+- `GET /api/interview/sessions` - List interview sessions with pagination (Protected)
+- `GET /api/interview/session/:id` - Fetch session details & transcripts (Protected)
+- `GET /api/interview/session/:id/initial-question` - Dynamic mode-tailored opening question (Protected)
+- `POST /api/interview/session/:id/next-turn` - Real-time conversational agent follow-up (Protected)
+- `POST /api/interview/upload-resume` - 5-Tier multi-modal resume & image OCR parsing (Protected)
+- `POST /api/interview/session/:id/token` - Mint LiveKit WebRTC access token (Protected)
+- `POST /api/interview/session/:id/transcript` - Record candidate / AI speech turn (Protected)
+- `POST /api/interview/session/:id/evaluate` - Generate LLM evaluation rubric scorecard (Protected)
+- `DELETE /api/interview/session/:id` - Delete interview session (Protected)
+
 ## Setup
 
 ```bash

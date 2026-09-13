@@ -359,7 +359,7 @@ const Profile = () => {
       </GlassCard>
 
       {/* Email Verification Banner */}
-      {user?.authProvider !== 'google' && !user?.isEmailVerified && (
+      {user?.role !== 'admin' && user?.authProvider !== 'google' && !user?.isEmailVerified && (
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}

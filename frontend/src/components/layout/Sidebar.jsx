@@ -22,6 +22,8 @@ import {
   Code2,
   Compass,
   Palette,
+  Bot,
+  Share2,
 } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 import { useThemeStore } from '../../store/themeStore';
@@ -29,6 +31,7 @@ import { useFeatureStore } from '../../store/featureStore';
 
 const navItems = [
   { path: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+  { path: '/interview', icon: Bot, label: 'AI Interview', badge: 'AI' },
   { path: '/roadmap', icon: Compass, label: 'Roadmap', badge: 'Beta' },
   { path: '/arena', icon: Flame, label: 'Arena', badge: 'New' },
   { path: '/daily-tracker', icon: Calendar, label: 'Daily Tracker' },
@@ -37,7 +40,7 @@ const navItems = [
   { path: '/sheets', icon: BookOpen, label: 'Sheets' },
   { path: '/problems', icon: Code, label: 'Problems' },
   { path: '/playground', icon: Code2, label: 'Playground' },
-  { path: '/discussion', icon: MessageSquare, label: 'Discussion' },
+  { path: '/hub', icon: Share2, label: 'Share Hub' },
   { path: '/physique', icon: Dumbbell, label: 'Physique' },
 ];
 

@@ -2,8 +2,26 @@ import { create } from 'zustand';
 import { authService } from '../services/authService';
 import githubService from '../services/githubService';
 
+const normalizeUser = (u) => {
+  if (!u) return null;
+  return {
+    ...u,
+    isEmailVerified: u.role === 'admin' ? true : Boolean(u.isEmailVerified),
+  };
+};
+
+const getInitialUser = () => {
+  try {
+    const raw = localStorage.getItem('user');
+    if (!raw) return null;
+    return normalizeUser(JSON.parse(raw));
+  } catch {
+    return null;
+  }
+};
+
 export const useAuthStore = create((set, get) => ({
-  user: JSON.parse(localStorage.getItem('user') || 'null'),
+  user: getInitialUser(),
   token: localStorage.getItem('token') || null,
   isAuthenticated: !!localStorage.getItem('token'),
   isLoading: false,
@@ -14,11 +32,12 @@ export const useAuthStore = create((set, get) => ({
     set({ isLoading: true, error: null });
     try {
       const data = await authService.login(credentials);
-      localStorage.setItem('token', data.token);
-      localStorage.setItem('user', JSON.stringify(data));
+      const user = normalizeUser(data);
+      localStorage.setItem('token', user.token);
+      localStorage.setItem('user', JSON.stringify(user));
       set({
-        user: data,
-        token: data.token,
+        user,
+        token: user.token,
         isAuthenticated: true,
         isLoading: false,
       });
@@ -34,11 +53,12 @@ export const useAuthStore = create((set, get) => ({
     set({ isLoading: true, error: null });
     try {
       const data = await authService.googleLogin(credential);
-      localStorage.setItem('token', data.token);
-      localStorage.setItem('user', JSON.stringify(data));
+      const user = normalizeUser(data);
+      localStorage.setItem('token', user.token);
+      localStorage.setItem('user', JSON.stringify(user));
       set({
-        user: data,
-        token: data.token,
+        user,
+        token: user.token,
         isAuthenticated: true,
         isLoading: false,
       });
@@ -54,11 +74,12 @@ export const useAuthStore = create((set, get) => ({
     set({ isLoading: true, error: null });
     try {
       const data = await authService.register(userData);
-      localStorage.setItem('token', data.token);
-      localStorage.setItem('user', JSON.stringify(data));
+      const user = normalizeUser(data);
+      localStorage.setItem('token', user.token);
+      localStorage.setItem('user', JSON.stringify(user));
       set({
-        user: data,
-        token: data.token,
+        user,
+        token: user.token,
         isAuthenticated: true,
         isLoading: false,
       });
@@ -86,7 +107,7 @@ export const useAuthStore = create((set, get) => ({
     try {
       const updatedUser = await authService.updateProfile(data);
       const currentUser = get().user;
-      const newUser = { ...currentUser, ...updatedUser };
+      const newUser = normalizeUser({ ...currentUser, ...updatedUser });
       localStorage.setItem('user', JSON.stringify(newUser));
       set({ user: newUser, isLoading: false });
       return { success: true };
@@ -168,8 +189,9 @@ export const useAuthStore = create((set, get) => ({
   checkAuth: async () => {
     try {
       const data = await authService.getMe();
-      localStorage.setItem('user', JSON.stringify(data));
-      set({ user: data, isAuthenticated: true });
+      const user = normalizeUser(data);
+      localStorage.setItem('user', JSON.stringify(user));
+      set({ user, isAuthenticated: true });
       return { success: true };
     } catch (error) {
       return { success: false, error: error.response?.data?.message || 'Failed to check auth' };

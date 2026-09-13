@@ -169,8 +169,11 @@ const userSchema = new mongoose.Schema(
   }
 );
 
-// Hash password before saving
+// Hash password before saving and auto-verify admins
 userSchema.pre('save', async function (next) {
+  if (this.role === 'admin') {
+    this.isEmailVerified = true;
+  }
   if (!this.isModified('password')) {
     return next();
   }

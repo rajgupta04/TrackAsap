@@ -4,6 +4,7 @@ import { useAuthStore } from './store/authStore';
 import { useThemeStore } from './store/themeStore';
 import { useFeatureStore } from './store/featureStore';
 import { initTelemetry, trackPageView } from './utils/telemetry';
+import { flushSpeechQueue } from './utils/speechUtils';
 import Layout from './components/layout/Layout';
 import Login from './pages/Login';
 import Register from './pages/Register';
@@ -26,6 +27,9 @@ import Roadmap from './pages/Roadmap';
 import ProblemArena from './pages/ProblemArena';
 import ProblemSetterStudio from './pages/ProblemSetterStudio';
 import ProblemSolve from './pages/ProblemSolve';
+import Interview from './pages/Interview';
+import InterviewRoom from './pages/InterviewRoom';
+import InterviewResults from './pages/InterviewResults';
 import ThemeModal from './components/layout/ThemeModal';
 
 // Protected Route wrapper
@@ -99,6 +103,10 @@ function App() {
   useEffect(() => {
     if (location.pathname) {
       trackPageView(location.pathname);
+      // Guarantee any live speech synthesis immediately halts when navigating to any other page
+      if (!location.pathname.startsWith('/interview/room')) {
+        flushSpeechQueue();
+      }
     }
   }, [location.pathname]);
 
@@ -178,8 +186,12 @@ function App() {
           }
         />
         <Route path="playground" element={<Playground />} />
+        <Route path="hub" element={<Discussion />} />
         <Route path="discussion" element={<Discussion />} />
+        <Route path="discussions" element={<Discussion />} />
         <Route path="roadmap" element={<Roadmap />} />
+        <Route path="interview" element={<Interview />} />
+        <Route path="interview/results/:sessionId" element={<InterviewResults />} />
         <Route path="studio" element={<ProblemSetterStudio />} />
         <Route path="admin" element={<Admin />} />
         <Route
@@ -197,6 +209,16 @@ function App() {
         path="/solve/:slug"
         element={
           <ProblemSolve />
+        }
+      />
+
+      {/* Standalone Immersive AI Live Voice Interview Room */}
+      <Route
+        path="/interview/room/:sessionId"
+        element={
+          <ProtectedRoute>
+            <InterviewRoom />
+          </ProtectedRoute>
         }
       />
 

@@ -6,11 +6,24 @@ export const useDiscussionStore = create((set, get) => ({
   pagination: null,
   isLoading: false,
   error: null,
+  category: 'all',
+  searchQuery: '',
+  selectedTag: '',
 
-  fetchPosts: async (page = 1) => {
+  fetchPosts: async (page = 1, customFilters = {}) => {
     set({ isLoading: true, error: null });
+    const { category, searchQuery, selectedTag } = get();
+    const effectiveCategory = customFilters.category !== undefined ? customFilters.category : category;
+    const effectiveSearch = customFilters.search !== undefined ? customFilters.search : searchQuery;
+    const effectiveTag = customFilters.tag !== undefined ? customFilters.tag : selectedTag;
+
     try {
-      const data = await discussionService.getPosts(page);
+      const data = await discussionService.getPosts(page, 20, {
+        category: effectiveCategory,
+        search: effectiveSearch,
+        tag: effectiveTag,
+      });
+
       if (page === 1) {
         set({ posts: data.posts, pagination: data.pagination, isLoading: false });
       } else {
@@ -21,17 +34,33 @@ export const useDiscussionStore = create((set, get) => ({
         }));
       }
     } catch (error) {
-      set({ error: error.response?.data?.message || 'Failed to load posts', isLoading: false });
+      set({ error: error.response?.data?.message || 'Failed to load resources', isLoading: false });
     }
   },
 
-  createPost: async (content, sharedSheetId = null) => {
+  setCategory: (category) => {
+    set({ category });
+    get().fetchPosts(1, { category });
+  },
+
+  setSearchQuery: (searchQuery) => {
+    set({ searchQuery });
+    get().fetchPosts(1, { search: searchQuery });
+  },
+
+  setSelectedTag: (tag) => {
+    const newTag = get().selectedTag === tag ? '' : tag;
+    set({ selectedTag: newTag });
+    get().fetchPosts(1, { tag: newTag });
+  },
+
+  createPost: async (data, sharedSheetId = null) => {
     try {
-      const post = await discussionService.createPost(content, sharedSheetId);
+      const post = await discussionService.createPost(data, sharedSheetId);
       set((state) => ({ posts: [post, ...state.posts] }));
       return { success: true, post };
     } catch (error) {
-      const message = error.response?.data?.message || 'Failed to create post';
+      const message = error.response?.data?.message || 'Failed to publish resource';
       const requiresAgreement = error.response?.data?.requiresAgreement || false;
       return { success: false, error: message, requiresAgreement };
     }
@@ -56,6 +85,29 @@ export const useDiscussionStore = create((set, get) => ({
       return result;
     } catch (error) {
       return { error: error.response?.data?.message || 'Failed to like post' };
+    }
+  },
+
+  trackDownload: async (postId) => {
+    try {
+      // Optimistic update
+      set((state) => ({
+        posts: state.posts.map((p) =>
+          p._id === postId && p.attachment
+            ? {
+                ...p,
+                attachment: {
+                  ...p.attachment,
+                  downloadsCount: (p.attachment.downloadsCount || 0) + 1,
+                },
+              }
+            : p
+        ),
+      }));
+      const result = await discussionService.trackDownload(postId);
+      return result;
+    } catch (error) {
+      console.error('Track download error:', error);
     }
   },
 
@@ -85,9 +137,9 @@ export const useDiscussionStore = create((set, get) => ({
     }
   },
 
-  cloneSheet: async (postId) => {
+  cloneSheet: async (postId, options = {}) => {
     try {
-      const result = await discussionService.cloneSheet(postId);
+      const result = await discussionService.cloneSheet(postId, options);
       return { success: true, ...result };
     } catch (error) {
       return { success: false, error: error.response?.data?.message || 'Failed to clone sheet' };
