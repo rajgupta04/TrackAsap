@@ -32,6 +32,38 @@ const discussionPostSchema = new mongoose.Schema(
       trim: true,
       maxlength: 5000,
     },
+    // Share Hub metadata
+    title: {
+      type: String,
+      trim: true,
+      maxlength: 300,
+      default: '',
+    },
+    category: {
+      type: String,
+      enum: ['general', 'notes', 'cheat_sheet', 'sheet', 'system_design', 'interview_prep'],
+      default: 'general',
+    },
+    tags: [
+      {
+        type: String,
+        trim: true,
+        lowercase: true,
+      },
+    ],
+    // Optional file attachment (PDF, notes, doc, image)
+    attachment: {
+      fileUrl: { type: String, default: '' },
+      fileName: { type: String, default: '' },
+      fileSize: { type: Number, default: 0 },
+      fileType: {
+        type: String,
+        enum: ['pdf', 'doc', 'image', 'other', 'none'],
+        default: 'none',
+      },
+      mimeType: { type: String, default: '' },
+      downloadsCount: { type: Number, default: 0 },
+    },
     // Optional shared sheet
     sharedSheet: {
       type: mongoose.Schema.Types.ObjectId,
@@ -92,6 +124,8 @@ discussionPostSchema.pre('save', function (next) {
 discussionPostSchema.index({ createdAt: -1 });
 discussionPostSchema.index({ user: 1, createdAt: -1 });
 discussionPostSchema.index({ isDeleted: 1, createdAt: -1 });
+discussionPostSchema.index({ isDeleted: 1, category: 1, createdAt: -1 });
+discussionPostSchema.index({ tags: 1 });
 
 const DiscussionPost = mongoose.model('DiscussionPost', discussionPostSchema);
 export default DiscussionPost;

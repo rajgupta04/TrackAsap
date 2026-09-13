@@ -11,6 +11,7 @@ import {
   Flame,
   MessageSquare,
   Bot,
+  Share2,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 
@@ -29,15 +30,15 @@ const MobilePillNav = () => {
 
   return (
     <>
-      {/* Top Right Floating Discussion Chat Button (Visible ONLY on Dashboard on mobile) */}
+      {/* Top Right Floating Share Hub Button (Visible ONLY on Dashboard on mobile) */}
       {location.pathname === '/dashboard' && (
         <div className="md:hidden fixed top-4 right-4 z-40 flex items-center">
           <Link
-            to="/discussion"
-            aria-label="Discussion"
+            to="/hub"
+            aria-label="Share Hub"
             className="w-11 h-11 rounded-xl bg-dark-800/95 backdrop-blur-xl border border-white/10 hover:border-neon-green/40 text-gray-300 hover:text-neon-green shadow-lg active:scale-95 transition-all flex items-center justify-center cursor-pointer"
           >
-            <MessageSquare className="w-5 h-5" />
+            <Share2 className="w-5 h-5" />
           </Link>
         </div>
       )}

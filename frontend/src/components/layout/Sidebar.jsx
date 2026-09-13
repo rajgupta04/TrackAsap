@@ -23,6 +23,7 @@ import {
   Compass,
   Palette,
   Bot,
+  Share2,
 } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 import { useThemeStore } from '../../store/themeStore';
@@ -39,7 +40,7 @@ const navItems = [
   { path: '/sheets', icon: BookOpen, label: 'Sheets' },
   { path: '/problems', icon: Code, label: 'Problems' },
   { path: '/playground', icon: Code2, label: 'Playground' },
-  { path: '/discussion', icon: MessageSquare, label: 'Discussion' },
+  { path: '/hub', icon: Share2, label: 'Share Hub' },
   { path: '/physique', icon: Dumbbell, label: 'Physique' },
 ];
 

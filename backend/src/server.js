@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import path from 'path';
 import connectDB from './config/db.js';
 import authRoutes from './routes/auth.routes.js';
 import taskRoutes from './routes/task.routes.js';
@@ -57,6 +58,7 @@ app.use(cors({
   credentials: true,
 }));
 app.use(express.json());
+app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
 // System Request Logging Middleware
 app.use(requestLogger);
@@ -74,6 +76,7 @@ app.use('/api/platform-stats', platformStatsRoutes);
 app.use('/api/leaderboard', leaderboardRoutes);
 app.use('/api/github', githubRoutes);
 app.use('/api/discussions', discussionRoutes);
+app.use('/api/hub', discussionRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/extension', extensionRoutes);
 app.use('/api/ai', aiRoutes);

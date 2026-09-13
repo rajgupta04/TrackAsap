@@ -186,7 +186,9 @@ function App() {
           }
         />
         <Route path="playground" element={<Playground />} />
+        <Route path="hub" element={<Discussion />} />
         <Route path="discussion" element={<Discussion />} />
+        <Route path="discussions" element={<Discussion />} />
         <Route path="roadmap" element={<Roadmap />} />
         <Route path="interview" element={<Interview />} />
         <Route path="interview/results/:sessionId" element={<InterviewResults />} />
