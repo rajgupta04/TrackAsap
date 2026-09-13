@@ -57,6 +57,7 @@ const PROGRAMMER_QUOTES = [
 
 const Sheets = () => {
   const { user } = useAuthStore();
+  const isVerified = user?.role === 'admin' || Boolean(user?.isEmailVerified);
   const {
     sheets,
     templates,
@@ -194,15 +195,15 @@ const Sheets = () => {
               <div className="flex gap-2 mb-4">
                 <button
                   onClick={() => {
-                    if (!user?.isEmailVerified) {
+                    if (!isVerified) {
                       toast.error('Verify your email to import sheets');
                       return;
                     }
                     setShowBucketPicker(true);
                   }}
-                  title={!user?.isEmailVerified ? 'Verify your email to import sheets' : ''}
+                  title={!isVerified ? 'Verify your email to import sheets' : ''}
                   className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-2 text-xs border rounded-lg transition-all ${
-                    !user?.isEmailVerified 
+                    !isVerified 
                       ? 'bg-white/5 border-white/5 text-gray-600 cursor-not-allowed' 
                       : 'bg-white/5 hover:bg-white/10 border-white/10 text-gray-300'
                   }`}

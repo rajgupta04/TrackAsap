@@ -85,6 +85,7 @@ const getFileIcon = (fileType) => {
 
 const Discussion = () => {
   const { user, acceptAgreement } = useAuthStore();
+  const isVerified = user?.role === 'admin' || Boolean(user?.isEmailVerified);
   const {
     posts,
     pagination,
@@ -222,7 +223,7 @@ const Discussion = () => {
       return;
     }
 
-    if (!user?.isEmailVerified) {
+    if (!isVerified) {
       toast.error('Please verify your email before posting resources.');
       return;
     }
@@ -284,7 +285,7 @@ const Discussion = () => {
     const commentContent = commentInputs[postId];
     if (!commentContent?.trim()) return;
 
-    if (!user?.isEmailVerified) {
+    if (!isVerified) {
       toast.error('Verify your email to comment');
       return;
     }
@@ -308,7 +309,7 @@ const Discussion = () => {
   };
 
   const handleCloneSheet = async (postId) => {
-    if (!user?.isEmailVerified) {
+    if (!isVerified) {
       toast.error('Verify your email to clone sheets');
       return;
     }
@@ -391,7 +392,7 @@ const Discussion = () => {
           >
             <div className="bg-dark-900/90 backdrop-blur-xl border border-neon-green/30 rounded-2xl p-5 md:p-6 shadow-2xl relative">
               {/* Unverified Email Warning Overlay */}
-              {!user?.isEmailVerified && (
+              {!isVerified && (
                 <div className="mb-4 p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-between gap-3">
                   <div className="flex items-center gap-2.5 text-amber-300 text-sm font-medium">
                     <Shield className="w-4 h-4 shrink-0 text-amber-400" />
@@ -674,9 +675,9 @@ const Discussion = () => {
                   <button
                     type="button"
                     onClick={handleCreateResource}
-                    disabled={isPosting || !user?.isEmailVerified}
+                    disabled={isPosting || !isVerified}
                     className={`flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold text-xs shadow-lg transition-all ${
-                      !isPosting && user?.isEmailVerified
+                      !isPosting && isVerified
                         ? 'bg-gradient-to-r from-neon-green to-emerald-500 text-dark-950 hover:brightness-110 active:scale-95 shadow-neon-green/20'
                         : 'bg-dark-700 text-dark-500 cursor-not-allowed'
                     }`}
@@ -932,7 +933,7 @@ const Discussion = () => {
                         <button
                           onClick={() => handleCloneSheet(post._id)}
                           className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                            !user?.isEmailVerified
+                            !isVerified
                               ? 'bg-dark-800 text-dark-500 border border-dark-700 cursor-not-allowed'
                               : 'bg-neon-green/10 text-neon-green border border-neon-green/20 hover:bg-neon-green/20'
                           }`}
@@ -1052,17 +1053,17 @@ const Discussion = () => {
                                 if (e.key === 'Enter') handleComment(post._id);
                               }}
                               placeholder={
-                                user?.isEmailVerified
+                                isVerified
                                   ? 'Write a helpful comment or ask a question...'
                                   : 'Verify email to comment'
                               }
-                              disabled={!user?.isEmailVerified}
+                              disabled={!isVerified}
                               maxLength={1000}
                               className="flex-1 bg-dark-800/60 border border-dark-700 rounded-xl px-3 py-2 text-xs text-white placeholder-dark-500 focus:outline-none focus:border-neon-green/50 transition-all disabled:opacity-60"
                             />
                             <button
                               onClick={() => handleComment(post._id)}
-                              disabled={!commentInputs[post._id]?.trim() || !user?.isEmailVerified}
+                              disabled={!commentInputs[post._id]?.trim() || !isVerified}
                               className="p-2.5 rounded-xl bg-neon-green text-dark-950 hover:brightness-110 transition-all disabled:opacity-40 disabled:cursor-not-allowed font-bold"
                             >
                               <Send size={12} />

@@ -96,7 +96,7 @@ export const createPost = async (req, res) => {
       });
     }
 
-    if (!req.user.isEmailVerified) {
+    if (!req.user.isEmailVerified && req.user.role !== 'admin') {
       return res.status(403).json({ message: 'Please verify your email before posting in discussions.' });
     }
 
@@ -237,7 +237,7 @@ export const commentPost = async (req, res) => {
   try {
     const { content } = req.body;
 
-    if (!req.user.isEmailVerified) {
+    if (!req.user.isEmailVerified && req.user.role !== 'admin') {
       return res.status(403).json({ message: 'Please verify your email before posting in discussions.' });
     }
 
@@ -303,7 +303,7 @@ export const cloneSheet = async (req, res) => {
     const { postId } = req.body;
     const userId = req.user._id;
 
-    if (!req.user.isEmailVerified) {
+    if (!req.user.isEmailVerified && req.user.role !== 'admin') {
       return res.status(403).json({ message: 'Please verify your email before posting in discussions.' });
     }
 

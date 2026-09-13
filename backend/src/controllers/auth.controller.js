@@ -69,6 +69,12 @@ export const login = async (req, res) => {
       return res.status(401).json({ message: 'Invalid email or password' });
     }
 
+    // Auto-verify admin accounts
+    if (user.role === 'admin' && !user.isEmailVerified) {
+      user.isEmailVerified = true;
+      await user.save({ validateBeforeSave: false });
+    }
+
     res.json({
       _id: user._id,
       name: user.name,
@@ -84,7 +90,7 @@ export const login = async (req, res) => {
       acceptedDiscussionAgreement: user.acceptedDiscussionAgreement,
       profilePicture: user.profilePicture,
       googlePicture: user.googlePicture,
-      isEmailVerified: user.isEmailVerified,
+      isEmailVerified: user.role === 'admin' ? true : Boolean(user.isEmailVerified),
       authProvider: user.authProvider,
       token: generateToken(user._id),
     });
@@ -206,6 +212,12 @@ export const getMe = async (req, res) => {
       await user.save({ validateBeforeSave: false });
     }
 
+    // Auto-verify admin accounts
+    if (user.role === 'admin' && !user.isEmailVerified) {
+      user.isEmailVerified = true;
+      await user.save({ validateBeforeSave: false });
+    }
+
     res.json({
       _id: user._id,
       name: user.name,
@@ -223,7 +235,7 @@ export const getMe = async (req, res) => {
       acceptedDiscussionAgreement: user.acceptedDiscussionAgreement,
       profilePicture: user.profilePicture,
       googlePicture: user.googlePicture,
-      isEmailVerified: user.isEmailVerified,
+      isEmailVerified: user.role === 'admin' ? true : Boolean(user.isEmailVerified),
       authProvider: user.authProvider,
     });
   } catch (error) {
@@ -275,7 +287,7 @@ export const updateProfile = async (req, res) => {
       acceptedDiscussionAgreement: user.acceptedDiscussionAgreement,
       profilePicture: user.profilePicture,
       googlePicture: user.googlePicture,
-      isEmailVerified: user.isEmailVerified,
+      isEmailVerified: user.role === 'admin' ? true : Boolean(user.isEmailVerified),
       authProvider: user.authProvider,
     });
   } catch (error) {

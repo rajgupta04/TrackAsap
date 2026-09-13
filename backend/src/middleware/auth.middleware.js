@@ -19,6 +19,11 @@ export const protect = async (req, res, next) => {
         return res.status(401).json({ message: 'User not found' });
       }
 
+      // Admin accounts are always email verified
+      if (req.user.role === 'admin') {
+        req.user.isEmailVerified = true;
+      }
+
       if (req.user.isBanned) {
         AnalyticsTracker.trackSecurity('ACCOUNT_LOCK', {
           user: req.user._id,

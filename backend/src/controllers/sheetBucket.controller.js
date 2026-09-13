@@ -77,7 +77,7 @@ export const importBucketToSheet = async (req, res) => {
     const { bucketId, sheetId } = req.body;
     const userId = req.user._id;
 
-    if (!req.user.isEmailVerified) {
+    if (!req.user.isEmailVerified && req.user.role !== 'admin') {
       return res.status(403).json({ message: 'Please verify your email to import sheets.' });
     }
 
@@ -158,7 +158,7 @@ export const createSheetFromBucket = async (req, res) => {
     const { bucketId, sheetName } = req.body;
     const userId = req.user._id;
 
-    if (!req.user.isEmailVerified) {
+    if (!req.user.isEmailVerified && req.user.role !== 'admin') {
       return res.status(403).json({ message: 'Please verify your email to import sheets.' });
     }
 
