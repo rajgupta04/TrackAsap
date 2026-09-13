@@ -69,8 +69,8 @@ const discussionService = {
   },
 
   // Clone shared sheet
-  cloneSheet: async (postId) => {
-    const response = await api.post('/discussions/clone-sheet', { postId });
+  cloneSheet: async (postId, options = {}) => {
+    const response = await api.post('/discussions/clone-sheet', { postId, ...options });
     return response.data;
   },
 

@@ -29,6 +29,8 @@ import {
   Move,
   FolderInput,
   Sliders,
+  GitFork,
+  ShieldCheck,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import CodeViewer from '../CodeViewer';
@@ -401,9 +403,74 @@ const SheetProblemsView = ({ sheet, onStatsUpdate, onDelete }) => {
       {/* Header & Quick Actions */}
       <div className="space-y-4 min-w-0 max-w-full">
         <div className="min-w-0">
-          <h1 className="text-xl sm:text-2xl font-bold text-white break-words">{sheet.name}</h1>
+          <div className="flex items-center gap-2.5 flex-wrap">
+            <h1 className="text-xl sm:text-2xl font-bold text-white break-words">{sheet.name}</h1>
+            {(sheet.isCloned || sheet.clonedFrom?.authorName) && (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 shadow-[0_0_12px_rgba(16,185,129,0.15)]">
+                <GitFork className="w-3.5 h-3.5" />
+                <span>Cloned Sheet</span>
+              </span>
+            )}
+          </div>
           <p className="text-gray-400 text-xs sm:text-sm mt-0.5 break-words">{sheet.description}</p>
         </div>
+
+        {/* Non-removable Cloned Attribution & Credits Banner */}
+        {(sheet.isCloned || sheet.clonedFrom?.authorName) && (
+          <div className="p-3.5 rounded-xl bg-dark-900/90 border border-emerald-500/25 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-[0_0_15px_rgba(16,185,129,0.06)]">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-9 h-9 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0">
+                <GitFork className="w-4 h-4" />
+              </div>
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-xs font-semibold text-gray-400">Original Creator:</span>
+                  <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                    {sheet.clonedFrom?.authorAvatar ? (
+                      <img
+                        src={sheet.clonedFrom.authorAvatar}
+                        alt=""
+                        className="w-4 h-4 rounded-full object-cover border border-white/20"
+                      />
+                    ) : (
+                      <span className="w-4 h-4 rounded-full bg-neon-green/20 text-neon-green text-[9px] font-bold flex items-center justify-center">
+                        {(sheet.clonedFrom?.authorName || 'C')[0].toUpperCase()}
+                      </span>
+                    )}
+                    <span className="text-neon-green font-medium">
+                      {sheet.clonedFrom?.authorName || 'Community Creator'}
+                    </span>
+                  </span>
+                  {sheet.clonedFrom?.originalSheetName && (
+                    <span className="text-[11px] text-gray-400">
+                      from sheet <span className="text-white font-medium">"{sheet.clonedFrom.originalSheetName}"</span>
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center gap-2 text-[10px] text-gray-500 mt-0.5 flex-wrap">
+                  <span className="flex items-center gap-1 text-emerald-400/90 font-medium">
+                    <ShieldCheck className="w-3 h-3" />
+                    Permanent Creator Attribution
+                  </span>
+                  {sheet.clonedFrom?.clonedAt && (
+                    <>
+                      <span>•</span>
+                      <span>Cloned on {new Date(sheet.clonedFrom.clonedAt).toLocaleDateString()}</span>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <a
+              href="/hub"
+              className="self-start sm:self-center inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium text-emerald-400 hover:text-emerald-300 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 transition-all shrink-0"
+            >
+              <span>View Hub</span>
+              <ExternalLink className="w-3 h-3" />
+            </a>
+          </div>
+        )}
 
         {/* Mobile App Tile Actions (Visible on small screens) */}
         <div className="grid grid-cols-2 gap-2 sm:hidden w-full min-w-0">

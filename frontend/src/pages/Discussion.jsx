@@ -32,7 +32,9 @@ import { useDiscussionStore } from '../store/discussionStore';
 import sheetService from '../services/sheetService';
 import { getAvatarSrc } from '../utils/avatar';
 import UserAgreementModal from '../components/discussion/UserAgreementModal';
+import CloneSheetModal from '../components/discussion/CloneSheetModal';
 import PdfFlipViewer from '../components/hub/PdfFlipViewer';
+import useSheetStore from '../store/sheetStore';
 import toast from 'react-hot-toast';
 
 const CATEGORIES = [
@@ -122,6 +124,7 @@ const Discussion = () => {
   // Modals & comments
   const [showAgreement, setShowAgreement] = useState(false);
   const [activePdfPreview, setActivePdfPreview] = useState(null);
+  const [postToClone, setPostToClone] = useState(null);
   const [expandedComments, setExpandedComments] = useState({});
   const [commentInputs, setCommentInputs] = useState({});
   const [searchInput, setSearchInput] = useState(searchQuery || '');
@@ -310,14 +313,21 @@ const Discussion = () => {
     }
   };
 
-  const handleCloneSheet = async (postId) => {
+  const handleCloneSheetClick = (post) => {
     if (!isVerified) {
       toast.error('Verify your email to clone sheets');
       return;
     }
-    const result = await cloneSheet(postId);
+    setPostToClone(post);
+  };
+
+  const handleConfirmClone = async (cloneData) => {
+    if (!postToClone) return;
+    const result = await cloneSheet(postToClone._id, cloneData);
     if (result.success) {
-      toast.success(`Sheet cloned with ${result.problemsCloned} problems! Check your Sheets tab.`);
+      toast.success(`Sheet "${cloneData.name}" cloned with ${result.problemsCloned} problems! Check your Sheets tab.`);
+      useSheetStore.getState().fetchSheets();
+      setPostToClone(null);
     } else {
       toast.error(result.error || 'Failed to clone sheet');
     }
@@ -963,7 +973,7 @@ const Discussion = () => {
                           </span>
                         </div>
                         <button
-                          onClick={() => handleCloneSheet(post._id)}
+                          onClick={() => handleCloneSheetClick(post)}
                           className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                             !isVerified
                               ? 'bg-dark-800 text-dark-500 border border-dark-700 cursor-not-allowed'
@@ -1131,6 +1141,16 @@ const Discussion = () => {
         onAccept={handleAcceptAgreement}
         onClose={() => setShowAgreement(false)}
       />
+
+      {/* Clone Practice Sheet Customization Modal */}
+      {postToClone && (
+        <CloneSheetModal
+          isOpen={Boolean(postToClone)}
+          post={postToClone}
+          onClose={() => setPostToClone(null)}
+          onClone={handleConfirmClone}
+        />
+      )}
 
       {/* Interactive 3D Page Flip PDF Previewer Modal */}
       {activePdfPreview && (

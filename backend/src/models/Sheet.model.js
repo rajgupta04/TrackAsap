@@ -88,6 +88,40 @@ const sheetSchema = new mongoose.Schema(
     targetDate: {
       type: Date,
     },
+    // Cloned sheet attribution & non-removable credits
+    isCloned: {
+      type: Boolean,
+      default: false,
+    },
+    clonedFrom: {
+      user: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+      },
+      authorName: {
+        type: String,
+        default: '',
+      },
+      authorAvatar: {
+        type: String,
+        default: '',
+      },
+      originalSheet: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Sheet',
+      },
+      originalSheetName: {
+        type: String,
+        default: '',
+      },
+      postId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'DiscussionPost',
+      },
+      clonedAt: {
+        type: Date,
+      },
+    },
   },
   {
     timestamps: true,

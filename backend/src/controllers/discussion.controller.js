@@ -300,51 +300,85 @@ export const deletePost = async (req, res) => {
 // @access  Private
 export const cloneSheet = async (req, res) => {
   try {
-    const { postId } = req.body;
+    const {
+      postId,
+      name,
+      includeProgress = false,
+      includeNotes = false,
+      includeCode = false,
+    } = req.body;
     const userId = req.user._id;
 
     if (!req.user.isEmailVerified && req.user.role !== 'admin') {
       return res.status(403).json({ message: 'Please verify your email before posting in discussions.' });
     }
 
-    const post = await DiscussionPost.findById(postId);
+    const post = await DiscussionPost.findById(postId).populate('user', 'name profilePicture googlePicture');
     if (!post || post.isDeleted || !post.sharedSheet) {
       return res.status(404).json({ message: 'Post or shared sheet not found' });
     }
 
     // Load the original sheet
-    const originalSheet = await Sheet.findById(post.sharedSheet);
+    const originalSheet = await Sheet.findById(post.sharedSheet).populate('user', 'name profilePicture googlePicture');
     if (!originalSheet) {
       return res.status(404).json({ message: 'Original sheet no longer exists' });
     }
 
-    // Create a cloned sheet for the current user
+    // Determine original creator attribution & credits
+    const authorUser = originalSheet.user || post.user;
+    const authorName = authorUser?.name || post.user?.name || post.sharedSheetSnapshot?.authorName || 'Community Member';
+    const authorAvatar = authorUser?.profilePicture || authorUser?.googlePicture || post.user?.profilePicture || post.user?.googlePicture || '';
+
+    // Load original problems
+    const originalProblems = await SheetProblem.find({ sheet: originalSheet._id });
+
+    const shouldIncludeProgress = Boolean(includeProgress);
+    const shouldIncludeNotes = Boolean(includeNotes);
+    const shouldIncludeCode = Boolean(includeCode);
+
+    const solvedCount = shouldIncludeProgress
+      ? originalProblems.filter((p) => p.status === 'solved').length
+      : 0;
+
+    // Create a cloned sheet for the current user with non-removable credits
     const clonedSheet = await Sheet.create({
       user: userId,
-      name: `${originalSheet.name} (Cloned)`,
+      name: name?.trim() || `${originalSheet.name} (Cloned)`,
       description: originalSheet.description,
       category: originalSheet.category,
-      color: originalSheet.color,
-      icon: originalSheet.icon,
-      totalProblems: originalSheet.totalProblems,
-      solvedProblems: 0,
+      color: originalSheet.color || '#39FF14',
+      icon: originalSheet.icon || 'code',
+      totalProblems: originalProblems.length || originalSheet.totalProblems || 0,
+      solvedProblems: solvedCount,
+      isActive: true,
+      isCloned: true,
+      clonedFrom: {
+        user: authorUser?._id || null,
+        authorName,
+        authorAvatar,
+        originalSheet: originalSheet._id,
+        originalSheetName: originalSheet.name,
+        postId: post._id,
+        clonedAt: new Date(),
+      },
       topics: (originalSheet.topics || []).map((t) => ({
         name: t.name,
         totalProblems: t.totalProblems,
-        solvedProblems: 0,
+        solvedProblems: shouldIncludeProgress
+          ? originalProblems.filter((p) => p.topic === t.name && p.status === 'solved').length
+          : 0,
         order: t.order,
       })),
     });
 
     // Clone all SheetProblems
-    const originalProblems = await SheetProblem.find({ sheet: originalSheet._id });
-
     if (originalProblems.length > 0) {
       const clonedProblems = originalProblems.map((p) => ({
         user: userId,
         sheet: clonedSheet._id,
         title: p.title,
         topic: p.topic,
+        problemNumber: p.problemNumber,
         difficulty: p.difficulty,
         problemLink: p.problemLink,
         articleLink: p.articleLink,
@@ -353,7 +387,17 @@ export const cloneSheet = async (req, res) => {
         platform: p.platform,
         tags: p.tags,
         order: p.order,
-        status: 'pending',
+        status: shouldIncludeProgress ? p.status || 'pending' : 'pending',
+        notes: shouldIncludeNotes ? p.notes || '' : '',
+        code: shouldIncludeCode ? p.code || '' : '',
+        language: shouldIncludeCode ? p.language || 'cpp' : 'cpp',
+        solutions: shouldIncludeCode && Array.isArray(p.solutions)
+          ? p.solutions.map((s) => ({
+              language: s.language,
+              code: s.code,
+              label: s.label,
+            }))
+          : [],
       }));
 
       await SheetProblem.insertMany(clonedProblems);

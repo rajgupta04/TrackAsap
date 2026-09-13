@@ -137,9 +137,9 @@ export const useDiscussionStore = create((set, get) => ({
     }
   },
 
-  cloneSheet: async (postId) => {
+  cloneSheet: async (postId, options = {}) => {
     try {
-      const result = await discussionService.cloneSheet(postId);
+      const result = await discussionService.cloneSheet(postId, options);
       return { success: true, ...result };
     } catch (error) {
       return { success: false, error: error.response?.data?.message || 'Failed to clone sheet' };

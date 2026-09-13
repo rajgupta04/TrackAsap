@@ -156,7 +156,7 @@ export const createSheet = async (req, res) => {
 export const getSheets = async (req, res) => {
   try {
     const userObjectId = new mongoose.Types.ObjectId(req.user._id);
-    const sheets = await Sheet.find({ user: req.user._id, isActive: true })
+    const sheets = await Sheet.find({ user: req.user._id, isActive: { $ne: false } })
       .sort({ createdAt: -1 });
 
     // Aggregate real-time stats from SheetProblem to guarantee 100% accuracy
@@ -254,9 +254,15 @@ export const getSheet = async (req, res) => {
 // @access  Private
 export const updateSheet = async (req, res) => {
   try {
+    // Non-removable attribution protection: cannot remove or modify cloned credits
+    const updates = { ...req.body };
+    delete updates.isCloned;
+    delete updates.clonedFrom;
+    delete updates.user;
+
     const sheet = await Sheet.findOneAndUpdate(
       { _id: req.params.id, user: req.user._id },
-      req.body,
+      updates,
       { new: true, runValidators: true }
     );
 
