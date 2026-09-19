@@ -13,6 +13,7 @@ import {
   forgotPassword,
   resetPassword,
 } from '../controllers/auth.controller.js';
+import { migrateGuestData } from '../controllers/migration.controller.js';
 import upload from '../middleware/upload.js';
 
 const router = express.Router();
@@ -22,8 +23,8 @@ const registerValidation = [
   body('name').notEmpty().withMessage('Name is required'),
   body('email').isEmail().withMessage('Please enter a valid email'),
   body('password')
-    .isLength({ min: 6 })
-    .withMessage('Password must be at least 6 characters'),
+    .isLength({ min: 8 })
+    .withMessage('Password must be at least 8 characters'),
 ];
 
 const loginValidation = [
@@ -41,6 +42,7 @@ router.post('/login', loginValidation, validate, login);
 router.post('/google', googleValidation, validate, googleLogin);
 router.post('/forgot-password', forgotPassword);
 router.post('/reset-password/:token', resetPassword);
+router.post('/migrate-guest-data', protect, migrateGuestData);
 router.get('/me', protect, getMe);
 router.put('/profile', protect, updateProfile);
 router.put('/profile/picture', protect, upload.single('image'), uploadProfilePicture);

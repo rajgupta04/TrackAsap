@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import sheetService from '../services/sheetService';
 import localforage from 'localforage';
+import { useGuestStore } from './guestStore';
 
 const useSheetStore = create((set, get) => ({
   sheets: [],
@@ -12,6 +13,21 @@ const useSheetStore = create((set, get) => ({
 
   // Fetch all sheets (silent = true for background refresh without loading state)
   fetchSheets: async (silent = false) => {
+    const hasToken = !!localStorage.getItem('token');
+
+    // Guest mode: load sheets from guestStore
+    if (!hasToken) {
+      if (!silent) set({ loading: true, error: null });
+      try {
+        const sheets = await useGuestStore.getState().loadGuestSheets();
+        set({ sheets, loading: false });
+        return sheets;
+      } catch (err) {
+        if (!silent) set({ error: 'Failed to load local sheets', loading: false });
+        return [];
+      }
+    }
+
     try {
       const cachedSheets = await localforage.getItem('all_sheets');
       if (cachedSheets) {
@@ -34,6 +50,29 @@ const useSheetStore = create((set, get) => ({
 
   // Fetch single sheet with problems (silent = true for background refresh)
   fetchSheet: async (id, silent = false) => {
+    const hasToken = !!localStorage.getItem('token');
+
+    // Guest sheet or unauthenticated
+    if (!hasToken || String(id).startsWith('guest_')) {
+      if (!silent) set({ loading: true, error: null });
+      try {
+        let guestSheets = useGuestStore.getState().guestSheets;
+        let sheet = guestSheets.find(s => s._id === id);
+        if (!sheet) {
+          guestSheets = await useGuestStore.getState().loadGuestSheets();
+          sheet = guestSheets.find(s => s._id === id);
+        }
+        const cachedData = await localforage.getItem(`sheetProblems_${id}`);
+        const problems = cachedData?.problems || {};
+        if (sheet) {
+          set({ currentSheet: sheet, sheetProblems: problems, loading: false });
+          return { sheet, problems };
+        }
+      } catch (err) {
+        console.warn('Failed to load guest sheet', err);
+      }
+    }
+
     try {
       const cachedData = await localforage.getItem(`sheet_${id}`);
       if (cachedData) {
@@ -58,6 +97,23 @@ const useSheetStore = create((set, get) => ({
 
   // Create sheet
   createSheet: async (data) => {
+    const hasToken = !!localStorage.getItem('token');
+
+    if (!hasToken) {
+      set({ loading: true, error: null });
+      try {
+        const sheet = await useGuestStore.getState().createGuestSheet(data);
+        set((state) => ({
+          sheets: [sheet, ...state.sheets],
+          loading: false,
+        }));
+        return sheet;
+      } catch (err) {
+        set({ error: err.message || 'Failed to create guest sheet', loading: false });
+        throw err;
+      }
+    }
+
     set({ loading: true, error: null });
     try {
       const sheet = await sheetService.create(data);
@@ -74,6 +130,18 @@ const useSheetStore = create((set, get) => ({
 
   // Update sheet
   updateSheet: async (id, data) => {
+    const hasToken = !!localStorage.getItem('token');
+
+    if (!hasToken || String(id).startsWith('guest_')) {
+      await useGuestStore.getState().updateGuestSheet(id, data);
+      set((state) => ({
+        sheets: state.sheets.map((s) => (s._id === id ? { ...s, ...data } : s)),
+        currentSheet: state.currentSheet?._id === id ? { ...state.currentSheet, ...data } : state.currentSheet,
+        loading: false,
+      }));
+      return { _id: id, ...data };
+    }
+
     set({ loading: true, error: null });
     try {
       const sheet = await sheetService.update(id, data);
@@ -91,6 +159,17 @@ const useSheetStore = create((set, get) => ({
 
   // Delete sheet
   deleteSheet: async (id) => {
+    const hasToken = !!localStorage.getItem('token');
+
+    if (!hasToken || String(id).startsWith('guest_')) {
+      await useGuestStore.getState().deleteGuestSheet(id);
+      set((state) => ({
+        sheets: state.sheets.filter((s) => s._id !== id),
+        loading: false,
+      }));
+      return;
+    }
+
     set({ loading: true, error: null });
     try {
       await sheetService.delete(id);

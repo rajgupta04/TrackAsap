@@ -113,6 +113,44 @@ const adminService = {
     const response = await api.get('/admin/telemetry/top-clicks');
     return response.data;
   },
+
+  // Wall of Love / Testimonials Management
+  getAdminTestimonials: async () => {
+    const response = await api.get('/testimonials/admin');
+    return response.data;
+  },
+
+  createTestimonial: async (data) => {
+    const response = await api.post('/testimonials', data);
+    return response.data;
+  },
+
+  updateTestimonial: async (id, data) => {
+    const response = await api.put(`/testimonials/${id}`, data);
+    return response.data;
+  },
+
+  deleteTestimonial: async (id) => {
+    const response = await api.delete(`/testimonials/${id}`);
+    return response.data;
+  },
+
+  toggleTestimonial: async (id) => {
+    const response = await api.put(`/testimonials/${id}/toggle`);
+    return response.data;
+  },
+
+  seedTestimonials: async () => {
+    const response = await api.post('/testimonials/seed');
+    return response.data;
+  },
+
+  uploadTestimonialAvatar: async (formData) => {
+    const response = await api.post('/testimonials/upload-avatar', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data;
+  },
 };
 
 export default adminService;

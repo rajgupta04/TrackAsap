@@ -93,7 +93,7 @@ const PublicRoute = ({ children }) => {
 function App() {
   const { currentTheme } = useThemeStore();
   const { fetchFeatures } = useFeatureStore();
-  const { checkAuth, token } = useAuthStore();
+  const { checkAuth, token, isAuthenticated } = useAuthStore();
   const location = useLocation();
 
   useEffect(() => {
@@ -125,106 +125,189 @@ function App() {
     <>
       <ThemeModal />
       <Routes>
-      {/* Fully public — no auth required */}
-      <Route path="/privacy-policy" element={<PrivacyPolicy />} />
-      <Route path="/verify-email/:token" element={<EmailVerified />} />
-      <Route path="/reset-password/:token" element={<ResetPassword />} />
+        {/* Fully public — no auth required */}
+        <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+        <Route path="/verify-email/:token" element={<EmailVerified />} />
+        <Route path="/reset-password/:token" element={<ResetPassword />} />
 
-      {/* Public Routes */}
-      <Route
-        path="/login"
-        element={
-          <PublicRoute>
-            <Login />
-          </PublicRoute>
-        }
-      />
-      <Route
-        path="/register"
-        element={
-          <PublicRoute>
-            <Register />
-          </PublicRoute>
-        }
-      />
-      <Route
-        path="/home"
-        element={
-          <PublicRoute>
-            <LandingPage />
-          </PublicRoute>
-        }
-      />
-
-      {/* Public Layout Routes (Visible without login) */}
-      <Route path="/" element={<Layout />}>
-        <Route path="arena" element={<ProblemArena />} />
-      </Route>
-
-      {/* Protected Routes */}
-      <Route
-        path="/"
-        element={
-          <ProtectedRoute>
-            <Layout />
-          </ProtectedRoute>
-        }
-      >
-        <Route index element={<Navigate to="/dashboard" replace />} />
-        <Route path="dashboard" element={<Dashboard />} />
-        <Route path="daily-tracker" element={<DailyTracker />} />
-        <Route path="analytics" element={<Analytics />} />
-        <Route path="physique" element={<PhysiqueTracker />} />
-        <Route path="profile" element={<Profile />} />
-        <Route path="sheets" element={<Sheets />} />
+        {/* Public Landing Page & Auth Routes */}
         <Route
-          path="problems"
+          path="/"
           element={
-            <FeatureRoute feature="problems">
-              <Problems />
-            </FeatureRoute>
+            <PublicRoute>
+              <LandingPage />
+            </PublicRoute>
           }
         />
-        <Route path="playground" element={<Playground />} />
-        <Route path="hub" element={<Discussion />} />
-        <Route path="discussion" element={<Discussion />} />
-        <Route path="discussions" element={<Discussion />} />
-        <Route path="roadmap" element={<Roadmap />} />
-        <Route path="interview" element={<Interview />} />
-        <Route path="interview/results/:sessionId" element={<InterviewResults />} />
-        <Route path="studio" element={<ProblemSetterStudio />} />
-        <Route path="admin" element={<Admin />} />
+        <Route path="/home" element={<Navigate to="/" replace />} />
         <Route
-          path="leaderboard"
+          path="/login"
           element={
-            <FeatureRoute feature="leaderboard">
-              <Leaderboard />
-            </FeatureRoute>
+            <PublicRoute>
+              <Login />
+            </PublicRoute>
           }
         />
-      </Route>
+        <Route
+          path="/register"
+          element={
+            <PublicRoute>
+              <Register />
+            </PublicRoute>
+          }
+        />
 
-      {/* Standalone Full-screen Problem Solving Workspace */}
-      <Route
-        path="/solve/:slug"
-        element={
-          <ProblemSolve />
-        }
-      />
+        {/* Main App Layout */}
+        <Route element={<Layout />}>
+          {/* Guest or Member Accessible Routes */}
+          <Route path="/arena" element={<ProblemArena />} />
+          <Route path="/roadmap" element={<Roadmap />} />
+          <Route path="/sheets" element={<Sheets />} />
+          <Route
+            path="/leaderboard"
+            element={
+              <FeatureRoute feature="leaderboard">
+                <Leaderboard />
+              </FeatureRoute>
+            }
+          />
 
-      {/* Standalone Immersive AI Live Voice Interview Room */}
-      <Route
-        path="/interview/room/:sessionId"
-        element={
-          <ProtectedRoute>
-            <InterviewRoom />
-          </ProtectedRoute>
-        }
-      />
+          {/* Authenticated Member Only Routes */}
+          <Route
+            path="/dashboard"
+            element={
+              <ProtectedRoute>
+                <Dashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/daily-tracker"
+            element={
+              <ProtectedRoute>
+                <DailyTracker />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/analytics"
+            element={
+              <ProtectedRoute>
+                <Analytics />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/physique"
+            element={
+              <ProtectedRoute>
+                <PhysiqueTracker />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/profile"
+            element={
+              <ProtectedRoute>
+                <Profile />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/problems"
+            element={
+              <ProtectedRoute>
+                <FeatureRoute feature="problems">
+                  <Problems />
+                </FeatureRoute>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/playground"
+            element={
+              <ProtectedRoute>
+                <Playground />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/hub"
+            element={
+              <ProtectedRoute>
+                <Discussion />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/discussion"
+            element={
+              <ProtectedRoute>
+                <Discussion />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/discussions"
+            element={
+              <ProtectedRoute>
+                <Discussion />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/interview"
+            element={
+              <ProtectedRoute>
+                <Interview />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/interview/results/:sessionId"
+            element={
+              <ProtectedRoute>
+                <InterviewResults />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/studio"
+            element={
+              <ProtectedRoute>
+                <ProblemSetterStudio />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin"
+            element={
+              <ProtectedRoute>
+                <Admin />
+              </ProtectedRoute>
+            }
+          />
+        </Route>
 
-      {/* Catch all */}
-      <Route path="*" element={<Navigate to="/dashboard" replace />} />
-    </Routes>
+        {/* Standalone Full-screen Problem Solving Workspace */}
+        <Route path="/solve/:slug" element={<ProblemSolve />} />
+
+        {/* Standalone Immersive AI Live Voice Interview Room */}
+        <Route
+          path="/interview/room/:sessionId"
+          element={
+            <ProtectedRoute>
+              <InterviewRoom />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Catch all */}
+        <Route
+          path="*"
+          element={<Navigate to={isAuthenticated ? '/dashboard' : '/'} replace />}
+        />
+      </Routes>
     </>
   );
 }

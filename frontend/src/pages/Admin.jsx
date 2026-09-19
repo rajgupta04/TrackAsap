@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Shield,
+  Heart,
   Users,
   Package,
   Search,
@@ -55,6 +56,7 @@ import judgeService from '../services/judgeService';
 import toast from 'react-hot-toast';
 import CodeViewer from '../components/CodeViewer';
 import CodeEditor from '../components/editor/CodeEditor';
+import AdminTestimonialsTab from '../components/admin/AdminTestimonialsTab';
 
 const CSV_TEMPLATE_HEADER = 'Topic,Title,Difficulty,Platform,Problem Link,Article Link,YouTube,Tags';
 const CSV_TEMPLATE_ROWS = [
@@ -917,6 +919,7 @@ const Admin = () => {
           },
           { id: 'roadmaps', label: 'Roadmap Manager', icon: MapIcon },
           { id: 'buckets', label: 'Bucket Manager', icon: Package },
+          { id: 'testimonials', label: 'Wall of Love & Reviews', icon: Heart },
           { id: 'analytics', label: 'System Analytics', icon: Activity },
           { id: 'users', label: 'User Management', icon: Users },
           { id: 'compiler', label: 'Compiler & Rate Limiter', icon: Cpu },
@@ -4320,6 +4323,16 @@ const Admin = () => {
           </div>
         )}
       </AnimatePresence>
+
+      {/* Wall of Love & Reviews Manager Tab */}
+      {activeTab === 'testimonials' && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+        >
+          <AdminTestimonialsTab />
+        </motion.div>
+      )}
 
       {/* Notes Modal */}
       <AnimatePresence>

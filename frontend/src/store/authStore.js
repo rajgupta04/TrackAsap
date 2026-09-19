@@ -20,6 +20,27 @@ const getInitialUser = () => {
   }
 };
 
+const triggerGuestDataMigration = async () => {
+  try {
+    const { useGuestStore } = await import('./guestStore');
+    const guestStore = useGuestStore.getState();
+    const payload = await guestStore.getMigrationPayload();
+    if (payload && payload.length > 0) {
+      const api = (await import('../lib/api')).default;
+      const res = await api.post('/auth/migrate-guest-data', { sheets: payload });
+      if (res?.data?.migratedSheets > 0) {
+        await guestStore.clearGuestData();
+        const toast = (await import('react-hot-toast')).default;
+        toast.success(`🎉 Saved ${res.data.migratedSheets} local sheet(s) to your account!`, { duration: 5000 });
+        const useSheetStore = (await import('./sheetStore')).default;
+        useSheetStore.getState().fetchSheets(true);
+      }
+    }
+  } catch (err) {
+    console.warn('Guest migration failed silently:', err);
+  }
+};
+
 export const useAuthStore = create((set, get) => ({
   user: getInitialUser(),
   token: localStorage.getItem('token') || null,
@@ -41,6 +62,7 @@ export const useAuthStore = create((set, get) => ({
         isAuthenticated: true,
         isLoading: false,
       });
+      triggerGuestDataMigration();
       return { success: true };
     } catch (error) {
       const message = error.response?.data?.message || 'Login failed';
@@ -62,6 +84,7 @@ export const useAuthStore = create((set, get) => ({
         isAuthenticated: true,
         isLoading: false,
       });
+      triggerGuestDataMigration();
       return { success: true };
     } catch (error) {
       const message = error.response?.data?.message || 'Google sign-in failed';
@@ -83,6 +106,7 @@ export const useAuthStore = create((set, get) => ({
         isAuthenticated: true,
         isLoading: false,
       });
+      triggerGuestDataMigration();
       return { success: true };
     } catch (error) {
       const message = error.response?.data?.message || 'Registration failed';

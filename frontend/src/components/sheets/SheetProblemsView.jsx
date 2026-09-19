@@ -41,6 +41,7 @@ import githubService from '../../services/githubService';
 import aiService from '../../services/aiService';
 import api from '../../lib/api';
 import { useAuthStore } from '../../store/authStore';
+import { useGuestStore } from '../../store/guestStore';
 import localforage from 'localforage';
 
 const DIFFICULTY_COLORS = {
@@ -56,6 +57,7 @@ const STATUS_ICONS = {
 };
 
 const SheetProblemsView = ({ sheet, onStatsUpdate, onDelete }) => {
+  const { isAuthenticated } = useAuthStore();
   const [problems, setProblems] = useState({});
   const [rawProblems, setRawProblems] = useState([]);
   const [stats, setStats] = useState({ total: 0, solved: 0, revision: 0, pending: 0 });
@@ -102,6 +104,8 @@ const SheetProblemsView = ({ sheet, onStatsUpdate, onDelete }) => {
   }, [sheet?._id]);
 
   const fetchProblems = async (silent = false) => {
+    const isGuestSheet = !isAuthenticated || String(sheet?._id).startsWith('guest_');
+
     try {
       try {
         const cachedData = await localforage.getItem(`sheetProblems_${sheet._id}`);
@@ -111,9 +115,28 @@ const SheetProblemsView = ({ sheet, onStatsUpdate, onDelete }) => {
           setStats(cachedData.stats);
           if (!silent) setLoading(false);
           silent = true; // prevent loading spinner for network fetch
+
+          // For guest sheets, cachedData in localforage is the primary database!
+          if (isGuestSheet) {
+            const currentExpanded = expandedTopicsRef.current;
+            if (Object.keys(currentExpanded).length === 0 && cachedData.problems) {
+              const expanded = {};
+              Object.keys(cachedData.problems).forEach(topic => {
+                expanded[topic] = true;
+              });
+              expandedTopicsRef.current = expanded;
+              setExpandedTopics(expanded);
+            }
+            return;
+          }
         }
       } catch (err) {
         console.warn('Failed to read problems from cache', err);
+      }
+
+      if (isGuestSheet) {
+        if (!silent) setLoading(false);
+        return;
       }
 
       if (!silent) setLoading(true);
@@ -156,6 +179,7 @@ const SheetProblemsView = ({ sheet, onStatsUpdate, onDelete }) => {
   const handleStatusChange = async (problemId, currentStatus) => {
     const statusCycle = { pending: 'solved', solved: 'revision', revision: 'pending' };
     const newStatus = statusCycle[currentStatus];
+    const isGuestSheet = !isAuthenticated || String(sheet?._id).startsWith('guest_');
 
     // Optimistic update - update UI immediately
     setProblems(prevProblems => {
@@ -182,6 +206,16 @@ const SheetProblemsView = ({ sheet, onStatsUpdate, onDelete }) => {
 
     if (newStatus === 'solved') {
       toast.success('Problem marked as solved! 🎉');
+    }
+
+    if (isGuestSheet) {
+      try {
+        await useGuestStore.getState().updateGuestProblemStatus(sheet._id, problemId, newStatus);
+        onStatsUpdate?.();
+      } catch (err) {
+        console.warn('Failed to update guest problem status', err);
+      }
+      return;
     }
 
     try {
@@ -257,6 +291,30 @@ const SheetProblemsView = ({ sheet, onStatsUpdate, onDelete }) => {
   };
 
   const handleSaveNotes = async (problemId, notes) => {
+    const isGuestSheet = !isAuthenticated || String(sheet?._id).startsWith('guest_');
+    if (isGuestSheet) {
+      try {
+        const cacheKey = `sheetProblems_${sheet._id}`;
+        const cached = await localforage.getItem(cacheKey);
+        if (cached) {
+          const raw = cached.rawProblems.map(p => p._id === problemId ? { ...p, notes } : p);
+          const grouped = {};
+          raw.forEach(p => {
+            if (!grouped[p.topic]) grouped[p.topic] = [];
+            grouped[p.topic].push(p);
+          });
+          await localforage.setItem(cacheKey, { ...cached, rawProblems: raw, problems: grouped });
+          await fetchProblems(true);
+          toast.success('Notes saved locally');
+          setShowNotesModal(false);
+          setSelectedProblemForNotes(null);
+          return;
+        }
+      } catch (err) {
+        console.warn('Failed to save guest notes', err);
+      }
+    }
+
     try {
       await sheetProblemService.updateProblem(problemId, { notes });
       toast.success('Notes saved');
@@ -274,6 +332,30 @@ const SheetProblemsView = ({ sheet, onStatsUpdate, onDelete }) => {
   };
 
   const handleSaveCode = async (problemId, code, language, solutions = []) => {
+    const isGuestSheet = !isAuthenticated || String(sheet?._id).startsWith('guest_');
+    if (isGuestSheet) {
+      try {
+        const cacheKey = `sheetProblems_${sheet._id}`;
+        const cached = await localforage.getItem(cacheKey);
+        if (cached) {
+          const raw = cached.rawProblems.map(p => p._id === problemId ? { ...p, code, language, solutions } : p);
+          const grouped = {};
+          raw.forEach(p => {
+            if (!grouped[p.topic]) grouped[p.topic] = [];
+            grouped[p.topic].push(p);
+          });
+          await localforage.setItem(cacheKey, { ...cached, rawProblems: raw, problems: grouped });
+          await fetchProblems(true);
+          toast.success('Code saved locally! 🎉');
+          setShowCodeModal(false);
+          setSelectedProblemForCode(null);
+          return;
+        }
+      } catch (err) {
+        console.warn('Failed to save guest code', err);
+      }
+    }
+
     try {
       await sheetProblemService.updateProblem(problemId, { code, language, solutions });
       toast.success('Code saved! 🎉');
@@ -483,7 +565,13 @@ const SheetProblemsView = ({ sheet, onStatsUpdate, onDelete }) => {
           </button>
 
           <button
-            onClick={() => setShowImportModal(true)}
+            onClick={() => {
+              if (!isAuthenticated) {
+                toast('Sign up to import spreadsheets into cloud sheets!', { icon: '🔒' });
+                return;
+              }
+              setShowImportModal(true);
+            }}
             className="flex items-center justify-center gap-1.5 py-2.5 px-2 bg-white/5 hover:bg-white/10 active:scale-95 border border-white/10 rounded-xl transition-all text-xs text-white font-medium min-w-0"
           >
             <Upload className="w-4 h-4 text-blue-400 shrink-0" />
@@ -492,6 +580,10 @@ const SheetProblemsView = ({ sheet, onStatsUpdate, onDelete }) => {
 
           <button
             onClick={() => {
+              if (!isAuthenticated) {
+                toast('Sign up to sync solutions to your GitHub repo!', { icon: '🔒' });
+                return;
+              }
               const { githubStatus } = useAuthStore.getState();
               if (!githubStatus?.connected) {
                 toast.error('Connect GitHub first from Profile page');
@@ -541,6 +633,10 @@ const SheetProblemsView = ({ sheet, onStatsUpdate, onDelete }) => {
         <div className="hidden sm:flex items-center flex-wrap gap-2.5">
           <button
             onClick={() => {
+              if (!isAuthenticated) {
+                toast('Sign up to sync solutions to your GitHub repo!', { icon: '🔒' });
+                return;
+              }
               const { githubStatus } = useAuthStore.getState();
               if (!githubStatus?.connected) {
                 toast.error('Connect GitHub first from Profile page');
@@ -554,7 +650,13 @@ const SheetProblemsView = ({ sheet, onStatsUpdate, onDelete }) => {
             <span>Sync GitHub</span>
           </button>
           <button
-            onClick={() => setShowImportModal(true)}
+            onClick={() => {
+              if (!isAuthenticated) {
+                toast('Sign up to import spreadsheets into cloud sheets!', { icon: '🔒' });
+                return;
+              }
+              setShowImportModal(true);
+            }}
             className="flex items-center gap-2 px-3.5 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg transition-all text-white text-sm"
           >
             <Upload className="w-4 h-4" />

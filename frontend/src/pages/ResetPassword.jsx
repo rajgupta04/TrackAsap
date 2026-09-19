@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { Lock, CheckCircle } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import toast from 'react-hot-toast';
+import PasswordStrengthMeter from '../components/auth/PasswordStrengthMeter';
 
 const ResetPassword = () => {
   const { token } = useParams();
@@ -11,6 +12,7 @@ const ResetPassword = () => {
   
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [passwordMeta, setPasswordMeta] = useState({ score: 0, isPwned: false, isValid: false });
   const [status, setStatus] = useState('idle'); // idle, loading, success, error
   const [errorMessage, setErrorMessage] = useState('');
 
@@ -28,8 +30,13 @@ const ResetPassword = () => {
       return;
     }
     
-    if (password.length < 6) {
-      setErrorMessage('Password must be at least 6 characters');
+    if (password.length < 8) {
+      setErrorMessage('Password must be at least 8 characters');
+      return;
+    }
+
+    if (passwordMeta.score < 2) {
+      setErrorMessage('Please choose a stronger password (at least Fair strength)');
       return;
     }
     
@@ -99,8 +106,13 @@ const ResetPassword = () => {
                       className="input-field pl-12"
                       placeholder="••••••••"
                       required
+                      minLength={8}
                     />
                   </div>
+                  <PasswordStrengthMeter
+                    password={password}
+                    onScoreChange={setPasswordMeta}
+                  />
                 </div>
 
                 <div>
