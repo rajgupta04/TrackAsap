@@ -61,6 +61,13 @@ const sheetProblemSchema = new mongoose.Schema(
       type: String,
       default: '',
     },
+    // Additional links for same problem on different platforms
+    additionalLinks: [{
+      url: { type: String, required: true },
+      type: { type: String, enum: ['problem', 'article', 'youtube', 'other'], default: 'problem' },
+      platform: { type: String, default: '' },
+      label: { type: String, default: '' },
+    }],
     problemKey: {
       type: String,
       default: '',

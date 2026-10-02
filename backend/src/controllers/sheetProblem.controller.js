@@ -119,11 +119,11 @@ export const updateProblemStatus = async (req, res) => {
 // @access  Private
 export const updateSheetProblem = async (req, res) => {
   try {
-    const { title, topic, difficulty, problemLink, articleLink, youtubeLink, notes, code, language, solutions, platform, tags } = req.body;
+    const { title, topic, difficulty, problemLink, articleLink, youtubeLink, additionalLinks, notes, code, language, solutions, platform, tags } = req.body;
     
     const problem = await SheetProblem.findOneAndUpdate(
       { _id: req.params.id, user: req.user._id },
-      { title, topic, difficulty, problemLink, articleLink, youtubeLink, notes, code, language, solutions, platform, tags },
+      { title, topic, difficulty, problemLink, articleLink, youtubeLink, additionalLinks, notes, code, language, solutions, platform, tags },
       { new: true }
     );
 
