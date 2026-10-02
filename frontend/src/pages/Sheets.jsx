@@ -23,7 +23,7 @@ import {
   GitFork,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { useLocation } from 'react-router-dom';
+import { useLocation, Link } from 'react-router-dom';
 import useSheetStore from '../store/sheetStore';
 import { useAuthStore } from '../store/authStore';
 import GlassCard from '../components/ui/GlassCard';
@@ -38,30 +38,25 @@ const CATEGORY_ICONS = {
   cn: Network,
   oops: Boxes,
   dev: Code,
-  'system-design': BookOpen,
+  'system-design': Code,
   custom: BookOpen,
-  graph: Network,
-  dp: Boxes,
-  arrays: BookOpen,
   'company-wise': Building,
 };
 
 const PROGRAMMER_QUOTES = [
   { quote: "First, solve the problem. Then, write the code.", author: "John Johnson" },
-  { quote: "Code is like humor. When you have to explain it, it's bad.", author: "Cory House" },
   { quote: "Make it work, make it right, make it fast.", author: "Kent Beck" },
-  { quote: "Clean code always looks like it was written by someone who cares.", author: "Robert C. Martin" },
-  { quote: "The best error message is the one that never shows up.", author: "Thomas Fuchs" },
   { quote: "Simplicity is the soul of efficiency.", author: "Austin Freeman" },
   { quote: "Any fool can write code that a computer can understand.", author: "Martin Fowler" },
   { quote: "Programming isn't about what you know; it's about what you can figure out.", author: "Chris Pine" },
   { quote: "The only way to learn a new programming language is by writing programs in it.", author: "Dennis Ritchie" },
   { quote: "Experience is the name everyone gives to their mistakes.", author: "Oscar Wilde" },
 ];
+const MOTIVATIONAL_QUOTES = PROGRAMMER_QUOTES;
 
 const Sheets = () => {
-  const { user } = useAuthStore();
-  const isVerified = user?.role === 'admin' || Boolean(user?.isEmailVerified);
+  const { user, isAuthenticated } = useAuthStore();
+  const isVerified = !isAuthenticated || user?.role === 'admin' || Boolean(user?.isEmailVerified);
   const {
     sheets,
     templates,
@@ -175,11 +170,12 @@ const Sheets = () => {
     return total > 0 ? Math.round((solved / total) * 100) : 0;
   };
 
-  const totalProblems = sheets.reduce((acc, s) => acc + (s.totalProblems || 0), 0);
-  const solvedProblems = sheets.reduce((acc, s) => acc + (s.solvedProblems || 0), 0);
+  const safeSheets = Array.isArray(sheets) ? sheets : [];
+  const totalProblems = safeSheets.reduce((acc, s) => acc + (s.totalProblems || 0), 0);
+  const solvedProblems = safeSheets.reduce((acc, s) => acc + (s.solvedProblems || 0), 0);
   const overallProgress = totalProblems > 0 ? Math.round((solvedProblems / totalProblems) * 100) : 0;
 
-  const filteredSidebarSheets = sheets.filter((s) =>
+  const filteredSidebarSheets = safeSheets.filter((s) =>
     sheetSearch.trim() ? s.name.toLowerCase().includes(sheetSearch.toLowerCase()) : true
   );
 
@@ -199,7 +195,7 @@ const Sheets = () => {
               <div className="flex items-center justify-between mb-3 shrink-0">
                 <div className="flex items-center gap-2">
                   <h2 className="text-sm font-semibold text-white">Sheets</h2>
-                  <span className="text-[11px] font-medium px-1.5 py-0.5 rounded bg-white/10 text-gray-400">{sheets.length}</span>
+                  <span className="text-[11px] font-medium px-1.5 py-0.5 rounded bg-white/10 text-gray-400">{safeSheets.length}</span>
                 </div>
                 <button
                   onClick={() => setIsSidebarOpen(false)}
@@ -240,7 +236,7 @@ const Sheets = () => {
               </div>
 
               {/* Search filter if sheets > 4 */}
-              {sheets.length > 4 && (
+              {safeSheets.length > 4 && (
                 <div className="relative mb-3 shrink-0">
                   <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-500" />
                   <input
@@ -339,6 +335,24 @@ const Sheets = () => {
 
       {/* Main Content Area */}
       <div className="flex-1 overflow-y-auto overflow-x-hidden flex flex-col min-w-0 max-w-full w-full">
+        {/* Guest Mode Banner */}
+        {!isAuthenticated && (
+          <div className="shrink-0 bg-gradient-to-r from-neon-green/10 via-emerald-500/10 to-cyan-500/10 border-b border-neon-green/20 px-3.5 py-2.5 flex items-center justify-between gap-3 text-xs">
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="w-2 h-2 rounded-full bg-neon-green shrink-0 animate-pulse" />
+              <p className="text-gray-300 truncate">
+                <strong className="text-white font-semibold">Guest Mode:</strong> Your sheets and solved progress are saved in this browser.
+              </p>
+            </div>
+            <Link
+              to="/register"
+              className="shrink-0 px-3 py-1 bg-neon-green text-dark-950 font-bold rounded-lg hover:bg-neon-green/90 transition-all text-[11px] shadow-sm"
+            >
+              Sign Up to Save to Cloud
+            </Link>
+          </div>
+        )}
+
         {/* Horizontal Sheet Tiles - Only when sheet is selected */}
         <AnimatePresence>
           {selectedSheet && (
@@ -364,15 +378,15 @@ const Sheets = () => {
                 {/* Action buttons */}
                 <button
                   onClick={() => {
-                    if (!user?.isEmailVerified) {
+                    if (!isVerified) {
                       toast.error('Verify your email to import sheets');
                       return;
                     }
                     setShowBucketPicker(true);
                   }}
-                  title={!user?.isEmailVerified ? 'Verify your email to import sheets' : 'Buckets'}
+                  title={!isVerified ? 'Verify your email to import sheets' : 'Buckets'}
                   className={`p-2 border rounded-lg transition-all shrink-0 ${
-                    !user?.isEmailVerified 
+                    !isVerified 
                       ? 'bg-white/5 border-white/5 text-gray-600 cursor-not-allowed' 
                       : 'bg-white/5 hover:bg-white/10 border-white/10 text-gray-400 hover:text-white'
                   }`}
@@ -392,7 +406,7 @@ const Sheets = () => {
 
                 {/* Sheet tiles */}
                 <div className="flex-1 flex items-center gap-2 overflow-x-auto scrollbar-thin scrollbar-thumb-white/10 hover:scrollbar-thumb-white/20 pb-1 min-w-0 max-w-full">
-                  {sheets.map((sheet) => {
+                  {safeSheets.map((sheet) => {
                     const Icon = CATEGORY_ICONS[sheet.category] || BookOpen;
                     const isSelected = selectedSheet === sheet._id;
                     const progress = getSheetProgress(sheet);
@@ -487,7 +501,7 @@ const Sheets = () => {
                 <div className="flex items-center justify-between">
                   <h2 className="text-lg font-bold text-white">My Problem Sheets</h2>
                   <span className="px-2.5 py-0.5 text-xs bg-white/10 rounded-full text-gray-400 font-medium">
-                    {sheets.length} Sheets
+                    {safeSheets.length} Sheets
                   </span>
                 </div>
 
@@ -495,15 +509,15 @@ const Sheets = () => {
                 <div className="grid grid-cols-2 gap-3">
                   <button
                     onClick={() => {
-                      if (!user?.isEmailVerified) {
+                      if (!isVerified) {
                         toast.error('Verify your email to import sheets');
                         return;
                       }
                       setShowBucketPicker(true);
                     }}
-                    title={!user?.isEmailVerified ? 'Verify your email to import sheets' : ''}
+                    title={!isVerified ? 'Verify your email to import sheets' : ''}
                     className={`flex flex-col items-center justify-center p-3.5 border rounded-xl transition-all text-center group ${
-                      !user?.isEmailVerified 
+                      !isVerified 
                         ? 'bg-white/5 border-white/5 cursor-not-allowed opacity-50' 
                         : 'bg-white/5 hover:bg-white/10 active:scale-95 border-white/10'
                     }`}
@@ -529,7 +543,7 @@ const Sheets = () => {
 
                 {/* Mobile Sheet Tiles */}
                 <div className="space-y-2.5 pt-1">
-                  {sheets.length === 0 ? (
+                  {safeSheets.length === 0 ? (
                     <GlassCard className="p-8 text-center">
                       <BookOpen className="w-10 h-10 text-gray-600 mx-auto mb-2" />
                       <p className="text-sm text-gray-400">No problem sheets yet</p>
@@ -537,7 +551,7 @@ const Sheets = () => {
                     </GlassCard>
                   ) : (
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      {sheets.map((sheet) => {
+                      {safeSheets.map((sheet) => {
                         const Icon = CATEGORY_ICONS[sheet.category] || BookOpen;
                         const progress = getSheetProgress(sheet);
                         return (
@@ -680,10 +694,10 @@ const Sheets = () => {
               transition={{ duration: 0.3 }}
             >
               <p className="text-xs text-dark-300 italic leading-relaxed">
-                "{PROGRAMMER_QUOTES[currentQuoteIndex].quote}"
+                "{PROGRAMMER_QUOTES[currentQuoteIndex]?.quote || ''}"
               </p>
               <p className="text-[10px] text-dark-400 mt-1.5 text-right">
-                — {PROGRAMMER_QUOTES[currentQuoteIndex].author}
+                — {PROGRAMMER_QUOTES[currentQuoteIndex]?.author || ''}
               </p>
             </motion.div>
           </AnimatePresence>
@@ -913,7 +927,7 @@ const Sheets = () => {
           setBucketInitialCategory(null);
           setBucketInitialSearch('');
         }}
-        sheets={sheets}
+        sheets={safeSheets}
         initialCategory={bucketInitialCategory}
         initialSearch={bucketInitialSearch}
         onImport={() => {

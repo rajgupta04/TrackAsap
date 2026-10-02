@@ -13,9 +13,10 @@ import {
 
 const router = express.Router();
 
-router.use(protect);
-
+// Public route - Templates are static and safe for guests
 router.get('/templates', getTemplates);
+
+router.use(protect);
 
 router.route('/')
   .get(getSheets)

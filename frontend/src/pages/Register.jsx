@@ -1,20 +1,28 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Mail, Lock, User, UserPlus, Target, Calendar } from 'lucide-react';
+import { Mail, Lock, User, UserPlus, Target, Calendar, Sparkles } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
+import { useGuestStore } from '../store/guestStore';
 import toast from 'react-hot-toast';
 import GoogleSignInButton from '../components/auth/GoogleSignInButton';
+import PasswordStrengthMeter from '../components/auth/PasswordStrengthMeter';
 
 const Register = () => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [passwordMeta, setPasswordMeta] = useState({ score: 0, isPwned: false, isValid: false });
   const [startDate, setStartDate] = useState(
     new Date().toISOString().split('T')[0]
   );
   const { register, loginWithGoogle, isLoading } = useAuthStore();
+  const { guestSheets, loadGuestSheets } = useGuestStore();
+
+  useEffect(() => {
+    loadGuestSheets();
+  }, [loadGuestSheets]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -24,8 +32,13 @@ const Register = () => {
       return;
     }
 
-    if (password.length < 6) {
-      toast.error('Password must be at least 6 characters');
+    if (password.length < 8) {
+      toast.error('Password must be at least 8 characters');
+      return;
+    }
+
+    if (passwordMeta.score < 2) {
+      toast.error('Please choose a stronger password (at least Fair strength)');
       return;
     }
 
@@ -65,9 +78,25 @@ const Register = () => {
 
         {/* Register Form */}
         <div className="glass-card p-8">
-          <h2 className="text-2xl font-bold text-white mb-6">Create Account</h2>
+          <h2 className="text-2xl font-bold text-white mb-2">Create Account</h2>
+          <p className="text-sm text-dark-400 mb-6">Join to save sheets, sync progress & track your journey</p>
 
-          <form onSubmit={handleSubmit} className="space-y-5">
+          {/* Local Sheets Detected Notice */}
+          {guestSheets && guestSheets.length > 0 && (
+            <div className="mb-5 p-3 rounded-xl bg-neon-green/10 border border-neon-green/30 flex items-start gap-2.5">
+              <Sparkles className="w-4 h-4 text-neon-green shrink-0 mt-0.5" />
+              <div className="text-xs text-dark-200">
+                <p className="font-semibold text-neon-green">
+                  {guestSheets.length} Browser Sheet{guestSheets.length > 1 ? 's' : ''} Found
+                </p>
+                <p className="text-[11px] text-dark-300 mt-0.5">
+                  Your local sheets and solved progress will automatically sync to your new account on signup!
+                </p>
+              </div>
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-dark-300 mb-2">
                 Name
@@ -131,9 +160,13 @@ const Register = () => {
                   className="input-field pl-12"
                   placeholder="••••••••"
                   required
-                  minLength={6}
+                  minLength={8}
                 />
               </div>
+              <PasswordStrengthMeter
+                password={password}
+                onScoreChange={setPasswordMeta}
+              />
             </div>
 
             <div>

@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Mail, Lock, LogIn, Target } from 'lucide-react';
+import { Mail, Lock, LogIn, Target, Sparkles } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
+import { useGuestStore } from '../store/guestStore';
 import toast from 'react-hot-toast';
 import GoogleSignInButton from '../components/auth/GoogleSignInButton';
 
@@ -14,6 +15,11 @@ const Login = () => {
   const [isSendingForgot, setIsSendingForgot] = useState(false);
   
   const { login, loginWithGoogle, forgotPassword, isLoading, error } = useAuthStore();
+  const { guestSheets, loadGuestSheets } = useGuestStore();
+
+  useEffect(() => {
+    loadGuestSheets();
+  }, [loadGuestSheets]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -115,7 +121,23 @@ const Login = () => {
             </>
           ) : (
             <>
-              <h2 className="text-2xl font-bold text-white mb-6">Welcome Back</h2>
+              <h2 className="text-2xl font-bold text-white mb-2">Welcome Back</h2>
+              <p className="text-sm text-dark-400 mb-6">Sign in to sync your practice data</p>
+
+              {/* Local Sheets Detected Notice */}
+              {guestSheets && guestSheets.length > 0 && (
+                <div className="mb-5 p-3 rounded-xl bg-neon-green/10 border border-neon-green/30 flex items-start gap-2.5">
+                  <Sparkles className="w-4 h-4 text-neon-green shrink-0 mt-0.5" />
+                  <div className="text-xs text-dark-200">
+                    <p className="font-semibold text-neon-green">
+                      {guestSheets.length} Browser Sheet{guestSheets.length > 1 ? 's' : ''} Detected
+                    </p>
+                    <p className="text-[11px] text-dark-300 mt-0.5">
+                      Signing in will automatically save and link your local sheets to your cloud account!
+                    </p>
+                  </div>
+                </div>
+              )}
 
               <form onSubmit={handleSubmit} className="space-y-5">
                 <div>

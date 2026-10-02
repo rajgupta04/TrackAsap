@@ -31,11 +31,13 @@ export const useRoadmapStore = create()(
       },
 
       syncToServer: async () => {
+        if (!localStorage.getItem('token')) return;
         if (syncTimeout) {
           clearTimeout(syncTimeout);
         }
         syncTimeout = setTimeout(async () => {
           try {
+            if (!localStorage.getItem('token')) return;
             const state = get();
             const payload = {
               completedProblems: state.completedProblems || [],
@@ -59,8 +61,12 @@ export const useRoadmapStore = create()(
 
       loadFromServer: async () => {
         try {
-          // Load worlds and progress concurrently
+          // Always load dynamic worlds (public endpoint with optionalProtect)
           get().fetchWorlds();
+          
+          // Only fetch user progress if authenticated
+          if (!localStorage.getItem('token')) return;
+
           const data = await roadmapService.getProgress();
           if (data) {
             set((state) => {

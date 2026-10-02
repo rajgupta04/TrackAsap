@@ -12,10 +12,12 @@ import {
   MessageSquare,
   Bot,
   Share2,
+  LogIn,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { useAuthStore } from '../../store/authStore';
 
-const navPiles = [
+const memberNavPiles = [
   { path: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
   { path: '/interview', icon: Bot, label: 'Interview' },
   { path: '/arena', icon: Flame, label: 'Arena' },
@@ -25,8 +27,17 @@ const navPiles = [
   { path: '/profile', icon: User, label: 'Profile' },
 ];
 
+const guestNavPiles = [
+  { path: '/arena', icon: Flame, label: 'Arena' },
+  { path: '/roadmap', icon: Compass, label: 'Roadmap' },
+  { path: '/sheets', icon: BookOpen, label: 'Sheets' },
+  { path: '/login', icon: LogIn, label: 'Login' },
+];
+
 const MobilePillNav = () => {
   const location = useLocation();
+  const { isAuthenticated } = useAuthStore();
+  const navPiles = isAuthenticated ? memberNavPiles : guestNavPiles;
 
   return (
     <>

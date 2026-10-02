@@ -122,6 +122,12 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
         <nav className="flex-1 p-2 md:p-4 space-y-1.5 md:space-y-2 overflow-y-auto">
           {navItems
             .filter((item) => {
+              if (!isAuthenticated) {
+                const guestAllowedPaths = ['/roadmap', '/arena', '/sheets', '/leaderboard'];
+                if (!guestAllowedPaths.includes(item.path)) return false;
+                if (item.path === '/leaderboard' && !showLeaderboard) return false;
+                return true;
+              }
               if (item.path === '/physique' && !user?.enablePhysique) {
                 return false;
               }
@@ -231,28 +237,39 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
 
         {/* User section */}
         <div className="p-2 md:p-4 border-t border-dark-700/50">
-          <NavLink
-            to="/profile"
-            title={isCollapsed ? 'Profile' : ''}
-            className={`flex items-center gap-3 px-3 md:px-4 py-3 mb-2 rounded-xl transition-all duration-300 hover:bg-dark-800/50 ${
-              isCollapsed ? 'md:justify-center' : ''
-            }`}
-          >
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-neon-green/20 to-cyan-500/20 flex items-center justify-center border border-dark-600/50 flex-shrink-0 overflow-hidden">
-              {avatarSrc ? (
-                <img
-                  src={avatarSrc}
-                  alt={user?.name || 'User'}
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <span className="text-neon-green font-bold">
-                  {user?.name?.charAt(0).toUpperCase() || 'U'}
-                </span>
+          {isAuthenticated ? (
+            <NavLink
+              to="/profile"
+              title={isCollapsed ? 'Profile' : ''}
+              className={`flex items-center gap-3 px-3 md:px-4 py-3 mb-2 rounded-xl transition-all duration-300 hover:bg-dark-800/50 ${
+                isCollapsed ? 'md:justify-center' : ''
+              }`}
+            >
+              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-neon-green/20 to-cyan-500/20 flex items-center justify-center border border-dark-600/50 flex-shrink-0 overflow-hidden">
+                {avatarSrc ? (
+                  <img
+                    src={avatarSrc}
+                    alt={user?.name || 'User'}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <span className="text-neon-green font-bold">
+                    {user?.name?.charAt(0).toUpperCase() || 'U'}
+                  </span>
+                )}
+              </div>
+              {!isCollapsed && (
+                <div className="flex-1 min-w-0 hidden md:block">
+                  <p className="text-sm font-medium text-white truncate">
+                    {user?.name || 'User'}
+                  </p>
+                  <div className="flex items-center gap-1 text-xs text-dark-400">
+                    <Flame size={12} className="text-orange-500" />
+                    <span>Day {user?.currentDay || 1}</span>
+                  </div>
+                </div>
               )}
-            </div>
-            {!isCollapsed && (
-              <div className="flex-1 min-w-0 hidden md:block">
+              <div className="flex-1 min-w-0 md:hidden">
                 <p className="text-sm font-medium text-white truncate">
                   {user?.name || 'User'}
                 </p>
@@ -261,17 +278,24 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
                   <span>Day {user?.currentDay || 1}</span>
                 </div>
               </div>
-            )}
-            <div className="flex-1 min-w-0 md:hidden">
-              <p className="text-sm font-medium text-white truncate">
-                {user?.name || 'User'}
-              </p>
-              <div className="flex items-center gap-1 text-xs text-dark-400">
-                <Flame size={12} className="text-orange-500" />
-                <span>Day {user?.currentDay || 1}</span>
+            </NavLink>
+          ) : (
+            <div className={`mb-3 p-3 rounded-xl bg-neon-green/5 border border-neon-green/20 ${isCollapsed ? 'hidden' : 'block'}`}>
+              <div className="flex items-center gap-2 mb-1.5">
+                <div className="w-2 h-2 rounded-full bg-neon-green animate-pulse" />
+                <span className="text-xs font-semibold text-neon-green uppercase tracking-wider">Guest Mode</span>
               </div>
+              <p className="text-[11px] text-dark-300 leading-tight mb-2.5">
+                Sheets are saved locally. Create an account to sync progress to cloud!
+              </p>
+              <NavLink
+                to="/register"
+                className="w-full flex items-center justify-center gap-1.5 py-1.5 px-2.5 bg-neon-green text-dark-950 font-bold text-xs rounded-lg hover:bg-neon-green/90 transition-all shadow-sm"
+              >
+                Sign Up Free
+              </NavLink>
             </div>
-          </NavLink>
+          )}
           <button
             onClick={openThemeModal}
             title={isCollapsed ? 'Customize Theme' : ''}

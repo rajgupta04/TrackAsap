@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Code2, Trophy, Target, BookOpen, Zap, Clock, Activity, ArrowUpRight,
@@ -6,6 +6,7 @@ import {
   Terminal, Sparkles, Star, Building2, Quote, Award, Heart,
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
+import api from '../lib/api';
 
 // ── ReactBits-Inspired: Spotlight Card Component ─────────────────────────────
 // Tracks mouse cursor and renders a glowing radial gradient follow effect
@@ -405,14 +406,29 @@ const MockStreakWidget = () => (
 const LandingPage = () => {
   const [selectedCompany, setSelectedCompany] = useState(null);
   const [activeTab, setActiveTab] = useState('sheets');
+  const [testimonials, setTestimonials] = useState(INDUSTRY_TESTIMONIALS);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    let isMounted = true;
+    api.get('/testimonials')
+      .then((res) => {
+        if (isMounted && Array.isArray(res.data) && res.data.length > 0) {
+          setTestimonials(res.data);
+        }
+      })
+      .catch((err) => {
+        console.warn('Failed to load live testimonials, using defaults', err);
+      });
+    return () => { isMounted = false; };
+  }, []);
 
   return (
     <div className="min-h-screen bg-dark-950 text-white font-sans selection:bg-neon-green selection:text-dark-950">
       {/* ── Top Navigation Bar ── */}
       <header className="sticky top-0 z-40 w-full border-b border-white/10 bg-dark-950/80 backdrop-blur-xl">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <Link to="/home" className="flex items-center gap-2.5 group">
+          <Link to="/" className="flex items-center gap-2.5 group">
             <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-neon-green/20 via-emerald-500/20 to-cyan-500/20 border border-white/10 flex items-center justify-center shadow-lg group-hover:scale-105 transition-transform">
               <Terminal className="w-5 h-5 text-neon-green" />
             </div>
@@ -426,13 +442,31 @@ const LandingPage = () => {
 
           <div className="flex items-center gap-4">
             <Link
+              to="/roadmap"
+              className="text-sm font-semibold text-gray-300 hover:text-neon-green transition-colors hidden sm:block"
+            >
+              Roadmap
+            </Link>
+            <Link
+              to="/sheets"
+              className="text-sm font-semibold text-gray-300 hover:text-neon-green transition-colors hidden sm:block"
+            >
+              Sheets
+            </Link>
+            <Link
+              to="/arena"
+              className="text-sm font-semibold text-gray-300 hover:text-neon-green transition-colors hidden sm:block"
+            >
+              Arena
+            </Link>
+            <Link
               to="/login"
               className="text-sm font-semibold text-gray-300 hover:text-white transition-colors"
             >
               Sign In
             </Link>
-            <ShinyButton to="/login" className="text-xs px-5 py-2.5">
-              Launch Command Center ➔
+            <ShinyButton to="/sheets" className="text-xs px-4 py-2">
+              Try As Guest ➔
             </ShinyButton>
           </div>
         </div>
@@ -475,7 +509,7 @@ const LandingPage = () => {
               transition={{ delay: 0.2 }}
               className="text-base sm:text-lg text-gray-400 max-w-xl leading-relaxed mb-10"
             >
-              Track your DSA progress, sync LeetCode & CodeChef ratings, write code in our embedded playground, and log time automatically. Stop juggling spreadsheets and start gamifying your prep.
+              Track your DSA progress, sync LeetCode & CodeChef ratings, write code in our embedded playground, and log time automatically. Works instantly in your browser — no account required to start.
             </motion.p>
 
             <motion.div
@@ -484,18 +518,15 @@ const LandingPage = () => {
               transition={{ delay: 0.3 }}
               className="flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto"
             >
-              <ShinyButton to="/login" className="w-full sm:w-auto text-base px-8 py-4 shadow-[0_0_30px_rgba(57,255,20,0.3)]">
-                Get Started Free — No Credit Card ➔
+              <ShinyButton to="/sheets" className="w-full sm:w-auto text-base px-8 py-4 shadow-[0_0_30px_rgba(57,255,20,0.3)]">
+                Try In Browser (No Login Required) ➔
               </ShinyButton>
-              <button
-                onClick={() => {
-                  const el = document.getElementById('company-marquee');
-                  el?.scrollIntoView({ behavior: 'smooth' });
-                }}
-                className="w-full sm:w-auto px-6 py-4 rounded-xl border border-white/10 hover:border-white/25 bg-white/5 hover:bg-white/10 text-sm font-bold text-gray-200 transition-all shadow-sm"
+              <Link
+                to="/register"
+                className="w-full sm:w-auto px-6 py-4 rounded-xl border border-neon-green/30 hover:border-neon-green bg-neon-green/10 hover:bg-neon-green/20 text-sm font-bold text-neon-green text-center transition-all shadow-sm"
               >
-                Explore 12+ Company Sheets
-              </button>
+                Create Free Account
+              </Link>
             </motion.div>
           </div>
 
@@ -600,63 +631,82 @@ const LandingPage = () => {
 
         {/* 3-Column Masonry / Spotlight Card Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {INDUSTRY_TESTIMONIALS.map((friend, i) => (
-            <SpotlightCard
-              key={i}
-              spotlightColor={friend.spotlight}
-              className="p-6 flex flex-col justify-between"
-            >
-              <div>
-                {/* Header: Avatar, Name, Role + Company Badge */}
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-3">
+          {testimonials.map((friend, i) => {
+            const cardColor = friend.companyColor || friend.color || '#4285F4';
+            const cardSpotlight = friend.spotlightColor || friend.spotlight || 'rgba(66, 133, 244, 0.18)';
+            const initials = friend.avatarInitials || friend.avatar || (friend.name ? friend.name.split(' ').map(n=>n[0]).join('').slice(0,2) : 'AS');
+            const rating = typeof friend.rating === 'number' ? friend.rating : 5;
+
+            return (
+              <SpotlightCard
+                key={friend._id || i}
+                spotlightColor={cardSpotlight}
+                className="p-6 flex flex-col justify-between"
+              >
+                <div>
+                  {/* Header: Avatar, Name, Role + Company Badge */}
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-3 min-w-0">
+                      {friend.avatarUrl ? (
+                        <img
+                          src={friend.avatarUrl}
+                          alt={friend.name}
+                          className="w-11 h-11 rounded-full object-cover border border-white/20 shadow-lg shrink-0"
+                          onError={(e) => {
+                            e.target.style.display = 'none';
+                            const next = e.target.nextSibling;
+                            if (next) next.style.display = 'flex';
+                          }}
+                        />
+                      ) : null}
+                      <div
+                        className={`w-11 h-11 rounded-full flex items-center justify-center font-bold text-sm text-white shadow-lg shrink-0 border border-white/20 ${friend.avatarUrl ? 'hidden' : 'flex'}`}
+                        style={{ backgroundColor: cardColor }}
+                      >
+                        {initials}
+                      </div>
+                      <div className="min-w-0">
+                        <h3 className="text-sm font-bold text-white truncate">{friend.name}</h3>
+                        <p className="text-xs text-gray-400 truncate">{friend.role}</p>
+                      </div>
+                    </div>
+
+                    {/* SVG Company Badge */}
                     <div
-                      className="w-11 h-11 rounded-full flex items-center justify-center font-bold text-sm text-white shadow-lg shrink-0 border border-white/20"
-                      style={{ backgroundColor: friend.color }}
+                      className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold text-white shadow-md shrink-0 ml-2"
+                      style={{ backgroundColor: cardColor }}
                     >
-                      {friend.avatar}
-                    </div>
-                    <div>
-                      <h3 className="text-sm font-bold text-white">{friend.name}</h3>
-                      <p className="text-xs text-gray-400">{friend.role}</p>
+                      <CompanyLogo name={friend.company} fallback={friend.company ? friend.company[0] : 'C'} />
+                      <span>{friend.company}</span>
                     </div>
                   </div>
 
-                  {/* SVG Company Badge */}
-                  <div
-                    className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold text-white shadow-md shrink-0"
-                    style={{ backgroundColor: friend.color }}
-                  >
-                    <CompanyLogo name={friend.company} fallback={friend.company[0]} />
-                    <span>{friend.company}</span>
+                  {/* Verified Pill */}
+                  {friend.isVerified !== false && (
+                    <div className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-cyan-400/10 border border-cyan-400/20 text-[11px] font-semibold text-cyan-400 mb-4">
+                      <CheckCircle2 className="w-3 h-3" />
+                      <span>{friend.verifiedLabel || 'Verified Industry Engineer'}</span>
+                    </div>
+                  )}
+
+                  {/* Quote */}
+                  <p className="text-xs sm:text-sm text-gray-300 leading-relaxed italic">
+                    “{friend.quote}”
+                  </p>
+                </div>
+
+                {/* Card Footer */}
+                <div className="mt-5 pt-4 border-t border-white/10 flex items-center justify-between text-[11px] text-gray-500 font-mono">
+                  <span>{friend.userTag || 'TrackAsap User'}</span>
+                  <div className="flex items-center gap-1 text-yellow-400">
+                    {Array.from({ length: rating }).map((_, sIdx) => (
+                      <Star key={sIdx} size={12} fill="currentColor" />
+                    ))}
                   </div>
                 </div>
-
-                {/* Verified Pill */}
-                <div className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-cyan-400/10 border border-cyan-400/20 text-[11px] font-semibold text-cyan-400 mb-4">
-                  <CheckCircle2 className="w-3 h-3" />
-                  <span>Verified Industry Engineer</span>
-                </div>
-
-                {/* Quote */}
-                <p className="text-xs sm:text-sm text-gray-300 leading-relaxed italic">
-                  “{friend.quote}”
-                </p>
-              </div>
-
-              {/* Card Footer */}
-              <div className="mt-5 pt-4 border-t border-white/10 flex items-center justify-between text-[11px] text-gray-500 font-mono">
-                <span>TrackAsap User</span>
-                <div className="flex items-center gap-1 text-yellow-400">
-                  <Star size={12} fill="currentColor" />
-                  <Star size={12} fill="currentColor" />
-                  <Star size={12} fill="currentColor" />
-                  <Star size={12} fill="currentColor" />
-                  <Star size={12} fill="currentColor" />
-                </div>
-              </div>
-            </SpotlightCard>
-          ))}
+              </SpotlightCard>
+            );
+          })}
         </div>
       </section>
 

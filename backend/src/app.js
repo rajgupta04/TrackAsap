@@ -26,6 +26,7 @@ import telemetryRoutes from './routes/telemetry.routes.js';
 import path from 'path';
 import dailyPlanRoutes from './routes/dailyPlan.routes.js';
 import interviewRoutes from './routes/interview.routes.js';
+import testimonialRoutes from './routes/testimonial.routes.js';
 import { requestLogger } from './analytics/middlewares/requestLogger.js';
 import systemAnalyticsRoutes from './analytics/admin/analytics.routes.js';
 import { errorHandler, notFound } from './middleware/error.middleware.js';
@@ -80,6 +81,7 @@ app.use('/api/features', featureRoutes);
 app.use('/api/telemetry', telemetryRoutes);
 app.use('/api/daily-plan', dailyPlanRoutes);
 app.use('/api/interview', interviewRoutes);
+app.use('/api/testimonials', testimonialRoutes);
 
 // System Analytics (Admin only)
 app.use('/api/system-analytics', systemAnalyticsRoutes);

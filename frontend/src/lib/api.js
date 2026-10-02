@@ -78,9 +78,18 @@ api.interceptors.response.use(
     }
 
     if (error.response?.status === 401) {
+      const hadToken = !!localStorage.getItem('token');
       localStorage.removeItem('token');
       localStorage.removeItem('user');
-      window.location.href = '/login';
+
+      // Only redirect if an existing session expired, and not already on a guest/public page
+      const currentPath = window.location.pathname;
+      const guestPaths = ['/', '/home', '/login', '/register', '/roadmap', '/sheets', '/arena', '/privacy-policy'];
+      const isGuestPage = guestPaths.includes(currentPath) || currentPath.startsWith('/solve/') || currentPath.startsWith('/verify-email') || currentPath.startsWith('/reset-password');
+
+      if (hadToken && !isGuestPage) {
+        window.location.href = '/login';
+      }
     }
     // Handle banned user
     if (error.response?.status === 403 && error.response?.data?.banned) {

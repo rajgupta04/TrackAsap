@@ -9,8 +9,11 @@ import FloatingParticles from '../components/roadmap/FloatingParticles';
 import AnimatedBackground from '../components/roadmap/AnimatedBackground';
 import AmbientAudio from '../components/roadmap/AmbientAudio';
 import { AnimatePresence } from 'framer-motion';
+import { Link } from 'react-router-dom';
+import { useAuthStore } from '../store/authStore';
 
 const Roadmap = () => {
+  const { isAuthenticated } = useAuthStore();
   const { 
     activeWorldId, 
     setActiveWorldId, 
@@ -172,6 +175,24 @@ const Roadmap = () => {
 
       {/* Main Scrollable Container */}
       <div className="flex-1 overflow-y-auto custom-scrollbar relative z-10">
+        {/* Guest Preview Notice */}
+        {!isAuthenticated && (
+          <div className="bg-gradient-to-r from-cyan-500/15 via-neon-green/15 to-purple-500/15 border-b border-cyan-500/30 px-4 py-2.5 flex items-center justify-between gap-3 text-xs sticky top-0 z-30 backdrop-blur-md">
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="w-2 h-2 rounded-full bg-cyan-400 shrink-0 animate-pulse" />
+              <span className="text-gray-300 truncate">
+                <strong className="text-white font-semibold">World Map Preview:</strong> Explore worlds, problems & music tracks.
+              </span>
+            </div>
+            <Link
+              to="/register"
+              className="shrink-0 px-3 py-1 bg-neon-green text-dark-950 font-bold rounded-lg hover:bg-neon-green/90 transition-all text-[11px] shadow-sm"
+            >
+              Sign Up to Save Progress
+            </Link>
+          </div>
+        )}
+
         {/* Sticky Progress HUD Banner */}
         <ProgressHUD />
 

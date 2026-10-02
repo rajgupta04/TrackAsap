@@ -24,6 +24,8 @@ import {
 import toast from 'react-hot-toast';
 import GlassCard from '../ui/GlassCard';
 import bucketService from '../../services/bucketService';
+import { useAuthStore } from '../../store/authStore';
+import { useGuestStore } from '../../store/guestStore';
 
 const CATEGORY_ICONS = {
   graph: Network,
@@ -53,6 +55,7 @@ const SUBJECT_CATEGORIES = [
 ];
 
 const BucketPicker = ({ isOpen, onClose, onImport, sheets = [], initialCategory = null, initialSearch = '' }) => {
+  const { isAuthenticated } = useAuthStore();
   const [buckets, setBuckets] = useState([]);
   const [selectedBucket, setSelectedBucket] = useState(null);
   const [bucketDetails, setBucketDetails] = useState(null);
@@ -169,6 +172,23 @@ const BucketPicker = ({ isOpen, onClose, onImport, sheets = [], initialCategory 
 
     try {
       setImporting(true);
+
+      // Guest mode import: save sheet & problems directly to IndexedDB
+      if (!isAuthenticated) {
+        let fullBucket = bucketDetails;
+        if (!fullBucket || !Array.isArray(fullBucket.problems) || fullBucket.problems.length === 0) {
+          fullBucket = await bucketService.getBucket(selectedBucket._id);
+        }
+        const createdGuestSheet = await useGuestStore.getState().importBucketAsGuest(
+          fullBucket,
+          (newSheetName || selectedBucket.name).trim()
+        );
+        toast.success(`Sheet "${createdGuestSheet.name}" saved in browser! 🎉`);
+        onImport?.(createdGuestSheet);
+        onClose();
+        resetState();
+        return;
+      }
 
       if (importMode === 'new') {
         const result = await bucketService.createSheetFromBucket(

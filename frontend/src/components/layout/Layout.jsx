@@ -6,9 +6,11 @@ import MobilePillNav from './MobilePillNav';
 import ThemeModal from './ThemeModal';
 import DailyPlannerBubble from '../planner/DailyPlannerBubble';
 import DailyPlannerModal from '../planner/DailyPlannerModal';
+import { useAuthStore } from '../../store/authStore';
 
 const Layout = () => {
   const location = useLocation();
+  const { isAuthenticated } = useAuthStore();
   const [isCollapsed, setIsCollapsed] = useState(() => {
     const saved = localStorage.getItem('sidebarCollapsed');
     return saved === 'true';
@@ -25,8 +27,8 @@ const Layout = () => {
       <Sidebar isCollapsed={isCollapsed} setIsCollapsed={setIsCollapsed} />
       <MobilePillNav />
       <ThemeModal />
-      <DailyPlannerBubble />
-      <DailyPlannerModal />
+      {isAuthenticated && <DailyPlannerBubble />}
+      {isAuthenticated && <DailyPlannerModal />}
       <div className={`flex-1 flex flex-col min-h-0 min-w-0 max-w-full ml-0 transition-all duration-300 ${isCollapsed ? 'md:ml-20' : 'md:ml-64'}`}>
         <main className="flex-1 flex flex-col min-h-0 overflow-y-auto overflow-x-hidden min-w-0 max-w-full">
           {showHeader && <Header />}

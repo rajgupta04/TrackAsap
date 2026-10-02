@@ -41,6 +41,7 @@ import githubService from '../../services/githubService';
 import aiService from '../../services/aiService';
 import api from '../../lib/api';
 import { useAuthStore } from '../../store/authStore';
+import { useGuestStore } from '../../store/guestStore';
 import localforage from 'localforage';
 
 const DIFFICULTY_COLORS = {
@@ -56,6 +57,7 @@ const STATUS_ICONS = {
 };
 
 const SheetProblemsView = ({ sheet, onStatsUpdate, onDelete }) => {
+  const { isAuthenticated } = useAuthStore();
   const [problems, setProblems] = useState({});
   const [rawProblems, setRawProblems] = useState([]);
   const [stats, setStats] = useState({ total: 0, solved: 0, revision: 0, pending: 0 });
@@ -68,6 +70,8 @@ const SheetProblemsView = ({ sheet, onStatsUpdate, onDelete }) => {
   const [showImportModal, setShowImportModal] = useState(false);
   const [showNotesModal, setShowNotesModal] = useState(false);
   const [selectedProblemForNotes, setSelectedProblemForNotes] = useState(null);
+  const [showLinksModal, setShowLinksModal] = useState(false);
+  const [selectedProblemForLinks, setSelectedProblemForLinks] = useState(null);
   const [showCodeModal, setShowCodeModal] = useState(false);
   const [selectedProblemForCode, setSelectedProblemForCode] = useState(null);
   const [githubSyncing, setGithubSyncing] = useState(false);
@@ -102,6 +106,8 @@ const SheetProblemsView = ({ sheet, onStatsUpdate, onDelete }) => {
   }, [sheet?._id]);
 
   const fetchProblems = async (silent = false) => {
+    const isGuestSheet = !isAuthenticated || String(sheet?._id).startsWith('guest_');
+
     try {
       try {
         const cachedData = await localforage.getItem(`sheetProblems_${sheet._id}`);
@@ -111,9 +117,28 @@ const SheetProblemsView = ({ sheet, onStatsUpdate, onDelete }) => {
           setStats(cachedData.stats);
           if (!silent) setLoading(false);
           silent = true; // prevent loading spinner for network fetch
+
+          // For guest sheets, cachedData in localforage is the primary database!
+          if (isGuestSheet) {
+            const currentExpanded = expandedTopicsRef.current;
+            if (Object.keys(currentExpanded).length === 0 && cachedData.problems) {
+              const expanded = {};
+              Object.keys(cachedData.problems).forEach(topic => {
+                expanded[topic] = true;
+              });
+              expandedTopicsRef.current = expanded;
+              setExpandedTopics(expanded);
+            }
+            return;
+          }
         }
       } catch (err) {
         console.warn('Failed to read problems from cache', err);
+      }
+
+      if (isGuestSheet) {
+        if (!silent) setLoading(false);
+        return;
       }
 
       if (!silent) setLoading(true);
@@ -156,6 +181,7 @@ const SheetProblemsView = ({ sheet, onStatsUpdate, onDelete }) => {
   const handleStatusChange = async (problemId, currentStatus) => {
     const statusCycle = { pending: 'solved', solved: 'revision', revision: 'pending' };
     const newStatus = statusCycle[currentStatus];
+    const isGuestSheet = !isAuthenticated || String(sheet?._id).startsWith('guest_');
 
     // Optimistic update - update UI immediately
     setProblems(prevProblems => {
@@ -182,6 +208,16 @@ const SheetProblemsView = ({ sheet, onStatsUpdate, onDelete }) => {
 
     if (newStatus === 'solved') {
       toast.success('Problem marked as solved! 🎉');
+    }
+
+    if (isGuestSheet) {
+      try {
+        await useGuestStore.getState().updateGuestProblemStatus(sheet._id, problemId, newStatus);
+        onStatsUpdate?.();
+      } catch (err) {
+        console.warn('Failed to update guest problem status', err);
+      }
+      return;
     }
 
     try {
@@ -257,6 +293,30 @@ const SheetProblemsView = ({ sheet, onStatsUpdate, onDelete }) => {
   };
 
   const handleSaveNotes = async (problemId, notes) => {
+    const isGuestSheet = !isAuthenticated || String(sheet?._id).startsWith('guest_');
+    if (isGuestSheet) {
+      try {
+        const cacheKey = `sheetProblems_${sheet._id}`;
+        const cached = await localforage.getItem(cacheKey);
+        if (cached) {
+          const raw = cached.rawProblems.map(p => p._id === problemId ? { ...p, notes } : p);
+          const grouped = {};
+          raw.forEach(p => {
+            if (!grouped[p.topic]) grouped[p.topic] = [];
+            grouped[p.topic].push(p);
+          });
+          await localforage.setItem(cacheKey, { ...cached, rawProblems: raw, problems: grouped });
+          await fetchProblems(true);
+          toast.success('Notes saved locally');
+          setShowNotesModal(false);
+          setSelectedProblemForNotes(null);
+          return;
+        }
+      } catch (err) {
+        console.warn('Failed to save guest notes', err);
+      }
+    }
+
     try {
       await sheetProblemService.updateProblem(problemId, { notes });
       toast.success('Notes saved');
@@ -268,12 +328,77 @@ const SheetProblemsView = ({ sheet, onStatsUpdate, onDelete }) => {
     }
   };
 
+  const handleOpenLinks = (problem) => {
+    setSelectedProblemForLinks(problem);
+    setShowLinksModal(true);
+  };
+
+  const handleSaveLinks = async (problemId, additionalLinks) => {
+    const isGuestSheet = !isAuthenticated || String(sheet?._id).startsWith('guest_');
+    if (isGuestSheet) {
+      try {
+        const cacheKey = `sheetProblems_${sheet._id}`;
+        const cached = await localforage.getItem(cacheKey);
+        if (cached) {
+          const raw = cached.rawProblems.map(p => p._id === problemId ? { ...p, additionalLinks } : p);
+          const grouped = {};
+          raw.forEach(p => {
+            if (!grouped[p.topic]) grouped[p.topic] = [];
+            grouped[p.topic].push(p);
+          });
+          await localforage.setItem(cacheKey, { ...cached, rawProblems: raw, problems: grouped });
+          await fetchProblems(true);
+          toast.success('Links saved locally');
+          setShowLinksModal(false);
+          setSelectedProblemForLinks(null);
+          return;
+        }
+      } catch (err) {
+        console.warn('Failed to save guest links', err);
+      }
+    }
+
+    try {
+      await sheetProblemService.updateProblem(problemId, { additionalLinks });
+      toast.success('Links updated!');
+      await fetchProblems(true);
+      setShowLinksModal(false);
+      setSelectedProblemForLinks(null);
+    } catch (error) {
+      toast.error('Failed to update links');
+    }
+  };
+
   const handleOpenCode = (problem) => {
     setSelectedProblemForCode(problem);
     setShowCodeModal(true);
   };
 
   const handleSaveCode = async (problemId, code, language, solutions = []) => {
+    const isGuestSheet = !isAuthenticated || String(sheet?._id).startsWith('guest_');
+    if (isGuestSheet) {
+      try {
+        const cacheKey = `sheetProblems_${sheet._id}`;
+        const cached = await localforage.getItem(cacheKey);
+        if (cached) {
+          const raw = cached.rawProblems.map(p => p._id === problemId ? { ...p, code, language, solutions } : p);
+          const grouped = {};
+          raw.forEach(p => {
+            if (!grouped[p.topic]) grouped[p.topic] = [];
+            grouped[p.topic].push(p);
+          });
+          await localforage.setItem(cacheKey, { ...cached, rawProblems: raw, problems: grouped });
+          await fetchProblems(true);
+          toast.success('Code saved locally! 🎉');
+          setShowCodeModal(false);
+          setSelectedProblemForCode(null);
+          return;
+        }
+      } catch (err) {
+        console.warn('Failed to save guest code', err);
+      }
+    }
+
     try {
       await sheetProblemService.updateProblem(problemId, { code, language, solutions });
       toast.success('Code saved! 🎉');
@@ -483,7 +608,13 @@ const SheetProblemsView = ({ sheet, onStatsUpdate, onDelete }) => {
           </button>
 
           <button
-            onClick={() => setShowImportModal(true)}
+            onClick={() => {
+              if (!isAuthenticated) {
+                toast('Sign up to import spreadsheets into cloud sheets!', { icon: '🔒' });
+                return;
+              }
+              setShowImportModal(true);
+            }}
             className="flex items-center justify-center gap-1.5 py-2.5 px-2 bg-white/5 hover:bg-white/10 active:scale-95 border border-white/10 rounded-xl transition-all text-xs text-white font-medium min-w-0"
           >
             <Upload className="w-4 h-4 text-blue-400 shrink-0" />
@@ -492,6 +623,10 @@ const SheetProblemsView = ({ sheet, onStatsUpdate, onDelete }) => {
 
           <button
             onClick={() => {
+              if (!isAuthenticated) {
+                toast('Sign up to sync solutions to your GitHub repo!', { icon: '🔒' });
+                return;
+              }
               const { githubStatus } = useAuthStore.getState();
               if (!githubStatus?.connected) {
                 toast.error('Connect GitHub first from Profile page');
@@ -541,6 +676,10 @@ const SheetProblemsView = ({ sheet, onStatsUpdate, onDelete }) => {
         <div className="hidden sm:flex items-center flex-wrap gap-2.5">
           <button
             onClick={() => {
+              if (!isAuthenticated) {
+                toast('Sign up to sync solutions to your GitHub repo!', { icon: '🔒' });
+                return;
+              }
               const { githubStatus } = useAuthStore.getState();
               if (!githubStatus?.connected) {
                 toast.error('Connect GitHub first from Profile page');
@@ -554,7 +693,13 @@ const SheetProblemsView = ({ sheet, onStatsUpdate, onDelete }) => {
             <span>Sync GitHub</span>
           </button>
           <button
-            onClick={() => setShowImportModal(true)}
+            onClick={() => {
+              if (!isAuthenticated) {
+                toast('Sign up to import spreadsheets into cloud sheets!', { icon: '🔒' });
+                return;
+              }
+              setShowImportModal(true);
+            }}
             className="flex items-center gap-2 px-3.5 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg transition-all text-white text-sm"
           >
             <Upload className="w-4 h-4" />
@@ -959,6 +1104,53 @@ const SheetProblemsView = ({ sheet, onStatsUpdate, onDelete }) => {
                                           <Youtube className="w-3.5 h-3.5" />
                                         </a>
                                       )}
+                                      {problem.additionalLinks?.map((link, i) => {
+                                        let LinkIcon = ExternalLink;
+                                        let iconColor = 'text-dark-300 group-hover:text-white';
+                                        
+                                        if (link.type === 'problem') LinkIcon = Code2;
+                                        else if (link.type === 'article') LinkIcon = FileText;
+                                        else if (link.type === 'youtube') LinkIcon = Youtube;
+
+                                        const p = (link.platform || '').toLowerCase();
+                                        if (p.includes('leetcode')) iconColor = 'text-yellow-400';
+                                        else if (p.includes('geeksforgeeks')) iconColor = 'text-green-400';
+                                        else if (p.includes('codeforces')) iconColor = 'text-blue-400';
+                                        else if (p.includes('codechef')) iconColor = 'text-amber-500';
+                                        else if (p.includes('hackerrank')) iconColor = 'text-emerald-400';
+                                        else if (p.includes('codingninjas')) iconColor = 'text-orange-400';
+                                        else if (p.includes('interviewbit')) iconColor = 'text-cyan-400';
+                                        else if (p.includes('atcoder')) iconColor = 'text-sky-400';
+                                        else if (p.includes('spoj')) iconColor = 'text-indigo-400';
+                                        else if (p.includes('cses')) iconColor = 'text-blue-300';
+                                        else if (link.type === 'youtube') iconColor = 'text-red-400';
+                                        else if (link.type === 'article') iconColor = 'text-orange-400';
+
+                                        return (
+                                          <a
+                                            key={i}
+                                            href={link.url}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="p-1.5 bg-white/5 hover:bg-white/10 border border-white/5 rounded-lg transition-colors shrink-0 group"
+                                            title={link.label || link.platform || link.type}
+                                          >
+                                            <LinkIcon className={`w-3.5 h-3.5 ${iconColor}`} />
+                                          </a>
+                                        );
+                                      })}
+                                      <button
+                                        onClick={() => handleOpenLinks(problem)}
+                                        className="p-1 hover:bg-white/10 rounded-lg transition-colors text-dark-400 hover:text-neon-green relative"
+                                        title="Manage links"
+                                      >
+                                        <Plus className="w-3.5 h-3.5" />
+                                        {problem.additionalLinks?.length > 0 && (
+                                          <span className="absolute -top-1 -right-1 w-3 h-3 bg-neon-green text-black rounded-full flex items-center justify-center text-[8px] font-bold">
+                                            {problem.additionalLinks.length}
+                                          </span>
+                                        )}
+                                      </button>
                                     </div>
 
                                     <div className="flex items-center gap-1.5 shrink-0">
@@ -1162,6 +1354,53 @@ const SheetProblemsView = ({ sheet, onStatsUpdate, onDelete }) => {
                                           <Youtube className="w-4 h-4" />
                                         </a>
                                       )}
+                                      {problem.additionalLinks?.map((link, i) => {
+                                        let LinkIcon = ExternalLink;
+                                        let iconColor = 'text-dark-300 group-hover:text-white';
+                                        
+                                        if (link.type === 'problem') LinkIcon = Code2;
+                                        else if (link.type === 'article') LinkIcon = FileText;
+                                        else if (link.type === 'youtube') LinkIcon = Youtube;
+
+                                        const p = (link.platform || '').toLowerCase();
+                                        if (p.includes('leetcode')) iconColor = 'text-yellow-400';
+                                        else if (p.includes('geeksforgeeks')) iconColor = 'text-green-400';
+                                        else if (p.includes('codeforces')) iconColor = 'text-blue-400';
+                                        else if (p.includes('codechef')) iconColor = 'text-amber-500';
+                                        else if (p.includes('hackerrank')) iconColor = 'text-emerald-400';
+                                        else if (p.includes('codingninjas')) iconColor = 'text-orange-400';
+                                        else if (p.includes('interviewbit')) iconColor = 'text-cyan-400';
+                                        else if (p.includes('atcoder')) iconColor = 'text-sky-400';
+                                        else if (p.includes('spoj')) iconColor = 'text-indigo-400';
+                                        else if (p.includes('cses')) iconColor = 'text-blue-300';
+                                        else if (link.type === 'youtube') iconColor = 'text-red-400';
+                                        else if (link.type === 'article') iconColor = 'text-orange-400';
+
+                                        return (
+                                          <a
+                                            key={i}
+                                            href={link.url}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="p-1.5 bg-white/5 hover:bg-white/10 border border-white/5 rounded-lg transition-colors group"
+                                            title={link.label || link.platform || link.type}
+                                          >
+                                            <LinkIcon className={`w-4 h-4 ${iconColor}`} />
+                                          </a>
+                                        );
+                                      })}
+                                      <button
+                                        onClick={() => handleOpenLinks(problem)}
+                                        className="p-1 hover:bg-white/10 rounded-lg transition-colors text-dark-400 hover:text-neon-green relative"
+                                        title="Manage links"
+                                      >
+                                        <Plus className="w-3.5 h-3.5" />
+                                        {problem.additionalLinks?.length > 0 && (
+                                          <span className="absolute -top-1 -right-1 w-3 h-3 bg-neon-green text-black rounded-full flex items-center justify-center text-[8px] font-bold">
+                                            {problem.additionalLinks.length}
+                                          </span>
+                                        )}
+                                      </button>
                                     </div>
                                   </td>
                                   <td className="px-4 py-3 text-center">
@@ -1582,6 +1821,17 @@ const SheetProblemsView = ({ sheet, onStatsUpdate, onDelete }) => {
         problem={selectedProblemForCode}
         onSave={handleSaveCode}
       />
+
+      {/* Links Manager Modal */}
+      <AnimatePresence>
+        {showLinksModal && selectedProblemForLinks && (
+          <LinksManagerModal
+            problem={selectedProblemForLinks}
+            onClose={() => { setShowLinksModal(false); setSelectedProblemForLinks(null); }}
+            onSave={handleSaveLinks}
+          />
+        )}
+      </AnimatePresence>
 
       {/* Git Sync Modal */}
       <GitSyncModal
@@ -2010,6 +2260,200 @@ const AddProblemModal = ({ sheet, onClose, onSuccess }) => {
               </button>
             </div>
           </form>
+        </GlassCard>
+      </motion.div>
+    </motion.div>
+  );
+};
+
+const LinksManagerModal = ({ problem, onClose, onSave }) => {
+  const [links, setLinks] = useState(problem.additionalLinks || []);
+  const [newLink, setNewLink] = useState({ url: '', type: 'problem', platform: '', label: '' });
+  const [saving, setSaving] = useState(false);
+
+  const handleAddLink = () => {
+    if (!newLink.url) return toast.error('URL is required');
+    let label = newLink.label;
+    if (!label && newLink.platform) label = newLink.platform;
+    setLinks([...links, { ...newLink, label }]);
+    setNewLink({ url: '', type: 'problem', platform: '', label: '' });
+  };
+
+  const handleRemoveLink = (index) => {
+    setLinks(links.filter((_, i) => i !== index));
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setSaving(true);
+    await onSave(problem._id, links);
+    setSaving(false);
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ scale: 0.9, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        exit={{ scale: 0.9, opacity: 0 }}
+        className="w-full h-[100dvh] sm:h-auto sm:max-w-xl rounded-none sm:rounded-2xl overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <GlassCard className="p-4 sm:p-6 h-full sm:h-auto overflow-y-auto flex flex-col">
+          <div className="flex items-center justify-between mb-4 shrink-0">
+            <div>
+              <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                <ExternalLink className="w-5 h-5 text-blue-400" />
+                Manage Links
+              </h2>
+              <p className="text-sm text-gray-400 mt-1 truncate max-w-[220px] sm:max-w-[300px]">{problem.title}</p>
+            </div>
+            <button
+              onClick={onClose}
+              className="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+
+          <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 space-y-4">
+            <div className="space-y-2">
+              <h3 className="text-sm font-semibold text-gray-300">Primary Links</h3>
+              {problem.problemLink && (
+                <div className="flex items-center gap-3 p-3 bg-white/5 border border-white/10 rounded-xl">
+                  <Code2 className="w-4 h-4 text-blue-400 shrink-0" />
+                  <a href={problem.problemLink} target="_blank" rel="noopener noreferrer" className="text-sm text-white hover:text-blue-400 truncate flex-1">
+                    {problem.problemLink}
+                  </a>
+                </div>
+              )}
+              {problem.articleLink && (
+                <div className="flex items-center gap-3 p-3 bg-white/5 border border-white/10 rounded-xl">
+                  <FileText className="w-4 h-4 text-orange-400 shrink-0" />
+                  <a href={problem.articleLink} target="_blank" rel="noopener noreferrer" className="text-sm text-white hover:text-orange-400 truncate flex-1">
+                    {problem.articleLink}
+                  </a>
+                </div>
+              )}
+              {problem.youtubeLink && (
+                <div className="flex items-center gap-3 p-3 bg-white/5 border border-white/10 rounded-xl">
+                  <Youtube className="w-4 h-4 text-red-400 shrink-0" />
+                  <a href={problem.youtubeLink} target="_blank" rel="noopener noreferrer" className="text-sm text-white hover:text-red-400 truncate flex-1">
+                    {problem.youtubeLink}
+                  </a>
+                </div>
+              )}
+              {!problem.problemLink && !problem.articleLink && !problem.youtubeLink && (
+                <div className="text-sm text-gray-500">No primary links</div>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <h3 className="text-sm font-semibold text-gray-300">Additional Links</h3>
+              {links.map((link, i) => {
+                let LinkIcon = ExternalLink;
+                if (link.type === 'problem') LinkIcon = Code2;
+                else if (link.type === 'article') LinkIcon = FileText;
+                else if (link.type === 'youtube') LinkIcon = Youtube;
+
+                return (
+                  <div key={i} className="flex items-center gap-3 p-3 bg-white/5 border border-white/10 rounded-xl">
+                    <LinkIcon className="w-4 h-4 text-gray-400 shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        {link.label && <span className="text-xs font-bold text-gray-300">{link.label}</span>}
+                        <span className="text-[10px] px-1.5 py-0.5 bg-white/10 rounded text-gray-400 uppercase tracking-wider">{link.type}</span>
+                      </div>
+                      <a href={link.url} target="_blank" rel="noopener noreferrer" className="text-sm text-gray-400 hover:text-white truncate block mt-0.5">
+                        {link.url}
+                      </a>
+                    </div>
+                    <button onClick={() => handleRemoveLink(i)} className="p-1.5 text-red-400 hover:bg-red-500/20 rounded-lg transition-colors">
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="p-4 border border-dashed border-white/20 rounded-xl space-y-3 bg-white/[0.02]">
+              <h4 className="text-sm font-bold text-white">Add New Link</h4>
+              <input
+                type="url"
+                value={newLink.url}
+                onChange={(e) => setNewLink({ ...newLink, url: e.target.value })}
+                placeholder="URL *"
+                className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:border-neon-green outline-none"
+              />
+              <div className="grid grid-cols-2 gap-3">
+                <select
+                  value={newLink.type}
+                  onChange={(e) => setNewLink({ ...newLink, type: e.target.value })}
+                  className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-neon-green"
+                >
+                  <option value="problem">Problem</option>
+                  <option value="article">Article</option>
+                  <option value="youtube">YouTube</option>
+                  <option value="other">Other</option>
+                </select>
+                <select
+                  value={newLink.platform}
+                  onChange={(e) => setNewLink({ ...newLink, platform: e.target.value })}
+                  className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-neon-green"
+                >
+                  <option value="">Platform (Auto)</option>
+                  <option value="LeetCode">LeetCode</option>
+                  <option value="GeeksForGeeks">GeeksForGeeks</option>
+                  <option value="CodeForces">CodeForces</option>
+                  <option value="CodeChef">CodeChef</option>
+                  <option value="HackerRank">HackerRank</option>
+                  <option value="Coding Ninjas">Coding Ninjas</option>
+                  <option value="InterviewBit">InterviewBit</option>
+                  <option value="AtCoder">AtCoder</option>
+                  <option value="SPOJ">SPOJ</option>
+                  <option value="CSES">CSES</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+              <input
+                type="text"
+                value={newLink.label}
+                onChange={(e) => setNewLink({ ...newLink, label: e.target.value })}
+                placeholder="Custom Label (Optional)"
+                className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:border-neon-green outline-none"
+              />
+              <button
+                type="button"
+                onClick={handleAddLink}
+                className="w-full py-2 bg-white/10 hover:bg-white/20 text-white font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
+              >
+                <Plus className="w-4 h-4" /> Add Link
+              </button>
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-3 pt-4 shrink-0 border-t border-white/10 mt-4">
+            <button
+              onClick={onClose}
+              className="px-6 py-2.5 text-gray-300 hover:text-white border border-white/10 hover:border-white/20 rounded-lg transition-all text-sm font-medium"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleSubmit}
+              disabled={saving}
+              className="px-6 py-2.5 bg-neon-green text-black font-semibold rounded-lg hover:bg-neon-green/90 transition-all disabled:opacity-50 text-sm flex items-center gap-2"
+            >
+              <Save className="w-4 h-4" />
+              {saving ? 'Saving...' : 'Save All Links'}
+            </button>
+          </div>
         </GlassCard>
       </motion.div>
     </motion.div>
