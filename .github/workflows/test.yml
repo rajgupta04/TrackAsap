@@ -2,7 +2,7 @@ name: TrackAsap CI & Automated Test Suite
 
 on:
   push:
-    branches: [ main, 'feature/**' ]
+    branches: [ main, devops, 'feature/**' ]
   pull_request:
     branches: [ main ]
 
@@ -57,3 +57,21 @@ jobs:
       - name: Verify Frontend Production Build
         working-directory: frontend
         run: npm run build
+
+  devops-verify:
+    name: 🛠️ DevOps Configs & Docker Compose Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install PyYAML
+        run: pip install pyyaml
+
+      - name: Validate Docker Compose, Ansible, Puppet, Nagios, Prometheus & Grafana
+        run: python devops/scripts/verify_devops.py

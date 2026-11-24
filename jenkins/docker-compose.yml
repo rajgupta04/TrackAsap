@@ -1,9 +1,9 @@
-version: "3.9"
-
 services:
   jenkins:
     build:
       context: .
+    container_name: trackasap-jenkins
+    restart: unless-stopped
     ports:
       - "8086:8080"
       - "50000:50000"

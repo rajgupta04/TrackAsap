@@ -1,21 +1,89 @@
-version: "3.9"
+name: trackasap
 
 services:
+  redis:
+    image: redis:7-alpine
+    container_name: trackasap-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks:
+      - trackasap-net
+
   backend:
     build:
       context: ./backend
+      dockerfile: Dockerfile
+    container_name: trackasap-backend
+    restart: unless-stopped
     env_file:
-      - ./backend/.env
+      - path: ./backend/.env
+        required: false
     environment:
       PORT: 8080
       NODE_ENV: production
+    depends_on:
+      redis:
+        condition: service_healthy
     ports:
       - "5000:8080"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8080/api/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      start_period: 15s
+      retries: 3
+    networks:
+      - trackasap-net
 
   frontend:
     build:
       context: ./frontend
+      dockerfile: Dockerfile
+    container_name: trackasap-frontend
+    restart: unless-stopped
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     ports:
       - "3000:8080"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/nginx-health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    networks:
+      - trackasap-net
+
+  learn:
+    build:
+      context: ./learn
+      dockerfile: Dockerfile
+    container_name: trackasap-learn
+    restart: unless-stopped
+    profiles: ["learn", "full"]
+    ports:
+      - "5174:8080"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/nginx-health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    networks:
+      - trackasap-net
+
+volumes:
+  redis_data:
+
+networks:
+  trackasap-net:
+    name: trackasap-net
+    driver: bridge

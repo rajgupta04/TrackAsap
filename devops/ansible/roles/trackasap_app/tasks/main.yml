@@ -1,0 +1,26 @@
+---
+- name: Ensure TrackAsap application directory exists
+  ansible.builtin.file:
+    path: "{{ app_dir }}"
+    state: directory
+    mode: "0755"
+
+- name: Clone or update TrackAsap repository
+  ansible.builtin.git:
+    repo: "{{ repo_url }}"
+    dest: "{{ app_dir }}"
+    version: "{{ repo_branch }}"
+    update: true
+
+- name: Render backend environment template (override secrets via Ansible Vault)
+  ansible.builtin.template:
+    src: backend.env.j2
+    dest: "{{ app_dir }}/backend/.env"
+    mode: "0600"
+  when: vault_manage_env | default(false)
+
+- name: Start TrackAsap full application stack
+  ansible.builtin.command:
+    cmd: docker compose up -d --build
+    chdir: "{{ app_dir }}"
+  changed_when: true

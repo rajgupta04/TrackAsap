@@ -1,0 +1,30 @@
+---
+- name: Install Nagios NRPE Server and standard plugins
+  ansible.builtin.apt:
+    name:
+      - nagios-nrpe-server
+      - monitoring-plugins
+      - prometheus-node-exporter
+    state: present
+    update_cache: true
+
+- name: Deploy custom TrackAsap deep-health Nagios plugin
+  ansible.builtin.copy:
+    src: "{{ app_dir }}/devops/nagios/plugins/check_trackasap_health.sh"
+    dest: /usr/lib/nagios/plugins/check_trackasap_health.sh
+    mode: "0755"
+    remote_src: true
+
+- name: Configure NRPE command for TrackAsap health check
+  ansible.builtin.lineinfile:
+    path: /etc/nagios/nrpe_local.cfg
+    create: true
+    mode: "0644"
+    line: "command[check_trackasap_health]=/usr/lib/nagios/plugins/check_trackasap_health.sh -H 127.0.0.1 -p {{ backend_port }}"
+  notify: Restart NRPE
+
+- name: Enable and start Prometheus Node Exporter
+  ansible.builtin.systemd:
+    name: prometheus-node-exporter
+    state: started
+    enabled: true

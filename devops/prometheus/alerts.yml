@@ -1,0 +1,59 @@
+groups:
+  - name: trackasap_backend_alerts
+    rules:
+      - alert: TrackAsapBackendDown
+        expr: up{job="trackasap-backend"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "TrackAsap backend target is unreachable"
+          description: "Prometheus failed to scrape trackasap-backend:8080/metrics for 1 minute."
+
+      - alert: TrackAsapMongoDBDisconnected
+        expr: trackasap_db_connected == 0
+        for: 30s
+        labels:
+          severity: critical
+        annotations:
+          summary: "TrackAsap MongoDB / Cosmos DB disconnected"
+          description: "Mongoose readyState != 1 on {{ $labels.instance }}."
+
+      - alert: TrackAsapRedisDisconnected
+        expr: trackasap_redis_connected == 0
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "TrackAsap Redis cache unavailable (failing open)"
+          description: "Redis connection is not ready; traffic falling back directly to DB."
+
+      - alert: TrackAsapHigh5xxRate
+        expr: |
+          sum(rate(trackasap_http_requests_total{status_code=~"5.."}[5m]))
+          / clamp_min(sum(rate(trackasap_http_requests_total[5m])), 1) > 0.05
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "HTTP 5xx error rate exceeds 5%"
+          description: "More than 5% of TrackAsap API requests returned 5xx over the last 5 minutes."
+
+      - alert: TrackAsapHighP95Latency
+        expr: |
+          histogram_quantile(0.95, sum(rate(trackasap_http_request_duration_seconds_bucket[5m])) by (le)) > 1.5
+        for: 3m
+        labels:
+          severity: warning
+        annotations:
+          summary: "API P95 latency exceeds 1.5s"
+          description: "95th percentile HTTP response time is above 1.5 seconds."
+
+      - alert: TrackAsapHighEventLoopLag
+        expr: trackasap_nodejs_event_loop_lag_seconds > 0.25
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Node.js event loop lag > 250ms"
+          description: "CPU-bound work may be blocking the Express event loop."

@@ -1,0 +1,46 @@
+---
+- name: Provision Docker Host & TrackAsap Application Stack
+  hosts: app_servers
+  become: true
+  roles:
+    - docker_host
+    - trackasap_app
+    - monitoring_agent
+
+- name: Provision LiveKit & Python AI Interviewer Worker
+  hosts: ai_workers
+  become: true
+  roles:
+    - docker_host
+  tasks:
+    - name: Ensure TrackAsap repo is present on AI worker
+      ansible.builtin.git:
+        repo: "{{ repo_url }}"
+        dest: "{{ app_dir }}"
+        version: "{{ repo_branch }}"
+        update: true
+
+    - name: Deploy LiveKit + AI Agent containers
+      ansible.builtin.command:
+        cmd: docker compose -f docker/docker-compose.yml up -d --build
+        chdir: "{{ app_dir }}"
+      changed_when: true
+
+- name: Provision Observability Stack (Grafana, Prometheus, Nagios)
+  hosts: monitoring_servers
+  become: true
+  roles:
+    - docker_host
+  tasks:
+    - name: Ensure TrackAsap repo is present on monitoring node
+      ansible.builtin.git:
+        repo: "{{ repo_url }}"
+        dest: "{{ app_dir }}"
+        version: "{{ repo_branch }}"
+        update: true
+
+    - name: Launch Observability Stack
+      ansible.builtin.command:
+        cmd: docker compose -f docker-compose.monitoring.yml up -d
+        chdir: "{{ app_dir }}"
+      changed_when: true

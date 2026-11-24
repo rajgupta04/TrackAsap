@@ -1,0 +1,11 @@
+---
+trackasap::app_dir: "/opt/trackasap"
+trackasap::backend_port: 5000
+trackasap::frontend_port: 3000
+trackasap::redis_port: 6379
+trackasap::nagios_allowed_hosts:
+  - "127.0.0.1"
+  - "::1"
+  - "10.0.2.10"
+trackasap::docker_log_max_size: "50m"
+trackasap::docker_log_max_file: "3"

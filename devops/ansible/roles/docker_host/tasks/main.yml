@@ -1,0 +1,55 @@
+---
+- name: Configure Docker Engine, UFW Firewall, and Runtime Prerequisites
+  ansible.builtin.apt:
+    name:
+      - apt-transport-https
+      - ca-certificates
+      - curl
+      - gnupg
+      - lsb-release
+      - git
+      - ufw
+    state: present
+    update_cache: true
+
+- name: Add Docker GPG key
+  ansible.builtin.get_url:
+    url: https://download.docker.com/linux/ubuntu/gpg
+    dest: /etc/apt/keyrings/docker.asc
+    mode: "0644"
+
+- name: Configure Docker APT repository
+  ansible.builtin.deb822_repository:
+    name: docker
+    types: deb
+    uris: https://download.docker.com/linux/ubuntu
+    suites: "{{ ansible_distribution_release }}"
+    components: stable
+    signed_by: /etc/apt/keyrings/docker.asc
+    enabled: true
+
+- name: Install Docker CE and Compose plugin
+  ansible.builtin.apt:
+    name: "{{ docker_packages }}"
+    state: present
+    update_cache: true
+
+- name: Ensure Docker service is running and enabled
+  ansible.builtin.systemd:
+    name: docker
+    state: started
+    enabled: true
+
+- name: Allow SSH, HTTP, HTTPS, and LiveKit WebRTC ports in UFW
+  ansible.builtin.command:
+    cmd: "ufw allow {{ item.port }}/{{ item.proto }}"
+  loop:
+    - { port: "22", proto: "tcp" }
+    - { port: "80", proto: "tcp" }
+    - { port: "443", proto: "tcp" }
+    - { port: "{{ backend_port }}", proto: "tcp" }
+    - { port: "{{ frontend_port }}", proto: "tcp" }
+    - { port: "{{ livekit_http_port }}", proto: "tcp" }
+    - { port: "{{ livekit_tcp_port }}", proto: "tcp" }
+    - { port: "{{ livekit_udp_port }}", proto: "udp" }
+  changed_when: false

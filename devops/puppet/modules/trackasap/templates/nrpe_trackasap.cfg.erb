@@ -1,0 +1,7 @@
+# Managed by Puppet - TrackAsap NRPE Checks
+allowed_hosts=<%= @allowed_hosts.join(',') %>
+
+command[check_trackasap_health]=/usr/lib/nagios/plugins/check_trackasap_health.sh -H 127.0.0.1 -p <%= @backend_port %>
+command[check_trackasap_frontend]=/usr/lib/nagios/plugins/check_http -H 127.0.0.1 -p <%= @frontend_port %> -u /nginx-health -s ok
+command[check_trackasap_disk]=/usr/lib/nagios/plugins/check_disk -w 20% -c 10% -p /
+command[check_trackasap_load]=/usr/lib/nagios/plugins/check_load -r -w 2.0,1.5,1.0 -c 4.0,3.0,2.0

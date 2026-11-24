@@ -1,0 +1,40 @@
+---
+- name: Zero-Downtime Rolling Deploy for TrackAsap
+  hosts: app_servers
+  become: true
+  serial: 1
+  tasks:
+    - name: Pull latest code on {{ repo_branch }}
+      ansible.builtin.git:
+        repo: "{{ repo_url }}"
+        dest: "{{ app_dir }}"
+        version: "{{ repo_branch }}"
+        force: false
+
+    - name: Build updated backend & frontend images
+      ansible.builtin.command:
+        cmd: docker compose build --pull backend frontend
+        chdir: "{{ app_dir }}"
+      changed_when: true
+
+    - name: Recreate services cleanly
+      ansible.builtin.command:
+        cmd: docker compose up -d --remove-orphans
+        chdir: "{{ app_dir }}"
+      changed_when: true
+
+    - name: Wait for TrackAsap deep health check to return 200
+      ansible.builtin.uri:
+        url: "http://127.0.0.1:{{ backend_port }}/api/health/deep"
+        method: GET
+        status_code: 200
+        return_content: true
+      register: health_check
+      retries: 12
+      delay: 5
+      until: health_check.status == 200
+
+    - name: Prune dangling Docker images
+      ansible.builtin.command:
+        cmd: docker image prune -f
+      changed_when: false

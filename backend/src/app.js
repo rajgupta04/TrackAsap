@@ -28,6 +28,11 @@ import dailyPlanRoutes from './routes/dailyPlan.routes.js';
 import interviewRoutes from './routes/interview.routes.js';
 import testimonialRoutes from './routes/testimonial.routes.js';
 import { requestLogger } from './analytics/middlewares/requestLogger.js';
+import {
+  prometheusMetricsMiddleware,
+  renderPrometheusMetrics,
+  deepHealthCheck,
+} from './analytics/middlewares/prometheusMetrics.js';
 import systemAnalyticsRoutes from './analytics/admin/analytics.routes.js';
 import { errorHandler, notFound } from './middleware/error.middleware.js';
 
@@ -49,6 +54,8 @@ app.use(cors({
 }));
 app.use(express.json());
 app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
+
+app.use(prometheusMetricsMiddleware);
 
 // System Request Logging Middleware
 if (process.env.NODE_ENV !== 'test') {
@@ -108,12 +115,21 @@ app.get('/', (req, res) => {
   });
 });
 
-// Health check
+// Health check & Prometheus observability endpoints
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', message: 'TrackAsap API is running' });
 });
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', message: 'TrackAsap API is running' });
+});
+app.get('/api/health/deep', deepHealthCheck);
+app.get('/metrics', (req, res) => {
+  res.set('Content-Type', 'text/plain; version=0.0.4; charset=utf-8');
+  res.send(renderPrometheusMetrics());
+});
+app.get('/api/metrics', (req, res) => {
+  res.set('Content-Type', 'text/plain; version=0.0.4; charset=utf-8');
+  res.send(renderPrometheusMetrics());
 });
 
 // Error handling

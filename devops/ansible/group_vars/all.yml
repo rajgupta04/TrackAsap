@@ -1,0 +1,27 @@
+---
+app_name: trackasap
+app_dir: /opt/trackasap
+repo_url: https://github.com/rajgupta04/TrackAsap.git
+repo_branch: devops
+
+backend_port: 5000
+backend_internal_port: 8080
+frontend_port: 3000
+learn_port: 5174
+redis_port: 6379
+livekit_http_port: 7880
+livekit_tcp_port: 7881
+livekit_udp_port: 7882
+
+prometheus_port: 9090
+grafana_port: 3001
+nagios_port: 8085
+node_exporter_port: 9100
+nrpe_port: 5666
+
+docker_packages:
+  - docker-ce
+  - docker-ce-cli
+  - containerd.io
+  - docker-buildx-plugin
+  - docker-compose-plugin
