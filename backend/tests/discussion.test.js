@@ -62,7 +62,7 @@ describe('Discussion Endpoints (/api/discussions)', () => {
         .send({ content: '   ' });
 
       expect(res.statusCode).toBe(400);
-      expect(res.body.message).toMatch(/content is required/i);
+      expect(res.body.message).toMatch(/post content or description is required/i);
     });
   });
 
