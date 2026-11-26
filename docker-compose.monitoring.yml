@@ -38,6 +38,10 @@ services:
     image: jasonrivers/nagios:latest
     container_name: trackasap-nagios
     restart: unless-stopped
+    entrypoint:
+      - /bin/bash
+      - -c
+      - "rm -f /run/*.pid /run/apache2/*.pid /var/run/*.pid /var/run/apache2/*.pid /opt/nagios/var/nagios.lock && exec /usr/local/bin/start_nagios"
     environment:
       - NAGIOSADMIN_USER=${NAGIOSADMIN_USER:-nagiosadmin}
       - NAGIOSADMIN_PASS=${NAGIOSADMIN_PASS:-trackasap_nagios}
